@@ -1,0 +1,23 @@
+# Python and common build output
+__pycache__/
+*.py[cod]
+.venv/
+build/
+dist/
+*.egg-info/
+
+# Worktree-local control plane. It is visible in the worktree but not tracked.
+.project/
+
+# Local environment and secrets
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Editor and OS files
+.DS_Store
+.idea/
+.vscode/
+
+# Asset links and manifests are tracked. Do not add large payloads to Git.

@@ -1,0 +1,24 @@
+name: Feature
+description: Propose a bounded product or development change
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What concrete problem should this change solve?
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope and design
+      description: What is in scope, and what is deliberately outside it?
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance evidence
+      description: What checks or real runs will establish completion?
+    validations:
+      required: true

@@ -1,0 +1,5 @@
+# One entry per external or unusually large asset.
+# The target of a symlink is intentionally machine-specific; keep the stable
+# repository-relative entry in assets/ and record the target in local state.
+version: 1
+assets: []

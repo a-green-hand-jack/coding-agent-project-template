@@ -1,0 +1,17 @@
+name: Template checks
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  structure:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check shell syntax
+        run: bash -n .agents/scripts/*.sh
+      - name: Initialize worktree state
+        run: bash .agents/scripts/setup-worktree.sh
+      - name: Diagnose template
+        run: bash .agents/scripts/diagnose-environment.sh

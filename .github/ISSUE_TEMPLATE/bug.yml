@@ -1,0 +1,23 @@
+name: Bug
+description: Report an observed defect with evidence
+body:
+  - type: textarea
+    id: observed
+    attributes:
+      label: Observed behavior
+      description: What happened, with the command or user path that triggered it?
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence and environment
+      description: Include relevant versions, logs or artifacts; never include secrets.
+    validations:
+      required: true
