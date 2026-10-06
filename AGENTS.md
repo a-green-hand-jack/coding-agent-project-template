@@ -2,9 +2,12 @@
 
 ## 先读什么
 
-开始工作前，先读本文件、`.agents/README.md`、相关 Issue，以及与任务直接相关
+开始工作前，先读本文件、`.agents/AGENTS.md`、相关 Issue，以及与任务直接相关
 的 `.agents/memory/`、`.agents/knowledge/` 和 `.agents/skills/`。先理解现有
 代码和边界，再决定是否需要修改。
+
+`CLAUDE.md` 是本文件的软链接索引，供 Claude Code 从仓库根目录发现同一套规则；
+修改规则只修改 `AGENTS.md`，不要把两份内容分叉。
 
 ## 三个平面
 
@@ -21,6 +24,7 @@
 - 不为特定角色、任务或 benchmark 写特例；
 - 不写与代码重复的长注释和文档；
 - 不用 agent 私有 memory 代替项目级 memory；
+- 先查 `.agents/content-registry.yaml`，区分 shared 内容和 project 内容；
 - 不把状态、日志、receipt 或资产藏在项目外的未知目录；
 - 运行操作使用项目自己的脚本和 CLI，不创建全局命令；
 - 保留无关修改，不重置、覆盖或提交别人的工作；

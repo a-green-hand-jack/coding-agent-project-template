@@ -21,7 +21,7 @@ Issue/branch/PR 构成可追溯的交付单元。
    bash .agents/scripts/setup-worktree.sh
    ```
 
-5. 让 coding agent 先读取 `AGENTS.md`、`.agents/README.md` 和当前 Issue，
+5. 让 coding agent 先读取 `AGENTS.md`、`.agents/AGENTS.md` 和当前 Issue，
    再开始修改。
 
 ## 目录
@@ -33,6 +33,7 @@ Issue/branch/PR 构成可追溯的交付单元。
 | `assets/` | 产品输入 | 大资产的可见入口、软链接和 manifest |
 | `.project/` | worktree 本地状态 | 运行记录、日志、receipt、临时产物；被 Git 忽略 |
 | `.agents/` | coding agent 开发面 | memory、knowledge、skills、setup 和诊断 |
+| `CLAUDE.md` | coding agent 入口 | 指向 `AGENTS.md` 的 Claude Code 软链接 |
 | `README.md` | human 面 | 产品定位和导航 |
 | `USER.md` | human 面 | 用户安装、使用和故障处理 |
 | `DEV.md` | human 面 | 开发、验证、发布和生命周期 |
@@ -46,3 +47,24 @@ checkpoint 和其他不适合进入 Git 的资产可以放在外部存储；仓�
 和可重建性。凭据不进入仓库，只通过 `.env.example` 中声明的路径或变量注入。
 
 项目讨论不属于模板产品。模板只保留已经收敛的规则、目录、脚本和占位文档。
+
+`.agents/content-registry.yaml` 登记哪些内容可以跨项目复用、哪些内容必须在新
+项目中重新建立，以及每项复用需要怎样适配。不要把项目专属 memory、knowledge
+或 skill 当作通用资产整目录复制。
+
+## 使用模板版本
+
+GitHub 的 **Use this template** 使用默认分支上的最新模板。需要可复现的版本时，
+从 release tag 创建起点：
+
+```bash
+git clone --branch v0.1.0 --depth 1 \
+  https://github.com/a-green-hand-jack/coding-agent-project-template.git my-project
+cd my-project
+git remote remove origin
+git remote add origin https://github.com/OWNER/PROJECT.git
+git push -u origin main
+```
+
+使用某个版本后，先阅读该版本的 `RELEASE_NOTES.md`；跨项目反馈请按
+`.agents/skills/shared/template-feedback/` 的流程向模板仓库提 Issue。
