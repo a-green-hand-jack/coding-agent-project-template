@@ -40,6 +40,12 @@ entries:
   - path: .agents/skills/shared/template-feedback/
     scope: shared_with_adaptation
     note: Adapt the canonical template URL, labels and upstream Issue fields.
+  - path: .agents/skills/shared/template-adoption/
+    scope: shared_with_adaptation
+    note: Adapt the target repository's rules, product paths and acceptance commands.
+  - path: .agents/skills/shared/template-upgrade/
+    scope: shared_with_adaptation
+    note: Adapt current and target release tags, local conflicts and migration evidence.
   - path: .agents/skills/shared/asset-lifecycle/
     scope: shared_with_adaptation
     note: Adapt asset classes, storage roots and migration evidence.
