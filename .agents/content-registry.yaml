@@ -1,0 +1,66 @@
+schema_version: 1
+purpose: >-
+  Record which development-plane content is reusable across repositories and
+  which content belongs to one concrete project.
+default_scope: project
+matching: Most specific path wins; explicit entries override directory defaults.
+classes:
+  shared:
+    meaning: Generic process that can be reused across projects.
+    rule: Reuse only after checking adaptation notes and local tool availability.
+  shared_with_adaptation:
+    meaning: Reusable structure whose paths, commands or evidence must change.
+    rule: Copy selectively and rewrite for the destination project.
+  project:
+    meaning: Content about one project's product, environment or history.
+    rule: Create independently; never copy the directory wholesale.
+  template:
+    meaning: Content that defines this template itself.
+    rule: Keep in the template repository only.
+entries:
+  - path: AGENTS.md
+    scope: shared_with_adaptation
+    note: Write destination-specific agent rules after using the template.
+  - path: CLAUDE.md
+    scope: shared
+    kind: symlink-index
+    note: Recreate as a relative symlink to AGENTS.md; never duplicate its content.
+  - path: .agents/skills/shared/worktree-lifecycle/
+    scope: shared_with_adaptation
+    note: Adapt Herdr workspace names, setup commands and repository state paths.
+  - path: .agents/skills/shared/project-memory-governance/
+    scope: shared
+    note: Generic classification, registration and cleanup procedure.
+  - path: .agents/skills/shared/cli-first-operations/
+    scope: shared
+    note: Use the project's public CLI instead of ad-hoc wrappers.
+  - path: .agents/skills/shared/long-running-supervision/
+    scope: shared_with_adaptation
+    note: Adapt status, monitor, logs and checkpoint commands to the product.
+  - path: .agents/skills/shared/asset-lifecycle/
+    scope: shared_with_adaptation
+    note: Adapt asset classes, storage roots and migration evidence.
+  - path: .agents/memory/
+    scope: project
+    note: Record destination decisions only; do not copy template history.
+  - path: .agents/knowledge/
+    scope: project
+    note: Machine, provider, version and benchmark facts are destination-specific.
+  - path: .agents/skills/
+    scope: project
+    note: The directory is reusable as a layout; its non-shared contents are local.
+  - path: .agents/**/AGENTS.md
+    scope: shared_with_adaptation
+    note: Keep the uniform directory guardrails, then adapt wording to the destination.
+  - path: .agents/content-registry.yaml
+    scope: shared_with_adaptation
+    note: Rewrite entries as the destination project grows; do not copy template history.
+  - path: .agents/scripts/
+    scope: shared_with_adaptation
+    note: Preserve lifecycle boundaries but adapt project setup hooks and tools.
+  - path: .project/
+    scope: project
+    note: Worktree-local state is never copied into a new repository template.
+  - path: assets/MANIFEST.yaml
+    scope: shared_with_adaptation
+    note: Keep the schema, then register the destination project's actual assets.

@@ -63,3 +63,21 @@ bash .agents/scripts/inspect-state.sh
 发布前检查：工作树干净、文档与行为一致、资产 manifest 可解析、环境入口可用、
 适用的回归和真实运行证据已记录。发布只从 `main` 或 release branch 进行，
 并更新 `RELEASE_NOTES.md`。
+
+## CLI 与长时运行监督
+
+项目的 setup、run、status、monitor、checkpoint、resume、artifact 和 release
+操作应通过一个稳定的 public CLI 暴露。不要让 coding agent 或 human 通过私有
+Python 函数、临时 provider SDK 或第二套脚本绕过产品入口。
+
+如果产品运行时间超过一个交互回合：
+
+- 在 `.project/runs/` 记录 worktree、状态根、配置、版本、输出目录和进程身份；
+- 在独立的 Herdr pane、tmux 或 service 中运行，不占住 coding agent 的前台上下文；
+- 提供一个只读 `status` 或 `monitor` 入口，展示进度、最后活动、错误、产物和恢复提示；
+- 将结构化 receipt 和日志写进当前 worktree 的状态根；
+- 明确定义 stop、checkpoint、resume、retry 和 terminal failure；
+- 将实现完成、运行验收和最终产物验收分开报告。
+
+通用原则和最小操作清单见 `.agents/skills/shared/cli-first-operations/` 与
+`.agents/skills/shared/long-running-supervision/`。

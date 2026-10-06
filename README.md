@@ -33,6 +33,7 @@ Issue/branch/PR 构成可追溯的交付单元。
 | `assets/` | 产品输入 | 大资产的可见入口、软链接和 manifest |
 | `.project/` | worktree 本地状态 | 运行记录、日志、receipt、临时产物；被 Git 忽略 |
 | `.agents/` | coding agent 开发面 | memory、knowledge、skills、setup 和诊断 |
+| `CLAUDE.md` | coding agent 入口 | 指向 `AGENTS.md` 的 Claude Code 软链接 |
 | `README.md` | human 面 | 产品定位和导航 |
 | `USER.md` | human 面 | 用户安装、使用和故障处理 |
 | `DEV.md` | human 面 | 开发、验证、发布和生命周期 |
@@ -46,3 +47,7 @@ checkpoint 和其他不适合进入 Git 的资产可以放在外部存储；仓�
 和可重建性。凭据不进入仓库，只通过 `.env.example` 中声明的路径或变量注入。
 
 项目讨论不属于模板产品。模板只保留已经收敛的规则、目录、脚本和占位文档。
+
+`.agents/content-registry.yaml` 登记哪些内容可以跨项目复用、哪些内容必须在新
+项目中重新建立，以及每项复用需要怎样适配。不要把项目专属 memory、knowledge
+或 skill 当作通用资产整目录复制。
