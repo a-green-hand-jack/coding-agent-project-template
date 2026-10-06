@@ -14,6 +14,10 @@ its local rules. Grouping directories such as `skills/shared/` also have one.
 Individual skill packages use `SKILL.md` as their entry point and do not add a
 duplicate `AGENTS.md`. Keep this convention uniform when adding directories.
 
+The `AGENTS.md` files are the indexes for this development plane. Do not add
+README files under `.agents/`; update the relevant `AGENTS.md` when registering
+memory, knowledge or skills.
+
 ## Where information goes
 
 - A durable decision, correction or project lesson goes in `memory/` and its

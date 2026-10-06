@@ -37,6 +37,9 @@ entries:
   - path: .agents/skills/shared/long-running-supervision/
     scope: shared_with_adaptation
     note: Adapt status, monitor, logs and checkpoint commands to the product.
+  - path: .agents/skills/shared/template-feedback/
+    scope: shared_with_adaptation
+    note: Adapt the canonical template URL, labels and upstream Issue fields.
   - path: .agents/skills/shared/asset-lifecycle/
     scope: shared_with_adaptation
     note: Adapt asset classes, storage roots and migration evidence.

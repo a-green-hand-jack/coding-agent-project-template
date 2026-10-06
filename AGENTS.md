@@ -2,7 +2,7 @@
 
 ## 先读什么
 
-开始工作前，先读本文件、`.agents/README.md`、相关 Issue，以及与任务直接相关
+开始工作前，先读本文件、`.agents/AGENTS.md`、相关 Issue，以及与任务直接相关
 的 `.agents/memory/`、`.agents/knowledge/` 和 `.agents/skills/`。先理解现有
 代码和边界，再决定是否需要修改。
 

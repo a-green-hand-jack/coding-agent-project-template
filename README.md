@@ -21,7 +21,7 @@ Issue/branch/PR 构成可追溯的交付单元。
    bash .agents/scripts/setup-worktree.sh
    ```
 
-5. 让 coding agent 先读取 `AGENTS.md`、`.agents/README.md` 和当前 Issue，
+5. 让 coding agent 先读取 `AGENTS.md`、`.agents/AGENTS.md` 和当前 Issue，
    再开始修改。
 
 ## 目录
@@ -51,3 +51,20 @@ checkpoint 和其他不适合进入 Git 的资产可以放在外部存储；仓�
 `.agents/content-registry.yaml` 登记哪些内容可以跨项目复用、哪些内容必须在新
 项目中重新建立，以及每项复用需要怎样适配。不要把项目专属 memory、knowledge
 或 skill 当作通用资产整目录复制。
+
+## 使用模板版本
+
+GitHub 的 **Use this template** 使用默认分支上的最新模板。需要可复现的版本时，
+从 release tag 创建起点：
+
+```bash
+git clone --branch v0.1.0 --depth 1 \
+  https://github.com/a-green-hand-jack/coding-agent-project-template.git my-project
+cd my-project
+git remote remove origin
+git remote add origin https://github.com/OWNER/PROJECT.git
+git push -u origin main
+```
+
+使用某个版本后，先阅读该版本的 `RELEASE_NOTES.md`；跨项目反馈请按
+`.agents/skills/shared/template-feedback/` 的流程向模板仓库提 Issue。
