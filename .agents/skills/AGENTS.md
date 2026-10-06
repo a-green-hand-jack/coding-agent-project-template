@@ -12,6 +12,8 @@ Shared skills currently included:
 - `shared/cli-first-operations/`
 - `shared/long-running-supervision/`
 - `shared/template-feedback/`
+- `shared/template-adoption/`
+- `shared/template-upgrade/`
 
 Add new skills to this list and to `.agents/content-registry.yaml` in the same
 change.
