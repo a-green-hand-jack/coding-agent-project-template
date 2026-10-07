@@ -89,6 +89,14 @@ bash .agents/scripts/diagnose-environment.sh
 bash .agents/scripts/inspect-state.sh
 ```
 
+## 产品构建与安装骨架
+
+需要 Python 包、容器或安装入口的项目从根目录的 `pyproject.toml`、`Dockerfile`
+和 `install.sh` 占位文件开始，替换项目名、依赖、基础镜像和 public entrypoint。
+包清单只从 `src/` 收集产品代码；`.dockerignore` 排除 `.agents/`、`.project/`、
+`AGENTS.md`、`CLAUDE.md` 和开发文档。非 Python 或不需要镜像的项目可以删除或
+改写对应骨架，并在 adoption/upgrade 迁移地图中记录取舍。
+
 ## 发布
 
 发布前检查：工作树干净、文档与行为一致、资产 manifest 可解析、环境入口可用、

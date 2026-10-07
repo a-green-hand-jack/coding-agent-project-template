@@ -40,6 +40,10 @@ Private 是默认建议：Issue 中的候选筛选、实验结果、日志和路
 | 路径 | 归属 | 用途 |
 | --- | --- | --- |
 | `src/` | 产品面 | 唯一的产品实现入口 |
+| `pyproject.toml` | 产品面 | 可选的 Python 包清单，占位元数据和 `src/` 包边界 |
+| `Dockerfile` | 产品面 | 可选的容器构建入口，占位运行命令 |
+| `install.sh` | 产品面 | 可选的安装入口，占位安装策略 |
+| `.dockerignore` | 产品面 | 容器构建上下文边界，排除开发面 |
 | `tests/` | 产品/开发交界 | 只放回归和接缝检查 |
 | `assets/` | 产品输入 | 大资产的稳定逻辑入口和 manifest；机器相关软链接在 `.project/` |
 | `.project/` | worktree 本地状态 | 运行记录、日志、receipt、临时产物；被 Git 忽略 |
@@ -59,6 +63,11 @@ checkpoint 和其他不适合进入 Git 的资产可以放在外部存储；仓�
 和可重建性。凭据不进入仓库，只通过 `.env.example` 中声明的路径或变量注入。
 
 项目讨论不属于模板产品。模板只保留已经收敛的规则、目录、脚本和占位文档。
+
+发布骨架是可选的，模板不绑定 Python、容器或发布渠道。需要这些入口的项目应
+替换根目录的 `pyproject.toml`、`Dockerfile` 和 `install.sh` 占位内容，并保持包
+清单只从 `src/` 收集产品代码；`.dockerignore` 默认排除 `.agents/`、`.project/`、
+`AGENTS.md`、`CLAUDE.md` 和开发文档，避免 coding-agent 开发面进入产品产物。
 
 `.agents/content-registry.yaml` 登记哪些内容可以跨项目复用、哪些内容必须在新
 项目中重新建立，以及每项复用需要怎样适配。不要把项目专属 memory、knowledge

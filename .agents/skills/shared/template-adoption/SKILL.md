@@ -31,6 +31,9 @@ example assets or project-specific memory and knowledge.
    Map legacy `memory/AGENTS.md` and `knowledge/AGENTS.md` records into one
    topic per file under `shared/` or `project/`, preserving the old text until
    each record has a destination and front matter.
+   Map the optional product release skeleton (`pyproject.toml`, `Dockerfile`,
+   `install.sh`, `.dockerignore`) as adopted, adapted, preserved or a local
+   conflict; never overwrite an existing product build entrypoint.
 4. Show the map and wait for the user's approval when the repository's local
    rules or public behavior would change. Do not silently overwrite files.
 5. On an Issue branch, add or adapt the three planes, `CLAUDE.md -> AGENTS.md`,

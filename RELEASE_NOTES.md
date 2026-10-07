@@ -1,5 +1,11 @@
 # Release notes
 
+## v0.1.4 — 2026-10-07
+
+- Added optional package, container and installer skeletons for product releases.
+- Added `.dockerignore` boundaries and diagnostics to keep development files out of products.
+- Documented adoption and upgrade handling for existing build and install contracts.
+
 ## v0.1.3 — 2026-10-07
 
 - Structured memory and knowledge into shared/project topic directories.

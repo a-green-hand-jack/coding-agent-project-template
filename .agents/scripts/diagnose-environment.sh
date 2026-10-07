@@ -14,6 +14,24 @@ check bash --version
 [[ -f .env.example ]] && printf 'ok   .env.example\n' || { echo 'FAIL .env.example'; fail=1; }
 [[ -f assets/MANIFEST.yaml ]] && printf 'ok   assets manifest\n' || { echo 'FAIL assets manifest'; fail=1; }
 
+for product_file in pyproject.toml Dockerfile install.sh .dockerignore; do
+  if [[ -f "$product_file" ]]; then
+    printf 'ok   optional product file: %s\n' "$product_file"
+  else
+    printf 'skip optional product file: %s\n' "$product_file"
+  fi
+done
+if [[ -f .dockerignore ]]; then
+  for excluded in .agents .project AGENTS.md CLAUDE.md; do
+    if grep -Fxq "$excluded" .dockerignore || grep -Fxq "$excluded/" .dockerignore; then
+      printf 'ok   docker excludes %s\n' "$excluded"
+    else
+      printf 'FAIL docker exclusion missing: %s\n' "$excluded"
+      fail=1
+    fi
+  done
+fi
+
 if git show-ref --verify --quiet refs/heads/dev || {
   [[ "${GITHUB_ACTIONS:-}" == true ]] &&
   git ls-remote --exit-code --heads origin dev >/dev/null 2>&1

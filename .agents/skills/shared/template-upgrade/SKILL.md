@@ -29,6 +29,9 @@ downstream repository with the template tree or merge template history into it.
    Migrate legacy memory and knowledge bodies into the new `shared/` and
    `project/` topic files, update their indexes and registry entries, and keep
    unresolved records readable until classification is complete.
+   Treat the product release skeleton as optional: preserve an existing package,
+   container or installer contract and adapt only the missing pieces, including
+   the development-plane exclusions in `.dockerignore`.
 4. Present the migration map and acceptance plan before mutating a repository when
    conflicts, public behavior or asset paths are involved.
 5. Work on an Issue branch. Apply only approved shared changes, adapt commands and
