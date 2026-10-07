@@ -1,5 +1,11 @@
 # Release notes
 
+## v0.1.3 — 2026-10-07
+
+- Structured memory and knowledge into shared/project topic directories.
+- Added front matter templates and rules-only indexes.
+- Updated governance, adoption and upgrade guidance for legacy single-file records.
+
 ## v0.1.2 — 2026-10-07
 
 - Added idempotent `dev`/`main` branch initialization and diagnostics.
