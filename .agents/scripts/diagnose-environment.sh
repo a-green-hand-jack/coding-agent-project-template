@@ -14,8 +14,11 @@ check bash --version
 [[ -f .env.example ]] && printf 'ok   .env.example\n' || { echo 'FAIL .env.example'; fail=1; }
 [[ -f assets/MANIFEST.yaml ]] && printf 'ok   assets manifest\n' || { echo 'FAIL assets manifest'; fail=1; }
 
-if git show-ref --verify --quiet refs/heads/dev; then
-  printf 'ok   local dev branch\n'
+if git show-ref --verify --quiet refs/heads/dev || {
+  [[ "${GITHUB_ACTIONS:-}" == true ]] &&
+  git show-ref --verify --quiet refs/remotes/origin/dev
+}; then
+  printf 'ok   dev branch available\n'
 else
   echo 'FAIL local dev branch (run .agents/scripts/init-branches.sh)'; fail=1
 fi
