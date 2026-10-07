@@ -12,17 +12,28 @@ Issue/branch/PR 构成可追溯的交付单元。
 
 ## 开始一个新项目
 
-1. 在 GitHub 使用 **Use this template** 创建新仓库。
-2. 修改本 README、`USER.md` 和 `DEV.md` 中的项目占位内容。
-3. 在 `src/` 放入产品代码，在 `tests/` 放入有明确价值的检查。
-4. 在每个 worktree 中运行：
+1. 在 GitHub 使用 **Use this template** 创建新仓库，并优先选择 **Private**。
+2. 在新仓库运行 `bash .agents/scripts/init-branches.sh`，建立 `dev`、推送它并
+   将 GitHub 默认分支设为 `dev`；之后 Issue branch 从 `dev` 创建，发布才合并
+   到 `main`。
+3. 修改本 README、`USER.md` 和 `DEV.md` 中的项目占位内容。
+4. 在 `src/` 放入产品代码，在 `tests/` 放入有明确价值的检查。
+5. 在每个 worktree 中运行：
 
    ```bash
    bash .agents/scripts/setup-worktree.sh
    ```
 
-5. 让 coding agent 先读取 `AGENTS.md`、`.agents/AGENTS.md` 和当前 Issue，
+6. 让 coding agent 先读取 `AGENTS.md`、`.agents/AGENTS.md` 和当前 Issue，
    再开始修改。
+
+### 可见性与公开边界
+
+Private 是默认建议：Issue 中的候选筛选、实验结果、日志和路径通常先留在私有
+仓库。决定公开前，确认没有凭据、私有数据、本机绝对路径或未经脱敏的日志，并
+检查所有 Issue、PR 和发布说明。模板仓库是公开的，向模板仓库反馈时不要放入
+下游私有内容；只保留必要的通用复现信息。仓库可见性与默认分支可用
+`bash .agents/scripts/diagnose-environment.sh` 检查。
 
 ## 目录
 
@@ -30,7 +41,7 @@ Issue/branch/PR 构成可追溯的交付单元。
 | --- | --- | --- |
 | `src/` | 产品面 | 唯一的产品实现入口 |
 | `tests/` | 产品/开发交界 | 只放回归和接缝检查 |
-| `assets/` | 产品输入 | 大资产的可见入口、软链接和 manifest |
+| `assets/` | 产品输入 | 大资产的稳定逻辑入口和 manifest；机器相关软链接在 `.project/` |
 | `.project/` | worktree 本地状态 | 运行记录、日志、receipt、临时产物；被 Git 忽略 |
 | `.agents/` | coding agent 开发面 | memory、knowledge、skills、setup 和诊断 |
 | `CLAUDE.md` | coding agent 入口 | 指向 `AGENTS.md` 的 Claude Code 软链接 |
@@ -43,7 +54,8 @@ Issue/branch/PR 构成可追溯的交付单元。
 项目运行产生的状态不应悄悄写到仓库外的未知位置。状态可以位于 worktree
 下的被忽略 `.project/`，但必须可见、可定位、可迁移。大型 dataset、model
 checkpoint 和其他不适合进入 Git 的资产可以放在外部存储；仓库内必须保留
-`assets/` 中的软链接和 `assets/MANIFEST.yaml`，说明来源、版本、checksum
+`assets/MANIFEST.yaml` 的稳定条目，机器相关软链接放入被忽略的
+`.project/assets.links`，说明来源、版本、checksum
 和可重建性。凭据不进入仓库，只通过 `.env.example` 中声明的路径或变量注入。
 
 项目讨论不属于模板产品。模板只保留已经收敛的规则、目录、脚本和占位文档。

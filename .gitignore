@@ -20,4 +20,9 @@ dist/
 .idea/
 .vscode/
 
-# Asset links and manifests are tracked. Do not add large payloads to Git.
+# Asset payloads and machine-specific links stay local. Keep only the stable
+# manifest, documentation and placeholder tracked in the repository.
+assets/*
+!assets/README.md
+!assets/MANIFEST.yaml
+!assets/.gitkeep

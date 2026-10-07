@@ -17,6 +17,10 @@ done
 mkdir -p "$destination/assets"
 for entry in assets/* assets/.[!.]*; do
   [[ -e "$entry" || -L "$entry" ]] || continue
+  # Tracked files and links reach the destination through Git, not migration.
+  if git --literal-pathspecs ls-files --error-unmatch -- "$entry" >/dev/null 2>&1; then
+    continue
+  fi
   name=${entry#assets/}
   target="$destination/assets/$name"
   if [[ -e "$target" || -L "$target" ]]; then
