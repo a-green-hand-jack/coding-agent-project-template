@@ -60,6 +60,13 @@ bash .agents/scripts/teardown-worktree.sh --migrate-to /path/to/canonical-projec
 机器相关的软链接写在被忽略的 `.project/assets.links` 中，由 setup 创建；不要
 提交软链接或其绝对目标路径。
 
+## Memory 与 knowledge
+
+`.agents/memory/` 记录长期决策，`.agents/knowledge/` 记录有来源和刷新条件的
+事实。两个目录的 `AGENTS.md` 只包含规则和简短索引；正文按主题拆成独立 Markdown
+文件，放入 `shared/` 或 `project/`，并使用对应的 `ENTRY_TEMPLATE.md` front
+matter。新增或迁移条目时同步更新分组索引和 `content-registry.yaml`。
+
 ## 分支模型与仓库可见性
 
 模板采用 `dev` 集成、`main` 发布的双分支模型。新仓库第一次 setup 会在可用的

@@ -28,6 +28,9 @@ example assets or project-specific memory and knowledge.
    - reject: content that would duplicate or hide an existing source of truth.
    Include repository visibility and the `dev`/`main` branch model in the map;
    confirm the target visibility before writing public Issues, PRs or releases.
+   Map legacy `memory/AGENTS.md` and `knowledge/AGENTS.md` records into one
+   topic per file under `shared/` or `project/`, preserving the old text until
+   each record has a destination and front matter.
 4. Show the map and wait for the user's approval when the repository's local
    rules or public behavior would change. Do not silently overwrite files.
 5. On an Issue branch, add or adapt the three planes, `CLAUDE.md -> AGENTS.md`,

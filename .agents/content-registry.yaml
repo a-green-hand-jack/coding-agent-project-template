@@ -50,11 +50,29 @@ entries:
     scope: shared_with_adaptation
     note: Adapt asset classes, storage roots and migration evidence.
   - path: .agents/memory/
+    scope: shared_with_adaptation
+    note: Keep the directory rules and indexes; destination records belong under shared/ or project/.
+  - path: .agents/memory/shared/
+    scope: shared
+    note: Reusable durable decisions; adapt paths and commands before reuse.
+  - path: .agents/memory/project/
     scope: project
-    note: Record destination decisions only; do not copy template history.
+    note: Decisions owned by the destination repository; never copy wholesale.
+  - path: .agents/memory/ENTRY_TEMPLATE.md
+    scope: shared
+    note: Reusable record shape; keep the destination source and scope accurate.
   - path: .agents/knowledge/
+    scope: shared_with_adaptation
+    note: Keep the directory rules and indexes; destination facts belong under shared/ or project/.
+  - path: .agents/knowledge/shared/
+    scope: shared
+    note: Reusable sourced facts with a refresh condition; adapt sources before reuse.
+  - path: .agents/knowledge/project/
     scope: project
-    note: Machine, provider, version and benchmark facts are destination-specific.
+    note: Machine, provider, version and benchmark facts owned by the destination.
+  - path: .agents/knowledge/ENTRY_TEMPLATE.md
+    scope: shared
+    note: Reusable record shape; keep the destination source, scope and refresh condition accurate.
   - path: .agents/skills/
     scope: project
     note: The directory is reusable as a layout; its non-shared contents are local.
