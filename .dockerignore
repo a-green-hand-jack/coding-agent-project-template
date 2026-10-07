@@ -1,0 +1,15 @@
+.git/
+.github/
+.agents/
+.project/
+AGENTS.md
+CLAUDE.md
+DEV.md
+README.md
+RELEASE_NOTES.md
+USER.md
+assets/
+tests/
+*.log
+*.py[cod]
+__pycache__/

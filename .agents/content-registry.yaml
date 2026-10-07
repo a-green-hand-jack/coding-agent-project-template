@@ -91,3 +91,15 @@ entries:
   - path: assets/MANIFEST.yaml
     scope: shared_with_adaptation
     note: Keep the schema, then register the destination project's actual assets.
+  - path: pyproject.toml
+    scope: shared_with_adaptation
+    note: Replace project metadata and dependencies; keep the package boundary under src/.
+  - path: Dockerfile
+    scope: shared_with_adaptation
+    note: Replace the base image and entrypoint; keep development-plane files out of the build context.
+  - path: install.sh
+    scope: shared_with_adaptation
+    note: Replace the installation policy and retain a stable public installer entrypoint.
+  - path: .dockerignore
+    scope: shared_with_adaptation
+    note: Adapt product inputs but keep .agents, .project and agent instruction files excluded.

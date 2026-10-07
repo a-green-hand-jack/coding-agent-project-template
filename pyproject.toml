@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "replace-with-project-name"
+version = "0.0.0"
+description = "Replace this placeholder with the product description."
+requires-python = ">=3.10"
+dependencies = []
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["replace_with_project_name*"]
+
+# Keep the package boundary under src/. Add product modules there and update the
+# project metadata above; do not include .agents/, .project/ or repository docs.
