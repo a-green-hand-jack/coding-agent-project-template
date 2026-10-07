@@ -1,5 +1,5 @@
 # One entry per external or unusually large asset.
-# The target of a symlink is intentionally machine-specific; keep the stable
-# repository-relative entry in assets/ and record the target in local state.
+# Link targets are intentionally machine-specific. Keep only the stable,
+# repository-relative asset id here; record local targets in .project/assets.links.
 version: 1
 assets: []

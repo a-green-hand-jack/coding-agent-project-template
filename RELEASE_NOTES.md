@@ -1,5 +1,12 @@
 # Release notes
 
+## v0.1.2 — 2026-10-07
+
+- Added idempotent `dev`/`main` branch initialization and diagnostics.
+- Documented Herdr worktree and new-pane agent handoff for Issue work.
+- Kept machine-specific asset links out of Git and fixed tracked-asset migration.
+- Added repository visibility guidance and checks for public writes and template feedback.
+
 ## v0.1.1 — 2026-10-06
 
 - Added `template-adoption` for migrating existing repositories into the template.

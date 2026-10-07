@@ -20,6 +20,11 @@
 ## 工作方式
 
 - 先通过 Issue 收敛范围、设计和验收，再修改代码；
+- 开始实现 Issue 时不要在当前 agent 窗口直接切分支。通过 Herdr 的原生
+  worktree 能力从 `dev` 创建 Issue worktree，在新 pane 启动独立 agent session，
+  运行 `bash .agents/scripts/setup-worktree.sh`，再用
+  `bash .agents/scripts/new-agent-prompt.sh <issue-number>` 生成交接 prompt。
+  Herdr 不可用时报告阻塞，不回退到当前窗口直接实现。
 - 先删掉不必要的规则，再考虑增加规则；
 - 不为特定角色、任务或 benchmark 写特例；
 - 不写与代码重复的长注释和文档；
@@ -29,6 +34,8 @@
 - 运行操作使用项目自己的脚本和 CLI，不创建全局命令；
 - 保留无关修改，不重置、覆盖或提交别人的工作；
 - 除非用户明确要求，不提交或推送 Git。
+- 对外可见的 Issue、PR、推送或发布写入前先检查仓库可见性；无论仓库公开还是
+  私有，都不得写入凭据、私有数据、本机绝对路径或未经脱敏的日志。
 
 ## 上下文与状态
 

@@ -14,6 +14,31 @@ check bash --version
 [[ -f .env.example ]] && printf 'ok   .env.example\n' || { echo 'FAIL .env.example'; fail=1; }
 [[ -f assets/MANIFEST.yaml ]] && printf 'ok   assets manifest\n' || { echo 'FAIL assets manifest'; fail=1; }
 
+if git show-ref --verify --quiet refs/heads/dev; then
+  printf 'ok   local dev branch\n'
+else
+  echo 'FAIL local dev branch (run .agents/scripts/init-branches.sh)'; fail=1
+fi
+if git remote get-url origin >/dev/null 2>&1 && git ls-remote --exit-code --heads origin dev >/dev/null 2>&1; then
+  printf 'ok   origin/dev branch\n'
+else
+  echo 'FAIL origin/dev branch (run .agents/scripts/init-branches.sh)'; fail=1
+fi
+
+if command -v gh >/dev/null 2>&1 && repo_view=$(gh repo view --json visibility,nameWithOwner,defaultBranchRef 2>/dev/null); then
+  visibility=$(jq -r .visibility <<<"$repo_view")
+  default_branch=$(jq -r '.defaultBranchRef.name // "unknown"' <<<"$repo_view")
+  printf 'ok   repository visibility: %s\n' "$visibility"
+  if [[ "$default_branch" == dev ]]; then
+    printf 'ok   GitHub default branch: dev\n'
+  else
+    printf 'FAIL GitHub default branch: %s (run .agents/scripts/init-branches.sh)\n' "$default_branch"
+    fail=1
+  fi
+else
+  echo 'skip repository visibility/default branch (gh unavailable or unauthenticated)'
+fi
+
 if [[ -f .project/home ]]; then
   expected=$(cat .project/home)
   [[ "$expected" == "$root" ]] && printf 'ok   worktree marker\n' || { echo 'FAIL worktree marker'; fail=1; }
@@ -28,5 +53,16 @@ while IFS= read -r -d '' link; do
     fail=1
   fi
 done < <(find assets -type l -print0 2>/dev/null)
+
+if [[ -f .project/assets.links ]]; then
+  while IFS='=' read -r name target; do
+    [[ -z "$name" || "$name" == \#* ]] && continue
+    if [[ ! -e "assets/$name" ]]; then
+      printf 'FAIL missing configured asset link: assets/%s\n' "$name"
+      fail=1
+    fi
+    [[ -e "$target" ]] || { printf 'FAIL missing configured asset target: %s\n' "$target"; fail=1; }
+  done < .project/assets.links
+fi
 
 exit "$fail"

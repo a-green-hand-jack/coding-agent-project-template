@@ -24,6 +24,8 @@ downstream repository with the template tree or merge template history into it.
 3. Classify each difference as shared addition, required adaptation, local conflict,
    obsolete template behavior or intentionally skipped change. Search local
    Issues, memory and skills before changing an existing rule.
+   Treat branch-model and visibility guidance as required shared additions, and
+   keep machine-specific asset links out of Git during the migration.
 4. Present the migration map and acceptance plan before mutating a repository when
    conflicts, public behavior or asset paths are involved.
 5. Work on an Issue branch. Apply only approved shared changes, adapt commands and

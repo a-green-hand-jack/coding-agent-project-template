@@ -21,6 +21,9 @@ missing capability or cross-project improvement in the template itself.
    - compatibility, migration and cleanup impact.
 4. Keep downstream work moving with a local workaround only when it is clearly
    marked as temporary and linked to the upstream Issue.
+   The template repository is public: never include downstream private content,
+   credentials, local paths or raw logs in the feedback Issue. Describe only the
+   smallest redacted reproduction needed to make the report reusable.
 5. When the template change lands, update the downstream project through the
    normal Issue, branch and PR process. Do not copy the template repository's
    history or private development state into the downstream project.

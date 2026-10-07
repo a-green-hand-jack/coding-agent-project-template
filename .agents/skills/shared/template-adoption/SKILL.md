@@ -26,6 +26,8 @@ example assets or project-specific memory and knowledge.
    - adapt: paths, commands, product docs, environment and evidence;
    - preserve: existing product code, domain docs, tests and project memory;
    - reject: content that would duplicate or hide an existing source of truth.
+   Include repository visibility and the `dev`/`main` branch model in the map;
+   confirm the target visibility before writing public Issues, PRs or releases.
 4. Show the map and wait for the user's approval when the repository's local
    rules or public behavior would change. Do not silently overwrite files.
 5. On an Issue branch, add or adapt the three planes, `CLAUDE.md -> AGENTS.md`,
