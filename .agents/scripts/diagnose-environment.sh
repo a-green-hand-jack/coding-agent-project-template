@@ -16,7 +16,7 @@ check bash --version
 
 if git show-ref --verify --quiet refs/heads/dev || {
   [[ "${GITHUB_ACTIONS:-}" == true ]] &&
-  git show-ref --verify --quiet refs/remotes/origin/dev
+  git ls-remote --exit-code --heads origin dev >/dev/null 2>&1
 }; then
   printf 'ok   dev branch available\n'
 else
