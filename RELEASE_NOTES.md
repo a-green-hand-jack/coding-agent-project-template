@@ -1,5 +1,11 @@
 # Release notes
 
+## v0.1.5 — 2026-10-08
+
+- Added the shared `release-doc-audit` skill for pre-release documentation checks.
+- Recorded the adopted template repository and version in the content registry.
+- Classified template release notes and separated them from downstream release history.
+
 ## v0.1.4 — 2026-10-07
 
 - Added optional package, container and installer skeletons for product releases.

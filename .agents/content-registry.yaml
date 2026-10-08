@@ -2,6 +2,9 @@ schema_version: 1
 purpose: >-
   Record which development-plane content is reusable across repositories and
   which content belongs to one concrete project.
+template:
+  repository: https://github.com/a-green-hand-jack/coding-agent-project-template
+  version: v0.1.5
 default_scope: project
 matching: Most specific path wins; explicit entries override directory defaults.
 classes:
@@ -46,6 +49,9 @@ entries:
   - path: .agents/skills/shared/template-upgrade/
     scope: shared_with_adaptation
     note: Adapt current and target release tags, local conflicts and migration evidence.
+  - path: .agents/skills/shared/release-doc-audit/
+    scope: shared
+    note: Run the documented release audit against the destination tree and target tag.
   - path: .agents/skills/shared/asset-lifecycle/
     scope: shared_with_adaptation
     note: Adapt asset classes, storage roots and migration evidence.
@@ -82,6 +88,9 @@ entries:
   - path: .agents/content-registry.yaml
     scope: shared_with_adaptation
     note: Rewrite entries as the destination project grows; do not copy template history.
+  - path: RELEASE_NOTES.md
+    scope: template
+    note: Template release history stays in the template repository; downstream projects keep their own release notes.
   - path: .agents/scripts/
     scope: shared_with_adaptation
     note: Preserve lifecycle boundaries but adapt project setup hooks and tools.

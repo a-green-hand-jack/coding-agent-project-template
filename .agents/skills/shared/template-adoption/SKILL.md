@@ -34,6 +34,8 @@ example assets or project-specific memory and knowledge.
    Map the optional product release skeleton (`pyproject.toml`, `Dockerfile`,
    `install.sh`, `.dockerignore`) as adopted, adapted, preserved or a local
    conflict; never overwrite an existing product build entrypoint.
+   Record the adopted template repository and tag in the registry's `template`
+   field; keep the downstream project's own `RELEASE_NOTES.md` separate.
 4. Show the map and wait for the user's approval when the repository's local
    rules or public behavior would change. Do not silently overwrite files.
 5. On an Issue branch, add or adapt the three planes, `CLAUDE.md -> AGENTS.md`,

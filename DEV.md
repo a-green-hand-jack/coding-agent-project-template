@@ -100,8 +100,10 @@ bash .agents/scripts/inspect-state.sh
 ## 发布
 
 发布前检查：工作树干净、文档与行为一致、资产 manifest 可解析、环境入口可用、
-适用的回归和真实运行证据已记录。发布只从 `main` 或 release branch 进行，
-并更新 `RELEASE_NOTES.md`。
+适用的回归和真实运行证据已记录。运行
+`.agents/skills/shared/release-doc-audit/`，处理或记录每个文档审计发现。发布只
+从 `main` 或 release branch 进行，并更新下游项目自己的 `RELEASE_NOTES.md`；
+模板仓库的 `RELEASE_NOTES.md` 只记录模板版本，不作为下游版本记录。
 
 ## CLI 与长时运行监督
 
