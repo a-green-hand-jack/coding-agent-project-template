@@ -1,5 +1,9 @@
 # Release notes
 
+## v0.1.6 — 2026-10-08
+
+- Fixed release-doc-audit version scanning to include hidden development-plane files.
+
 ## v0.1.5 — 2026-10-08
 
 - Added the shared `release-doc-audit` skill for pre-release documentation checks.
