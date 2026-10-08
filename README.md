@@ -87,5 +87,6 @@ git remote add origin https://github.com/OWNER/PROJECT.git
 git push -u origin main
 ```
 
-使用某个版本后，先阅读该版本的 `RELEASE_NOTES.md`；跨项目反馈请按
+使用某个模板版本后，先阅读模板仓库对应 tag 中的 `RELEASE_NOTES.md`；下游项目
+应维护自己的 `RELEASE_NOTES.md`，不要把模板发布历史拷入下游。跨项目反馈请按
 `.agents/skills/shared/template-feedback/` 的流程向模板仓库提 Issue。

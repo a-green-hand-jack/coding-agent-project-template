@@ -17,8 +17,9 @@ downstream repository with the template tree or merge template history into it.
 
 ## Procedure
 
-1. Identify the current template version from the downstream registry and record
-   the target release tag, branch, worktree, clean/dirty state and current tests.
+1. Identify `template.repository` and `template.version` from the downstream
+   registry and record the target release tag, branch, worktree, clean/dirty
+   state and current tests.
 2. Fetch the target template tag and inspect its release notes and registry. Build
    a path-level migration map from current version to target.
 3. Classify each difference as shared addition, required adaptation, local conflict,
@@ -32,11 +33,13 @@ downstream repository with the template tree or merge template history into it.
    Treat the product release skeleton as optional: preserve an existing package,
    container or installer contract and adapt only the missing pieces, including
    the development-plane exclusions in `.dockerignore`.
+   Treat the template repository's `RELEASE_NOTES.md` as template-only content;
+   it is not copied into the downstream project's release history.
 4. Present the migration map and acceptance plan before mutating a repository when
    conflicts, public behavior or asset paths are involved.
 5. Work on an Issue branch. Apply only approved shared changes, adapt commands and
    paths, update `CLAUDE.md` and `.agents/**/AGENTS.md` consistently, and update
-   the downstream content registry and recorded template version.
+   the downstream content registry's `template.version` to the target tag.
 6. Run setup, diagnostics, public CLI checks, relevant seam tests and any required
    long-running supervision checks. Verify assets and worktree state remain
    visible and no local product files were overwritten.

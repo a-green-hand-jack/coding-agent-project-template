@@ -14,6 +14,13 @@ check bash --version
 [[ -f .env.example ]] && printf 'ok   .env.example\n' || { echo 'FAIL .env.example'; fail=1; }
 [[ -f assets/MANIFEST.yaml ]] && printf 'ok   assets manifest\n' || { echo 'FAIL assets manifest'; fail=1; }
 
+template_version=$(sed -n '/^template:/,/^[^[:space:]]/p' .agents/content-registry.yaml 2>/dev/null | sed -n 's/^  version: *//p' | head -n 1)
+if [[ -n "$template_version" ]]; then
+  printf 'ok   adopted template version: %s\n' "$template_version"
+else
+  echo 'FAIL adopted template version in .agents/content-registry.yaml'; fail=1
+fi
+
 for product_file in pyproject.toml Dockerfile install.sh .dockerignore; do
   if [[ -f "$product_file" ]]; then
     printf 'ok   optional product file: %s\n' "$product_file"

@@ -27,7 +27,7 @@ agent。它会先检查仓库并给出迁移地图；涉及本地规则或产品
 
 ```text
 请使用本仓库采用的 template-adoption skill，把当前项目迁移到
-https://github.com/a-green-hand-jack/coding-agent-project-template 的 v0.1.2。
+https://github.com/a-green-hand-jack/coding-agent-project-template 的 <TEMPLATE_TAG>。
 先读取当前仓库的 AGENTS.md、开发文档、git 状态、入口、运行状态和资产布局，
 再读取目标模板的 release notes、AGENTS.md 和相关 shared skills。不要替换产品
 代码、项目历史、领域文档、现有测试或项目专属 memory/knowledge/skills。
@@ -43,9 +43,9 @@ https://github.com/a-green-hand-jack/coding-agent-project-template 的 v0.1.2。
 
 ```text
 请使用本仓库采用的 template-upgrade skill，把当前项目从登记的模板版本升级到
-https://github.com/a-green-hand-jack/coding-agent-project-template 的 v0.1.2。
+https://github.com/a-green-hand-jack/coding-agent-project-template 的 <TEMPLATE_TAG>。
 先检查当前 template registry、git 状态、Issue、memory、knowledge、skills、
-资产和 worktree 状态，再比较当前版本与 v0.1.2 的 release notes 和 registry。
+资产和 worktree 状态，再比较当前版本与 <TEMPLATE_TAG> 的 release notes 和 registry。
 先输出逐路径迁移地图，区分 shared addition、required adaptation、local
 conflict、obsolete behavior 和 intentionally skipped change；涉及冲突、公开
 行为或资产路径时等待我的批准。批准后在 Issue branch 中只应用批准的变化，

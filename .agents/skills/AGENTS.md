@@ -14,6 +14,7 @@ Shared skills currently included:
 - `shared/template-feedback/`
 - `shared/template-adoption/`
 - `shared/template-upgrade/`
+- `shared/release-doc-audit/`
 
 Add new skills to this list and to `.agents/content-registry.yaml` in the same
 change.
