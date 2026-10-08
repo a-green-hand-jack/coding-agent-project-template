@@ -13,7 +13,7 @@ adapting the repository URL and release-note ownership.
 1. Confirm the target release identity and version record:
 
    ```bash
-   test -n "${TARGET_TAG:?set TARGET_TAG, for example v0.1.5}"
+   test -n "${TARGET_TAG:?set TARGET_TAG, for example v0.1.6}"
    grep -nE "^## ${TARGET_TAG//./\\.}([[:space:]]|$)" RELEASE_NOTES.md
    grep -A2 '^template:' .agents/content-registry.yaml
    ```
@@ -25,7 +25,7 @@ adapting the repository URL and release-note ownership.
 2. Enumerate version-like references and classify every result:
 
    ```bash
-   rg -n --glob '!*.lock' --glob '!.project/**' --glob '!.git/**' \
+   rg --hidden -n --glob '!*.lock' --glob '!.project/**' --glob '!.git/**' \
      -o 'v[0-9]+\.[0-9]+\.[0-9]+' .
    ```
 

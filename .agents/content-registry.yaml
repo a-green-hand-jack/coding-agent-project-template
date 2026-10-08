@@ -4,7 +4,7 @@ purpose: >-
   which content belongs to one concrete project.
 template:
   repository: https://github.com/a-green-hand-jack/coding-agent-project-template
-  version: v0.1.5
+  version: v0.1.6
 default_scope: project
 matching: Most specific path wins; explicit entries override directory defaults.
 classes:
