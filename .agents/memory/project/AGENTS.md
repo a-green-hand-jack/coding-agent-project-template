@@ -7,4 +7,6 @@ or superseded status.
 
 ## Index
 
-No project memory records are present in this template yet.
+- [`harvest-2026-10-13.md`](harvest-2026-10-13.md) — the first downstream
+  harvest: adopter set, classified deltas, what became shared content in v0.1.7,
+  and the watch items.
