@@ -91,6 +91,9 @@ entries:
   - path: RELEASE_NOTES.md
     scope: template
     note: Template release history stays in the template repository; downstream projects keep their own release notes.
+  - path: .agents/skills/template-harvest/
+    scope: template
+    note: Maintainer procedure that collects settled downstream practice; keep it in the template repository and never copy it downstream.
   - path: .agents/scripts/
     scope: shared_with_adaptation
     note: Preserve lifecycle boundaries but adapt project setup hooks and tools.
