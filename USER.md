@@ -9,7 +9,7 @@
 ## 选择模板版本
 
 普通使用从 GitHub 的 **Use this template** 开始，它使用默认分支的最新版本。
-需要固定版本时，从 `v0.1.0` 等 release tag 浅克隆，再替换为新项目的 remote；
+需要固定版本时，从 release tag 浅克隆，再替换为新项目的 remote；
 具体命令见根目录 [README.md](README.md) 的“使用模板版本”。
 
 创建下游仓库时优先选择 **Private**，并在第一次 setup 时确认仓库可见性和默认

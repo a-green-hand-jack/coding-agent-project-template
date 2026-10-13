@@ -97,6 +97,19 @@ bash .agents/scripts/inspect-state.sh
 `AGENTS.md`、`CLAUDE.md` 和开发文档。非 Python 或不需要镜像的项目可以删除或
 改写对应骨架，并在 adoption/upgrade 迁移地图中记录取舍。
 
+## 与模板的关系
+
+本仓库是 `coding-agent-project-template` 的模板仓库本身；当前模板版本记录在
+`.agents/content-registry.yaml` 的 `template.version`，模板自己的发布历史在
+`RELEASE_NOTES.md`。
+
+从模板创建的项目在自己的 registry 里记录它采用的 `template.repository` 与
+`template.version`，并保留自己的 `RELEASE_NOTES.md`，不复制模板的发布历史。
+升级到新的模板版本用 `.agents/skills/shared/template-upgrade/`；发现模板本身的
+缺陷或缺失能力时用 `.agents/skills/shared/template-feedback/` 向上游开 Issue；
+模板维护者主动收集下游已沉淀的通用实践用 `.agents/skills/template-harvest/`
+（只属于模板仓库，下游不复制）。只有 URL 是项目专用的，其余规则通用。
+
 ## 发布
 
 发布前检查：工作树干净、文档与行为一致、资产 manifest 可解析、环境入口可用、

@@ -103,15 +103,23 @@ while IFS= read -r -d '' link; do
   fi
 done < <(find assets -type l -print0 2>/dev/null)
 
-if [[ -f .project/assets.links ]]; then
+# A linked worktree also inherits the primary checkout's link mappings, which
+# setup-worktree.sh creates.
+links_files=(.project/assets.links)
+common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null || true)
+if [[ "$(basename "$common")" == .git && "$(dirname "$common")" != "$root" ]]; then
+  links_files+=("$(dirname "$common")/.project/assets.links")
+fi
+for links_file in "${links_files[@]}"; do
+  [[ -f "$links_file" ]] || continue
   while IFS='=' read -r name target; do
     [[ -z "$name" || "$name" == \#* ]] && continue
     if [[ ! -e "assets/$name" ]]; then
-      printf 'FAIL missing configured asset link: assets/%s\n' "$name"
+      printf 'FAIL missing configured asset link: assets/%s (run setup-worktree.sh)\n' "$name"
       fail=1
     fi
     [[ -e "$target" ]] || { printf 'FAIL missing configured asset target: %s\n' "$target"; fail=1; }
-  done < .project/assets.links
-fi
+  done < "$links_file"
+done
 
 exit "$fail"

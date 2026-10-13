@@ -76,10 +76,11 @@ checkpoint 和其他不适合进入 Git 的资产可以放在外部存储；仓�
 ## 使用模板版本
 
 GitHub 的 **Use this template** 使用默认分支上的最新模板。需要可复现的版本时，
-从 release tag 创建起点：
+从 release tag 创建起点（把 `<TEMPLATE_TAG>` 换成 Releases 页上的目标 tag，
+不要用默认分支的浮动内容）：
 
 ```bash
-git clone --branch v0.1.0 --depth 1 \
+git clone --branch <TEMPLATE_TAG> --depth 1 \
   https://github.com/a-green-hand-jack/coding-agent-project-template.git my-project
 cd my-project
 git remote remove origin
