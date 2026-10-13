@@ -19,7 +19,10 @@ downstream repository with the template tree or merge template history into it.
 
 1. Identify `template.repository` and `template.version` from the downstream
    registry and record the target release tag, branch, worktree, clean/dirty
-   state and current tests.
+   state and current tests. If the registry has no `template:` block or no
+   `version:` line (repositories adopted before `v0.1.5`), backfill it first as
+   described in "Backfill a missing template record"; without it the upgrade has
+   no recorded source version.
 2. Fetch the target template tag and inspect its release notes and registry. Build
    a path-level migration map from current version to target.
 3. Classify each difference as shared addition, required adaptation, local conflict,
@@ -39,7 +42,8 @@ downstream repository with the template tree or merge template history into it.
    conflicts, public behavior or asset paths are involved.
 5. Work on an Issue branch. Apply only approved shared changes, adapt commands and
    paths, update `CLAUDE.md` and `.agents/**/AGENTS.md` consistently, and update
-   the downstream content registry's `template.version` to the target tag.
+   the downstream content registry's `template.version` to the target tag
+   (creating the block if the backfill has not been done yet).
 6. Run setup, diagnostics, public CLI checks, relevant seam tests and any required
    long-running supervision checks. Verify assets and worktree state remain
    visible and no local product files were overwritten.
@@ -49,3 +53,37 @@ downstream repository with the template tree or merge template history into it.
 
 An upgrade is complete only when the downstream project can explain which template
 capabilities it adopted and which it intentionally kept different.
+
+## Backfill a missing template record
+
+A repository adopted before `v0.1.5` records its adopted release only in its
+developer docs or git history, and `.agents/scripts/diagnose-environment.sh`
+reports a missing registry `template.version`. On the Issue branch, before the
+migration map:
+
+1. Read the adopted tag from the evidence:
+
+   ```bash
+   grep -nE 'v[0-9]+\.[0-9]+\.[0-9]+' DEV.md
+   git log --reverse --format='%h %s' -- .agents/content-registry.yaml
+   ```
+
+   The developer docs or the adoption commit normally name the tag. If they
+   disagree or neither names one, do not guess: compare the repository's
+   template-derived files with the candidate release tags, or ask the maintainer.
+   Record which evidence the tag came from.
+2. Insert the block, replacing `<TAG>` with the adopted tag. The command adds it
+   before the first top-level key that follows `purpose:`. If a `template:` key
+   already exists without `version:`, add the `version:` line by hand instead:
+
+   ```bash
+   awk -v tag=<TAG> '/^(default_scope|matching|classes|entries):/ && !done { print "template:"; print "  repository: https://github.com/a-green-hand-jack/coding-agent-project-template"; print "  version: " tag; done = 1 } { print }' .agents/content-registry.yaml > .agents/content-registry.yaml.new && mv .agents/content-registry.yaml.new .agents/content-registry.yaml
+   ```
+
+3. Verify with `grep -A2 '^template:' .agents/content-registry.yaml`, and with
+   `bash .agents/scripts/diagnose-environment.sh` once the target scripts are
+   in place.
+
+The backfilled value is the release the repository **adopted**. Step 5 of the
+procedure later moves it to the target tag; list the backfill in the migration
+report with its evidence.

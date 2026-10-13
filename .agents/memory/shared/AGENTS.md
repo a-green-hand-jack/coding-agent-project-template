@@ -7,4 +7,7 @@ or superseded status.
 
 ## Index
 
-No shared memory records are present in this template yet.
+- [`issue-in-herdr-worktree.md`](issue-in-herdr-worktree.md) — implement each
+  Issue in its own Herdr worktree and agent session.
+- [`issue-close-out.md`](issue-close-out.md) — close out an Issue's worktree
+  automatically after its PR merges.
