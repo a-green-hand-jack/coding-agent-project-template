@@ -105,6 +105,10 @@ bash .agents/scripts/inspect-state.sh
 从 `main` 或 release branch 进行，并更新下游项目自己的 `RELEASE_NOTES.md`；
 模板仓库的 `RELEASE_NOTES.md` 只记录模板版本，不作为下游版本记录。
 
+模板仓库发布前还要运行 `.agents/skills/template-harvest/`，收集下游已沉淀的通用
+实践，并把每个候选的分类与 Issue 记录下来；没有可访问的下游时在发布记录中写明。
+该 skill 只属于模板仓库，下游项目不复制，也不在自己的发布清单中引用。
+
 ## CLI 与长时运行监督
 
 项目的 setup、run、status、monitor、checkpoint、resume、artifact 和 release
