@@ -97,6 +97,19 @@ bash .agents/scripts/inspect-state.sh
 `AGENTS.md`、`CLAUDE.md` 和开发文档。非 Python 或不需要镜像的项目可以删除或
 改写对应骨架，并在 adoption/upgrade 迁移地图中记录取舍。
 
+## 与模板的关系
+
+本仓库是 `coding-agent-project-template` 的模板仓库本身；当前模板版本记录在
+`.agents/content-registry.yaml` 的 `template.version`，模板自己的发布历史在
+`RELEASE_NOTES.md`。
+
+从模板创建的项目在自己的 registry 里记录它采用的 `template.repository` 与
+`template.version`，并保留自己的 `RELEASE_NOTES.md`，不复制模板的发布历史。
+升级到新的模板版本用 `.agents/skills/shared/template-upgrade/`；发现模板本身的
+缺陷或缺失能力时用 `.agents/skills/shared/template-feedback/` 向上游开 Issue；
+模板维护者主动收集下游已沉淀的通用实践用 `.agents/skills/template-harvest/`
+（只属于模板仓库，下游不复制）。只有 URL 是项目专用的，其余规则通用。
+
 ## 发布
 
 发布前检查：工作树干净、文档与行为一致、资产 manifest 可解析、环境入口可用、
@@ -104,6 +117,10 @@ bash .agents/scripts/inspect-state.sh
 `.agents/skills/shared/release-doc-audit/`，处理或记录每个文档审计发现。发布只
 从 `main` 或 release branch 进行，并更新下游项目自己的 `RELEASE_NOTES.md`；
 模板仓库的 `RELEASE_NOTES.md` 只记录模板版本，不作为下游版本记录。
+
+模板仓库发布前还要运行 `.agents/skills/template-harvest/`，收集下游已沉淀的通用
+实践，并把每个候选的分类与 Issue 记录下来；没有可访问的下游时在发布记录中写明。
+该 skill 只属于模板仓库，下游项目不复制，也不在自己的发布清单中引用。
 
 ## CLI 与长时运行监督
 

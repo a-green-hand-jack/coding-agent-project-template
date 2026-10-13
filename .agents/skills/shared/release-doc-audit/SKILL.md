@@ -13,7 +13,7 @@ adapting the repository URL and release-note ownership.
 1. Confirm the target release identity and version record:
 
    ```bash
-   test -n "${TARGET_TAG:?set TARGET_TAG, for example v0.1.6}"
+   test -n "${TARGET_TAG:?set TARGET_TAG, for example v0.1.7}"
    grep -nE "^## ${TARGET_TAG//./\\.}([[:space:]]|$)" RELEASE_NOTES.md
    grep -A2 '^template:' .agents/content-registry.yaml
    ```

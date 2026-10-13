@@ -1,20 +1,109 @@
 #!/usr/bin/env bash
+# Copy what a retiring worktree must keep into the canonical (primary) checkout,
+# check the copy, and say what was left behind and why. Nothing is deleted.
+#
+#   migrate-assets.sh --to CANONICAL_PROJECT [--also NAME]... [--skip NAME=REASON]...
+#
+# Every top-level entry of .project/ gets one line: its action, size and why it
+# may be left behind. An entry this project has no rule for, and that holds
+# something, stops the migration (exit 3) until it is named with --also (copy it
+# too) or --skip (leave it, with the reason). Exit 1: an asset or link mapping
+# would be overwritten, or the copy does not match its source.
 set -euo pipefail
 
-usage() { echo "usage: $0 --to CANONICAL_PROJECT" >&2; exit 2; }
+usage() {
+  echo "usage: $0 --to CANONICAL_PROJECT [--also NAME]... [--skip NAME=REASON]..." >&2
+  exit 2
+}
 [[ "${1:-}" == '--to' && -n "${2:-}" ]] || usage
 destination=$(realpath -m "$2")
+shift 2
+also_list=
+skip_list=
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --also) [[ -n "${2:-}" ]] || usage; also_list+="$2"$'\n'; shift 2 ;;
+    --skip) [[ "${2:-}" == ?*=?* ]] || usage; skip_list+="$2"$'\n'; shift 2 ;;
+    *) usage ;;
+  esac
+done
+
 root=$(git rev-parse --show-toplevel)
 cd "$root"
 [[ "$destination" != "$root" && "$destination" != "$root"/* ]] || { echo 'destination must be outside this worktree' >&2; exit 1; }
-mkdir -p "$destination/.project/migrations"
-stamp=$(date -u +%Y%m%dT%H%M%SZ)
-migration="$destination/.project/migrations/$(basename "$root")-$stamp"
-mkdir -p "$migration"
-for name in state runs artifacts manifest; do
-  [[ -e ".project/$name" ]] && cp -a ".project/$name" "$migration/"
+
+# What this project does with each top-level entry of .project/ (adapt this table
+# per project). Prints "<action>|<why>": copy, merge, drop or unknown.
+classify() {
+  case $1 in
+    state|runs|artifacts|manifest) echo 'copy|' ;;
+    assets.links) echo "merge|the mappings are added to the destination's .project/assets.links" ;;
+    home|worktree.env) echo 'drop|setup-worktree.sh rewrites it and it only names this worktree' ;;
+    *) echo 'unknown|' ;;
+  esac
+}
+
+in_list() { printf '%s' "$2" | grep -qxF -- "$1"; }
+skip_reason() { printf '%s' "$skip_list" | awk -F= -v n="$1" '$1 == n { sub(/^[^=]*=/, ""); print; exit }'; }
+holds_nothing() {
+  if [[ -L "$1" ]]; then return 1; fi
+  if [[ -d "$1" ]]; then [[ -z "$(find "$1" ! -type d -print -quit)" ]]; else [[ ! -s "$1" ]]; fi
+}
+
+report=
+say() { printf '%s\n' "$*"; report+="$*"$'\n'; }
+
+fatal=0
+fail_with() { [[ $fatal -ne 0 ]] || fatal=$1; }
+
+# -- .project/ entries ------------------------------------------------------------------------
+say '## .project/ entries'
+say "$(printf '%-20s %-6s %7s  %s' ENTRY ACTION SIZE WHY)"
+copy_entries=
+merge_links=0
+seen=
+for path in .project/* .project/.[!.]*; do
+  [[ -e "$path" || -L "$path" ]] || continue
+  name=${path#.project/}
+  seen+="$name"$'\n'
+  size=$(du -sh "$path" 2>/dev/null | cut -f1 || true)
+  IFS='|' read -r action why <<<"$(classify "$name")"
+  if in_list "$name" "$also_list"; then
+    [[ $action != copy && $action != merge ]] || { echo "--also $name: it is migrated anyway" >&2; exit 2; }
+    action=copy
+    why='copied because --also named it'
+  elif in_list "$name" "$(printf '%s' "$skip_list" | cut -d= -f1)"; then
+    [[ $action != copy && $action != merge ]] || { echo "--skip $name: it is always migrated" >&2; exit 2; }
+    action=skip
+    why="left behind on purpose: $(skip_reason "$name")"
+  elif [[ $action == unknown ]]; then
+    if holds_nothing "$path"; then
+      action=drop
+      why='empty; nothing to keep'
+    else
+      why='no rule for it: decide with --also NAME (copy it too) or --skip NAME=REASON (leave it)'
+      fail_with 3
+    fi
+  fi
+  say "$(printf '%-20s %-6s %7s  %s' "$name" "$action" "$size" "$why")"
+  [[ $action != copy ]] || copy_entries+="$name"$'\n'
+  [[ $action != merge ]] || merge_links=1
 done
-mkdir -p "$destination/assets"
+while IFS= read -r given; do
+  [[ -z "$given" ]] || in_list "$given" "$seen" || { echo "--also/--skip $given: there is no .project/$given" >&2; exit 2; }
+done <<<"$(printf '%s' "$also_list"; printf '%s' "$skip_list" | cut -d= -f1)"
+
+if [[ -d .project/runs ]]; then
+  say ''
+  say 'note: before removing this worktree, check .project/runs/ with the project status command'
+  say '      and archive what cannot be rebuilt; see .agents/skills/shared/long-running-supervision/'
+  say '      and .agents/skills/shared/asset-lifecycle/.'
+fi
+
+# -- assets/ entries and link mappings ---------------------------------------------------------
+say ''
+say '## assets/'
+asset_entries=
 for entry in assets/* assets/.[!.]*; do
   [[ -e "$entry" || -L "$entry" ]] || continue
   # Tracked files and links reach the destination through Git, not migration.
@@ -25,14 +114,90 @@ for entry in assets/* assets/.[!.]*; do
   target="$destination/assets/$name"
   if [[ -e "$target" || -L "$target" ]]; then
     if [[ -L "$entry" && -L "$target" && "$(readlink "$entry")" == "$(readlink "$target")" ]]; then
+      say "$(printf '%-20s %-6s %s' "$name" same 'the destination already links to the same target')"
       continue
     fi
-    echo "refusing to overwrite destination asset: $target" >&2
-    exit 1
+    say "$(printf '%-20s %-6s %s' "$name" CONFLICT "the destination already has $target; not overwritten")"
+    fail_with 1
+    continue
   fi
-  cp -a "$entry" "$target"
+  say "$(printf '%-20s %-6s %s' "$name" copy "$([[ -L "$entry" ]] && echo "link -> $(readlink "$entry")" || du -sh "$entry" | cut -f1)")"
+  asset_entries+="$name"$'\n'
 done
+dest_links="$destination/.project/assets.links"
+if [[ $merge_links -eq 1 ]]; then
+  while IFS='=' read -r name target; do
+    [[ -z "$name" || "$name" == \#* ]] && continue
+    have=$(awk -F= -v n="$name" '$1 == n { sub(/^[^=]*=/, ""); print; found = 1; exit } END { if (!found) exit 1 }' "$dest_links" 2>/dev/null) && found=1 || found=0
+    if [[ $found -eq 1 && "$have" != "$target" ]]; then
+      say "$(printf '%-20s %-6s %s' "$name" CONFLICT "$dest_links maps it to a different target")"
+      fail_with 1
+    fi
+  done < .project/assets.links
+fi
+
+if [[ $fatal -ne 0 ]]; then
+  echo >&2
+  echo 'migration stopped before copying anything; resolve the lines above and run it again' >&2
+  exit "$fatal"
+fi
+
+# -- copy --------------------------------------------------------------------------------------
+stamp=$(date -u +%Y%m%dT%H%M%SZ)
+migration="$destination/.project/migrations/$(basename "$root")-$stamp"
+mkdir -p "$destination/.project/migrations" "$destination/assets"
+mkdir "$migration"
+while IFS= read -r name; do
+  [[ -n "$name" ]] && cp -a ".project/$name" "$migration/"
+done <<<"$copy_entries"
+while IFS= read -r name; do
+  [[ -n "$name" ]] && cp -a "assets/$name" "$destination/assets/$name"
+done <<<"$asset_entries"
+if [[ $merge_links -eq 1 ]]; then
+  mkdir -p "$destination/.project"
+  touch "$dest_links"
+  [[ ! -s "$dest_links" || -z "$(tail -c1 "$dest_links")" ]] || printf '\n' >> "$dest_links"
+  while IFS= read -r line; do
+    [[ -z "$line" || "$line" == \#* ]] && continue
+    grep -qxF -- "$line" "$dest_links" || printf '%s\n' "$line" >> "$dest_links"
+  done < .project/assets.links
+fi
 printf 'migrated_from=%q\n' "$root" > "$migration/migrated-from.env"
+printf '%s' "$report" > "$migration/migration-report.txt"
+
+# -- verify the copy ---------------------------------------------------------------------------
+diff_cmd='diff -rq'
+! diff --no-dereference /dev/null /dev/null >/dev/null 2>&1 || diff_cmd='diff -rq --no-dereference'
+same() { # SOURCE COPY
+  if [[ -L "$1" ]]; then [[ -L "$2" && "$(readlink "$1")" == "$(readlink "$2")" ]]
+  elif [[ -d "$1" ]]; then $diff_cmd "$1" "$2"
+  else cmp -s "$1" "$2"
+  fi
+}
+echo
+echo '## verification'
+verified=0
+bad=0
+while IFS= read -r name; do
+  [[ -n "$name" ]] || continue
+  if same ".project/$name" "$migration/$name"; then verified=$((verified + 1)); else echo "DIFFERS: .project/$name and $migration/$name" >&2; bad=1; fi
+done <<<"$copy_entries"
+while IFS= read -r name; do
+  [[ -n "$name" ]] || continue
+  if same "assets/$name" "$destination/assets/$name"; then verified=$((verified + 1)); else echo "DIFFERS: assets/$name and $destination/assets/$name" >&2; bad=1; fi
+done <<<"$asset_entries"
+if [[ $merge_links -eq 1 ]]; then
+  while IFS= read -r line; do
+    [[ -z "$line" || "$line" == \#* ]] && continue
+    if grep -qxF -- "$line" "$dest_links"; then verified=$((verified + 1)); else echo "MISSING in $dest_links: $line" >&2; bad=1; fi
+  done < .project/assets.links
+fi
+if [[ $bad -ne 0 ]]; then
+  echo 'verification FAILED: the copy does not match its source; keep the worktree and report this' >&2
+  exit 1
+fi
+echo "verified: $verified item(s) identical to their source"
+
 printf 'migrated_to=%s\n' "$destination"
 printf 'migration=%s\n' "$migration"
 printf 'state and asset links copied; source was not deleted\n'

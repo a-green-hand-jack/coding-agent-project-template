@@ -7,6 +7,15 @@ branch=$(git symbolic-ref --quiet --short HEAD || printf 'detached')
 commit=$(git rev-parse HEAD 2>/dev/null || printf 'unborn')
 state="$root/.project"
 
+# The primary checkout owns the asset links a new worktree inherits. It is the
+# parent of the shared git directory; in the primary checkout there is nothing
+# to inherit.
+common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null || true)
+primary=
+if [[ "$(basename "$common")" == .git && "$(dirname "$common")" != "$root" ]]; then
+  primary=$(dirname "$common")
+fi
+
 mkdir -p "$state"/{state,runs,artifacts,manifest}
 printf '%s\n' "$root" > "$state/home"
 {
@@ -25,15 +34,41 @@ fi
 [[ -f .env.example ]] || echo 'warning: .env.example is missing' >&2
 [[ -f assets/MANIFEST.yaml ]] || echo 'warning: assets/MANIFEST.yaml is missing' >&2
 
+# Create assets/<name> -> <target> unless the entry already exists. $3 says where
+# the mapping came from.
+link_asset() {
+  local name=$1 target=$2 origin=$3 link="assets/$1"
+  if [[ -z "$name" || "$name" == */* || "$name" == .* ]]; then
+    echo "warning: asset name must be a plain name without '/' or a leading '.', got '$name' ($origin)" >&2
+    return 0
+  fi
+  [[ -e "$link" || -L "$link" ]] && return 0
+  [[ -n "$target" ]] || { echo "warning: empty asset target for $name ($origin)" >&2; return 0; }
+  [[ -e "$target" ]] || { echo "warning: missing asset target for $name: $target ($origin)" >&2; return 0; }
+  ln -s "$target" "$link"
+  printf 'linked assets/%s -> %s (%s)\n' "$name" "$target" "$origin"
+}
+
+# This worktree's own mappings come first, then the primary checkout's mappings,
+# then the links the primary checkout holds under assets/ (made by hand, without
+# an assets.links line).
 if [[ -f "$state/assets.links" ]]; then
   while IFS='=' read -r name target; do
     [[ -z "$name" || "$name" == \#* ]] && continue
-    [[ -n "$target" ]] || { echo "warning: empty asset target for $name" >&2; continue; }
-    [[ -e "$target" ]] || { echo "warning: missing asset target for $name: $target" >&2; continue; }
-    link="assets/$name"
-    [[ -e "$link" || -L "$link" ]] && continue
-    ln -s "$target" "$link"
+    link_asset "$name" "$target" ".project/assets.links"
   done < "$state/assets.links"
+fi
+if [[ -n "$primary" ]]; then
+  if [[ -f "$primary/.project/assets.links" ]]; then
+    while IFS='=' read -r name target; do
+      [[ -z "$name" || "$name" == \#* ]] && continue
+      link_asset "$name" "$target" "primary checkout's .project/assets.links"
+    done < "$primary/.project/assets.links"
+  fi
+  for entry in "$primary"/assets/*; do
+    [[ -L "$entry" ]] || continue
+    link_asset "$(basename "$entry")" "$(readlink "$entry")" "primary checkout's assets/"
+  done
 fi
 
 if [[ -x .agents/scripts/setup-project.sh ]]; then

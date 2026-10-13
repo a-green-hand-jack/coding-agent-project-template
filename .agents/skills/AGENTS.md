@@ -7,6 +7,7 @@ concrete project and must state their commands, evidence and failure boundaries.
 Shared skills currently included:
 
 - `shared/worktree-lifecycle/`
+- `shared/issue-workflow/`
 - `shared/project-memory-governance/`
 - `shared/asset-lifecycle/`
 - `shared/cli-first-operations/`
@@ -18,3 +19,10 @@ Shared skills currently included:
 
 Add new skills to this list and to `.agents/content-registry.yaml` in the same
 change.
+
+Template skills:
+
+- `template-harvest/` — maintainer-only procedure that collects reusable practice
+  adopters have settled; it is not shared content and is never copied downstream.
+
+Register each template skill with `scope: template` in the same change.
