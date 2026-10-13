@@ -36,6 +36,10 @@ example assets or project-specific memory and knowledge.
    conflict; never overwrite an existing product build entrypoint.
    Record the adopted template repository and tag in the registry's `template`
    field; keep the downstream project's own `RELEASE_NOTES.md` separate.
+   If the repository already carries an earlier adoption whose registry has no
+   `template:` block, read the adopted tag from its developer docs or git history
+   and backfill the block first, following `template-upgrade`
+   ("Backfill a missing template record").
 4. Show the map and wait for the user's approval when the repository's local
    rules or public behavior would change. Do not silently overwrite files.
 5. On an Issue branch, add or adapt the three planes, `CLAUDE.md -> AGENTS.md`,

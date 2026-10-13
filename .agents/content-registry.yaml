@@ -31,6 +31,9 @@ entries:
   - path: .agents/skills/shared/worktree-lifecycle/
     scope: shared_with_adaptation
     note: Adapt Herdr workspace names, setup commands and repository state paths.
+  - path: .agents/skills/shared/issue-workflow/
+    scope: shared_with_adaptation
+    note: Fill the adaptation slots for base branch, repository, agent kind and prefix, CI, and product gate, archive and run commands.
   - path: .agents/skills/shared/project-memory-governance/
     scope: shared
     note: Generic classification, registration and cleanup procedure.
@@ -61,6 +64,12 @@ entries:
   - path: .agents/memory/shared/
     scope: shared
     note: Reusable durable decisions; adapt paths and commands before reuse.
+  - path: .agents/memory/shared/issue-in-herdr-worktree.md
+    scope: shared
+    note: Each Issue runs in its own Herdr worktree and agent session; applies to repositories developing from a dev branch.
+  - path: .agents/memory/shared/issue-close-out.md
+    scope: shared
+    note: Close out the worktree after the PR merges; keep the project's own archive and stop commands in the issue-workflow slots.
   - path: .agents/memory/project/
     scope: project
     note: Decisions owned by the destination repository; never copy wholesale.

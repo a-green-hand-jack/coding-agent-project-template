@@ -1,5 +1,11 @@
 # Release notes
 
+## Unreleased
+
+- Added the shared `issue-workflow` skill covering Herdr start, merge and close-out, with adaptation slots for agent, repository, CI and product commands.
+- Added shared memory records for implementing each Issue in its own Herdr worktree and closing it out after merge.
+- Added a "Backfill a missing template record" step to `template-upgrade` and `template-adoption`, and made `diagnose-environment.sh` explain how to backfill a missing registry `template` block.
+
 ## v0.1.6 — 2026-10-08
 
 - Fixed release-doc-audit version scanning to include hidden development-plane files.

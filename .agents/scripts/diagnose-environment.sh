@@ -14,11 +14,32 @@ check bash --version
 [[ -f .env.example ]] && printf 'ok   .env.example\n' || { echo 'FAIL .env.example'; fail=1; }
 [[ -f assets/MANIFEST.yaml ]] && printf 'ok   assets manifest\n' || { echo 'FAIL assets manifest'; fail=1; }
 
-template_version=$(sed -n '/^template:/,/^[^[:space:]]/p' .agents/content-registry.yaml 2>/dev/null | sed -n 's/^  version: *//p' | head -n 1)
+registry=.agents/content-registry.yaml
+template_version=
+[[ ! -f "$registry" ]] || template_version=$(sed -n '/^template:/,/^[^[:space:]]/p' "$registry" | sed -n 's/^  version: *//p' | head -n 1)
 if [[ -n "$template_version" ]]; then
   printf 'ok   adopted template version: %s\n' "$template_version"
 else
-  echo 'FAIL adopted template version in .agents/content-registry.yaml'; fail=1
+  fail=1
+  if [[ ! -f "$registry" ]]; then
+    printf 'FAIL %s is missing; adopt the template with .agents/skills/shared/template-adoption/\n' "$registry"
+  else
+    if grep -q '^template:' "$registry"; then
+      printf 'FAIL adopted template version is not recorded: `template:` in %s has no `version:` line\n' "$registry"
+      echo '     Add `  version: <TAG>` under `template:`, taking <TAG> from the first command below.'
+    else
+      printf 'FAIL adopted template version is not recorded: %s has no `template:` block\n' "$registry"
+      echo '     Repositories adopted before v0.1.5 have none. Backfill it, then rerun this script.'
+    fi
+    cat <<'HINT'
+     1. Read the adopted tag from the adoption commit or the developer docs:
+          git log --reverse --format='%h %s' -- .agents/content-registry.yaml
+          grep -nE 'v[0-9]+\.[0-9]+\.[0-9]+' DEV.md
+     2. With no `template:` block, insert one, replacing <TAG> (for example v0.1.1):
+          awk -v tag=<TAG> '/^(default_scope|matching|classes|entries):/ && !done { print "template:"; print "  repository: https://github.com/a-green-hand-jack/coding-agent-project-template"; print "  version: " tag; done = 1 } { print }' .agents/content-registry.yaml > .agents/content-registry.yaml.new && mv .agents/content-registry.yaml.new .agents/content-registry.yaml
+     See .agents/skills/shared/template-upgrade/SKILL.md ("Backfill a missing template record").
+HINT
+  fi
 fi
 
 for product_file in pyproject.toml Dockerfile install.sh .dockerignore; do

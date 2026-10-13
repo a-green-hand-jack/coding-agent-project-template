@@ -7,6 +7,7 @@ concrete project and must state their commands, evidence and failure boundaries.
 Shared skills currently included:
 
 - `shared/worktree-lifecycle/`
+- `shared/issue-workflow/`
 - `shared/project-memory-governance/`
 - `shared/asset-lifecycle/`
 - `shared/cli-first-operations/`
