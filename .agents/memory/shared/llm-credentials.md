@@ -51,7 +51,8 @@ worktree would need a new login for every worktree and would be lost with it.
 
 ## Apply
 
-Each project fills two parameters:
+Each project fills two parameters in the `## In this repository` section at the
+end of this record (see `template-adoption` step 5):
 
 - `SHARED_CREDENTIAL_FILE`: the device's shared file, taken from user-level
   configuration. If the device has none, the project runs without it.

@@ -42,6 +42,30 @@ HINT
   fi
 fi
 
+# An adopter writes its adaptations of a shared_with_adaptation skill or memory
+# record in a trailing section (template-adoption step 5). The template
+# repository itself has none, so only warn in other repositories.
+remote_id() { sed -E 's#^[a-z+]+://##; s#^[^@/]*@##; s#^([^/:]+):#\1/#; s#\.git$##; s#/$##' <<<"$1"; }
+template_repo=
+[[ ! -f "$registry" ]] || template_repo=$(sed -n '/^template:/,/^[^[:space:]]/p' "$registry" | sed -n 's/^  repository: *//p' | head -n 1)
+origin_url=$(git remote get-url origin 2>/dev/null || true)
+if [[ -z "$template_repo" ]]; then
+  :
+elif [[ -n "$origin_url" && "$(remote_id "$origin_url")" == "$(remote_id "$template_repo")" ]]; then
+  echo 'skip adaptation sections (template repository)'
+else
+  while IFS= read -r entry; do
+    file=$entry
+    [[ "$entry" == */ ]] && file=${entry}SKILL.md
+    [[ -f "$file" ]] || continue
+    if grep -qxF '## In this repository' "$file"; then
+      printf 'ok   adaptation section: %s\n' "$file"
+    else
+      printf 'warn adaptation section missing: %s (end it with `## In this repository`; see template-adoption step 5)\n' "$file"
+    fi
+  done < <(awk '/^  - path: / { p = $3 } /^    scope: shared_with_adaptation$/ && (p ~ /^\.agents\/skills\/.+\/$/ || p ~ /^\.agents\/memory\/.+\.md$/) { print p }' "$registry")
+fi
+
 for product_file in pyproject.toml Dockerfile install.sh .dockerignore; do
   if [[ -f "$product_file" ]]; then
     printf 'ok   optional product file: %s\n' "$product_file"

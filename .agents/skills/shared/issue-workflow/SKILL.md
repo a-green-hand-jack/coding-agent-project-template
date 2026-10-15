@@ -19,8 +19,12 @@ Close-out).
 
 ## Adaptation slots
 
-Fill these from the destination project before first use, and never run a
-command that still contains a placeholder. Everything else in this skill is
+Before first use, write the destination project's values in the
+`## In this repository` section at the end of this file, as a table of slot and
+value; a slot left out takes its default. Project-specific additions to a step
+go in the same section, keyed to the step (see `template-adoption` step 5). Do
+not edit this table or the text above that section, and never run a command
+that still contains a placeholder. Everything else in this skill is
 project-neutral.
 
 | Slot | Meaning | Default |
@@ -363,9 +367,10 @@ workspace, normally the dev checkout's.
 
    The second command must exit 0 and the third must print nothing (the ignored
    `.project/` is handled in step 6). Stop and report otherwise. A project that
-   squash- or rebase-merges cannot pass the ancestry check; it replaces that line
-   with its own evidence that the branch's content reached `<BASE>` and records the
-   evidence in the report.
+   squash- or rebase-merges cannot pass the ancestry check; it writes its own
+   evidence that the branch's content reached `<BASE>` in the
+   `## In this repository` section, keyed to this step, uses it instead, and
+   records the evidence in the report.
 4. Bring the dev checkout's `<BASE>` up to date so it contains the merged PR
    (step 6 copies state into it and step 8's `branch -d` judges against it):
 

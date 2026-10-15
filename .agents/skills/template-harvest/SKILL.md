@@ -113,6 +113,9 @@ blobs() { git --no-optional-locks -C "$1" ls-tree -r "$2" -- .agents AGENTS.md C
 `blobs <adopter> <scanned_commit>` against `blobs <template> <pin>` gives the
 *added* paths (absent at the pin) and *modified* paths (different blob); against
 `blobs <template> <current>` it gives the paths the adopter is *missing* (drift).
+A file with an `## In this repository` section always differs by blob: compare
+only the text above the section with the pin, and read the section as the
+adopter's adaptations.
 Count product content (`memory/project/`, `knowledge/project/`, product
 background in `AGENTS.md`) without reading it in depth, then examine the rest:
 
@@ -162,8 +165,11 @@ Generality gate. A delta is a shared candidate only if all of these hold:
    and what observation would show that wrong.
 4. It does not contradict an existing template rule.
 
-Diverged copies are the best source of adaptation points: what each copy changed
-after the split is what the destination must parameterize.
+Adopters' `## In this repository` sections (`template-adoption` step 5) are the
+best source of adaptation points: an addition that several adopters make to the
+same step is a slot or step the template lacks. Text changed above a section, or
+an adapted copy without one, is drift for `template-upgrade`, or evidence that a
+template step is wrong when adopters had to replace it rather than extend it.
 
 ## 4. Upstream channel
 

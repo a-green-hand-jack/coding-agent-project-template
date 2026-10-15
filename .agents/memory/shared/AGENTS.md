@@ -3,7 +3,10 @@
 This directory contains durable decisions that are neutral enough to reuse
 across projects. Every record is a separate Markdown file with the fields in
 [`../ENTRY_TEMPLATE.md`](../ENTRY_TEMPLATE.md), `scope: shared`, and an active
-or superseded status.
+or superseded status. A record that names parameters for the destination is
+registered `shared_with_adaptation`; the destination writes their values in a
+trailing `## In this repository` section (see `template-adoption` step 5), and
+the record's own text never contains that heading line.
 
 ## Index
 
