@@ -65,8 +65,10 @@ project-neutral.
   the maintainer's confirmation.
 - Initialize the dev checkout once with `bash .agents/scripts/setup-worktree.sh`
   so `.project/home` exists and diagnostics pass there.
-- Herdr syntax below was checked against herdr 0.9.1. Run `herdr worktree --help`,
-  `herdr agent --help` and `herdr pane --help`; the installed CLI is authoritative.
+- Herdr syntax below was checked against herdr 0.9.4; the `worktree create`
+  result paths in Start step 3 were last checked against 0.9.1. Run
+  `herdr worktree --help`, `herdr agent --help` and `herdr pane --help`; the
+  installed CLI is authoritative.
   General Herdr control rules: `herdr --skill`.
 
 ## Start
@@ -214,7 +216,8 @@ line that keeps the history:
 
 ```text
 Also read first:
-- `gh issue view <N> --comments` for the discussion;
+- `gh issue view <N>` for the Issue and `gh issue view <N> --comments` for the
+  discussion (outside a terminal, `--comments` prints only the comments);
 - <other files, linked Issues or references to read first>
 
 Scope: <what to do; what explicitly not to do>
