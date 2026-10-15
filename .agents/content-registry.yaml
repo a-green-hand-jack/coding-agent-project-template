@@ -33,7 +33,7 @@ entries:
     note: Adapt Herdr workspace names, setup commands and repository state paths.
   - path: .agents/skills/shared/issue-workflow/
     scope: shared_with_adaptation
-    note: Fill the adaptation slots for base branch, repository, agent kind and prefix, CI, and product gate, archive and run commands.
+    note: Fill the adaptation slots for base branch, repository, agent kind and prefix, dispatch tier models, effort arguments and fallback agent, CI, and product gate, archive and run commands.
   - path: .agents/skills/shared/project-memory-governance/
     scope: shared
     note: Generic classification, registration and cleanup procedure.
@@ -70,6 +70,9 @@ entries:
   - path: .agents/memory/shared/issue-close-out.md
     scope: shared
     note: Close out the worktree after the PR merges; keep the project's own archive and stop commands in the issue-workflow slots.
+  - path: .agents/memory/shared/issue-dispatch-by-difficulty.md
+    scope: shared
+    note: Dispatch each Issue agent with an explicit model and effort per difficulty tier and record it in the Issue; fill the tier models in the issue-workflow slots.
   - path: .agents/memory/shared/llm-credentials.md
     scope: shared_with_adaptation
     note: Fill SHARED_CREDENTIAL_FILE from user-level configuration and choose the Git-ignored CREDENTIAL_DIR; never copy a login between projects.
