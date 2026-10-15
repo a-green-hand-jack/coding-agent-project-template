@@ -11,6 +11,12 @@ superseded_by: null
 
 # Manage LLM credentials across projects
 
+Related: [`third-party-llm-compat-patches.md`](third-party-llm-compat-patches.md)
+(compatibility changes to third-party LLM tools) and
+[`../../knowledge/shared/gpt5-strict-backend-requests.md`](../../knowledge/shared/gpt5-strict-backend-requests.md)
+(request shapes strict backends reject). Read them together when a project
+calls an LLM provider or relay.
+
 ## Decision
 
 1. **Stable, reusable credentials live in one shared file per device.** API keys

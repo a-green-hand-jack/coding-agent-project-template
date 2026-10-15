@@ -31,6 +31,13 @@ example assets or project-specific memory and knowledge.
    Map legacy `memory/AGENTS.md` and `knowledge/AGENTS.md` records into one
    topic per file under `shared/` or `project/`, preserving the old text until
    each record has a destination and front matter.
+   If the repository calls LLM providers, from its own code, agent CLIs or
+   third-party tools it runs, map the shared `llm-credentials` and
+   `third-party-llm-compat-patches` memory records and the
+   `gpt5-strict-backend-requests` knowledge record together: adapt the
+   credential parameters, locate any local edits to third-party tools and move
+   them into the repository as patches, and keep the knowledge record's date and
+   refresh condition. Skip them when the project calls no LLM.
    Map the optional product release skeleton (`pyproject.toml`, `Dockerfile`,
    `install.sh`, `.dockerignore`) as adopted, adapted, preserved or a local
    conflict; never overwrite an existing product build entrypoint.
