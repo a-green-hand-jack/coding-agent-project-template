@@ -12,4 +12,5 @@ or superseded status.
 - [`issue-close-out.md`](issue-close-out.md) — close out an Issue's worktree
   automatically after its PR merges.
 - [`llm-credentials.md`](llm-credentials.md) — share stable LLM credentials
-  through one device file; log refreshing logins in once per project.
+  through one device file; log refreshing logins in once per canonical checkout,
+  whose worktrees link to them.

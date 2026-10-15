@@ -68,7 +68,18 @@ for path in .project/* .project/.[!.]*; do
   seen+="$name"$'\n'
   size=$(du -sh "$path" 2>/dev/null | cut -f1 || true)
   IFS='|' read -r action why <<<"$(classify "$name")"
-  if in_list "$name" "$also_list"; then
+  if [[ $name == credentials ]]; then
+    # Refreshing logins live in the canonical checkout (llm-credentials). A worktree
+    # only links to them: the link is dropped, a real copy is never migrated.
+    if [[ -L "$path" ]]; then
+      action=drop
+      why="link to the canonical checkout's login; the link is dropped and the login is never copied"
+    else
+      action=blocked
+      why='a real copy of a login: never migrated; check the canonical login, then remove it by hand'
+      fail_with 1
+    fi
+  elif in_list "$name" "$also_list"; then
     [[ $action != copy && $action != merge ]] || { echo "--also $name: it is migrated anyway" >&2; exit 2; }
     action=copy
     why='copied because --also named it'
