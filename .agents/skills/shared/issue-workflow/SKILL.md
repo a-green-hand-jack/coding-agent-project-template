@@ -34,6 +34,7 @@ project-neutral.
 | `<EXCLUDED_MODELS>` | Models never dispatched unless the maintainer asks for one by name. | none |
 | `<FALLBACK_AGENT>` | Agent kind used only when the primary agent is unavailable, with its own `<AGENT_ARGS>`, `<MODEL_ARGS>` and tier models. | none |
 | `<AGENT_PREFIX>` | Short project prefix. The agent name is `<AGENT_PREFIX>-issue-<N>` and must be unique across the whole Herdr server. | project choice |
+| `<WORKSPACE_PREFIX>` | Prefix of the Herdr workspace label, so that a server holding worktrees of several repositories shows which repository an Issue workspace belongs to. Herdr accepts upper-case letters in labels but not in agent names, so a project may prefer an upper-case prefix here. | `<AGENT_PREFIX>` |
 | `<MERGE_METHOD>` | `gh pr merge` method flag. Close-out's ancestry check assumes a merge commit. | `--merge` |
 | `<CI>` | Whether CI covers the project's checks. `yes`: rely on PR checks and the base-branch run. `no`: run `<POST_MERGE_CHECK>` in the dev checkout. | project fact |
 | `<POST_MERGE_CHECK>` | Verification commands from `DEV.md`, used when `<CI>` is `no`. | `DEV.md` verification strategy |
@@ -96,8 +97,14 @@ Input: Issue number `<N>` and a branch `<branch>` named per `DEV.md`
 
    ```bash
    herdr worktree create --workspace "$HERDR_WORKSPACE_ID" \
-     --branch <branch> --base <BASE> --no-focus
+     --branch <branch> --base <BASE> --label <WORKSPACE_PREFIX>-issue-<N> \
+     --no-focus
    ```
+
+   The label names the Issue workspace in `herdr workspace list`
+   (`herdr worktree list` shows the open workspace id instead). Without it Herdr derives one from the branch, such as
+   `issue-12-fix-parser`, which does not say which repository it belongs to.
+   Close-out still locates the worktree by branch.
 
    From the returned JSON record the worktree path `<worktree>`, the workspace
    id `<ws>` and the root pane id `<pane>` (herdr 0.9.1: `.result.worktree.path`,

@@ -33,7 +33,7 @@ entries:
     note: Adapt Herdr workspace names, setup commands and repository state paths.
   - path: .agents/skills/shared/issue-workflow/
     scope: shared_with_adaptation
-    note: Fill the adaptation slots for base branch, repository, agent kind and prefix, dispatch tier models, effort arguments and fallback agent, CI, and product gate, archive and run commands.
+    note: Fill the adaptation slots for base branch, repository, agent kind and prefix, workspace label prefix, dispatch tier models, effort arguments and fallback agent, CI, and product gate, archive and run commands.
   - path: .agents/skills/shared/project-memory-governance/
     scope: shared
     note: Generic classification, registration and cleanup procedure.
@@ -53,8 +53,8 @@ entries:
     scope: shared_with_adaptation
     note: Adapt current and target release tags, local conflicts and migration evidence.
   - path: .agents/skills/shared/release-doc-audit/
-    scope: shared
-    note: Run the documented release audit against the destination tree and target tag.
+    scope: shared_with_adaptation
+    note: Set RELEASE_HEADING to the destination's release-notes layout and adapt release-note ownership; the audit runs against the destination tree and target tag.
   - path: .agents/skills/shared/asset-lifecycle/
     scope: shared_with_adaptation
     note: Adapt asset classes, storage roots and migration evidence.
@@ -76,6 +76,9 @@ entries:
   - path: .agents/memory/shared/llm-credentials.md
     scope: shared_with_adaptation
     note: Fill SHARED_CREDENTIAL_FILE from user-level configuration and CREDENTIAL_DIR (credentials) under the canonical checkout's .project/; worktrees link to it; never copy a login between projects or worktrees.
+  - path: .agents/memory/shared/product-state-root.md
+    scope: shared_with_adaptation
+    note: Fill STATE_MARKER, STATE_ENV and DEFAULT_ROOT; product commands resolve a worktree's state root from the setup marker, and the lookup stops at the repository boundary.
   - path: .agents/memory/shared/run-settings-from-config.md
     scope: shared_with_adaptation
     note: Fill CONFIG_FILE, COMMAND_TABLE, RECORD_FIELD and CONFIG_FLAG; run parameters are settings with a fixed override order, recorded at run start and reused on resume.

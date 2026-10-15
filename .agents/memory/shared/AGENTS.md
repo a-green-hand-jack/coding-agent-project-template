@@ -18,6 +18,9 @@ or superseded status.
 - [`llm-credentials.md`](llm-credentials.md) — share stable LLM credentials
   through one device file; log refreshing logins in once per canonical checkout,
   whose worktrees link to them.
+- [`product-state-root.md`](product-state-root.md) — product commands resolve
+  the worktree's state root from an argument, an environment variable, the
+  nearest setup marker (stopping at the repository boundary), then a default.
 - [`run-settings-from-config.md`](run-settings-from-config.md) — run parameters
   are settings loaded from configuration with a fixed override order, recorded
   at run start and reused on resume; never constants in code.

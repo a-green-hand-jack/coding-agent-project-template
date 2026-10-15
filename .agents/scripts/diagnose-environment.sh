@@ -14,6 +14,29 @@ check bash --version
 [[ -f .env.example ]] && printf 'ok   .env.example\n' || { echo 'FAIL .env.example'; fail=1; }
 [[ -f assets/MANIFEST.yaml ]] && printf 'ok   assets manifest\n' || { echo 'FAIL assets manifest'; fail=1; }
 
+# Git must track the two files above and ignore the worktree-local state. An
+# existing repository's .gitignore often ignores .env.* or assets/, so the files
+# exist locally but never reach a commit, a fresh clone or CI.
+for tracked in .env.example assets/MANIFEST.yaml; do
+  if [[ -f "$tracked" ]] && git check-ignore -q -- "$tracked"; then
+    printf 'FAIL %s is ignored by Git: %s\n' "$tracked" "$(git check-ignore -v -- "$tracked")"
+    case "$tracked" in
+      .env.example) echo '     Add `!.env.example` after the `.env.*` rule in .gitignore.' ;;
+      *) echo '     Replace an `assets/` rule with `assets/*` followed by `!assets/README.md`, `!assets/MANIFEST.yaml` and `!assets/.gitkeep` (a directory rule cannot be undone by an exception).' ;;
+    esac
+    fail=1
+  fi
+done
+if [[ -f .project/home ]]; then
+  if git check-ignore -q -- .project/home; then
+    printf 'ok   .project/home is ignored by Git\n'
+  else
+    echo 'FAIL .project/home is not ignored by Git: worktree state, including the .project/credentials link, would show as untracked and can be committed'
+    echo '     Add `.project/` to .gitignore.'
+    fail=1
+  fi
+fi
+
 registry=.agents/content-registry.yaml
 template_version=
 [[ ! -f "$registry" ]] || template_version=$(sed -n '/^template:/,/^[^[:space:]]/p' "$registry" | sed -n 's/^  version: *//p' | head -n 1)
