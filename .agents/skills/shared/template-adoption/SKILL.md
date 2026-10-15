@@ -63,6 +63,27 @@ example assets or project-specific memory and knowledge.
    `product-state-root` memory record next to the setup hook
    (`.agents/scripts/setup-project.sh`) so every command started in a worktree
    finds that worktree's `.project/`.
+
+   Copy shared skills and memory records registered `shared_with_adaptation`
+   verbatim and adapt them only in one trailing section, so that
+   `template-upgrade` can replace the template text without conflicts:
+   - End the file with the heading `## In this repository`. Everything from that
+     heading to the end of the file belongs to this repository; the text above
+     it is the template's and is never edited.
+   - Write slot values as a table with the columns Slot and Value, one row per
+     slot the file defines (for example the `issue-workflow` adaptation slots).
+     A slot left out takes its default.
+   - Write every other adaptation as an addition keyed to the step it extends,
+     naming the step and its first words so that a renumbered step is noticed
+     at upgrade, for example "Start step 4 (Start the agent): also pass ...".
+     A local rule that has to replace a template step is keyed the same way,
+     says "instead", and is reported through `template-feedback`.
+   - When nothing needs adapting, the section says so in one line.
+
+   Adopt scripts unchanged and put project-specific setup in the
+   `.agents/scripts/setup-project.sh` hook. Rewrite the other
+   `shared_with_adaptation` files (`AGENTS.md`, the registry, product skeletons)
+   for the repository.
 6. Run the target repository's setup, diagnostics, CLI entrypoints and relevant
    seam checks. Confirm that product payloads do not include `.agents/`, secrets
    or worktree-local state.

@@ -44,6 +44,35 @@ downstream repository with the template tree or merge template history into it.
    paths, update `CLAUDE.md` and `.agents/**/AGENTS.md` consistently, and update
    the downstream content registry's `template.version` to the target tag
    (creating the block if the backfill has not been done yet).
+
+   Upgrade each adopted shared skill and memory record by replacing the template
+   text above its `## In this repository` section (the whole file when it has
+   no section; see `template-adoption` step 5) and keeping the section. With
+   `<template>` a clone of `template.repository` under `.project/` holding both
+   tags, `<SOURCE_TAG>` the registry's current `template.version` and `<path>`
+   the file:
+
+   ```bash
+   H='## In this repository'
+   above() { awk -v h="$H" '$0 == h { exit } /^$/ { b = b "\n"; next } { printf "%s%s\n", b, $0; b = "" }'; }
+   section() { awk -v h="$H" '$0 == h { s = 1 } s'; }
+   # 1. The text above the section must still be the source release's.
+   git -C <template> show <SOURCE_TAG>:<path> | above | diff - <(above < <path>)
+   # 2. Replace it with the target release's and keep the section.
+   { git -C <template> show <TARGET_TAG>:<path> | above
+     [ -z "$(section < <path>)" ] || { echo; section < <path>; }
+   } > <path>.new && mv <path>.new <path>
+   ```
+
+   - Check 1 must print nothing. A difference is a local edit above the section
+     and therefore a local conflict: move it into the section as an addition
+     keyed to its step, or drop it when the target release covers it, then
+     rerun the check. A repository adopted before this convention does this
+     once, at its first upgrade after it.
+   - Reconcile only the section. Read
+     `git -C <template> diff <SOURCE_TAG> <TARGET_TAG> -- <path>` for new,
+     renamed or removed slots and for steps that moved or changed, and update the
+     slot rows and the step keys of the additions.
 6. Run setup, diagnostics, public CLI checks, relevant seam tests and any required
    long-running supervision checks. Verify assets and worktree state remain
    visible and no local product files were overwritten.

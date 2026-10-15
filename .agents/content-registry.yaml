@@ -13,7 +13,12 @@ classes:
     rule: Reuse only after checking adaptation notes and local tool availability.
   shared_with_adaptation:
     meaning: Reusable structure whose paths, commands or evidence must change.
-    rule: Copy selectively and rewrite for the destination project.
+    rule: >-
+      Copy skills and memory records verbatim and write the destination's slot
+      values and step additions only in their trailing `## In this repository`
+      section (template-adoption step 5), so template-upgrade replaces the text
+      above it; copy other files selectively and rewrite them for the
+      destination project.
   project:
     meaning: Content about one project's product, environment or history.
     rule: Create independently; never copy the directory wholesale.
