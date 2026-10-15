@@ -66,7 +66,7 @@ entries:
     note: Reusable durable decisions; adapt paths and commands before reuse.
   - path: .agents/memory/shared/issue-in-herdr-worktree.md
     scope: shared
-    note: Each Issue runs in its own Herdr worktree and agent session; applies to repositories developing from a dev branch.
+    note: Each Issue runs in its own Herdr worktree and agent session under the handoff's working rules; applies to repositories developing from a dev branch.
   - path: .agents/memory/shared/issue-close-out.md
     scope: shared
     note: Close out the worktree after the PR merges; keep the project's own archive and stop commands in the issue-workflow slots.
