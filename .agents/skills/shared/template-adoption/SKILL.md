@@ -52,6 +52,17 @@ example assets or project-specific memory and knowledge.
 5. On an Issue branch, add or adapt the three planes, `CLAUDE.md -> AGENTS.md`,
    uniform `.agents/**/AGENTS.md` guidance, content registry, worktree setup,
    visible `.project/` state, asset manifest and GitHub templates as applicable.
+   Merge the template's `.gitignore` entries into the existing `.gitignore`
+   rather than replacing it: `.project/`; `assets/*` with the exceptions
+   `!assets/README.md`, `!assets/MANIFEST.yaml` and `!assets/.gitkeep`; and
+   `!.env.example` after any `.env.*` rule. A rule already in the repository
+   (`.env.*`, `assets/`) can hide `.env.example` or `assets/MANIFEST.yaml`, so
+   they exist locally but never reach a commit or CI;
+   `diagnose-environment.sh` fails with the fix when that happens.
+   If the product resolves a state root of its own, follow the shared
+   `product-state-root` memory record next to the setup hook
+   (`.agents/scripts/setup-project.sh`) so every command started in a worktree
+   finds that worktree's `.project/`.
 6. Run the target repository's setup, diagnostics, CLI entrypoints and relevant
    seam checks. Confirm that product payloads do not include `.agents/`, secrets
    or worktree-local state.
