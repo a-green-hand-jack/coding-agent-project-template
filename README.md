@@ -17,7 +17,7 @@ Issue/branch/PR 构成可追溯的交付单元。
    将 GitHub 默认分支设为 `dev`；之后 Issue branch 从 `dev` 创建，发布才合并
    到 `main`。
 3. 修改本 README、`USER.md` 和 `DEV.md` 中的项目占位内容。
-4. 在 `src/` 放入产品代码，在 `tests/` 放入有明确价值的检查。
+4. 在 `src/` 放入产品代码。
 5. 在每个 worktree 中运行：
 
    ```bash
@@ -44,7 +44,6 @@ Private 是默认建议：Issue 中的候选筛选、实验结果、日志和路
 | `Dockerfile` | 产品面 | 可选的容器构建入口，占位运行命令 |
 | `install.sh` | 产品面 | 可选的安装入口，占位安装策略 |
 | `.dockerignore` | 产品面 | 容器构建上下文边界，排除开发面 |
-| `tests/` | 产品/开发交界 | 只放回归和接缝检查 |
 | `assets/` | 产品输入 | 大资产的稳定逻辑入口和 manifest；机器相关软链接在 `.project/` |
 | `.project/` | worktree 本地状态 | 运行记录、日志、receipt、临时产物；被 Git 忽略 |
 | `.agents/` | coding agent 开发面 | memory、knowledge、skills、setup 和诊断 |
