@@ -22,6 +22,14 @@ workers, or create durable artifacts.
    restart, replay or reconcile durable results before starting duplicate work.
 6. Report implementation, runtime acceptance and final artifact acceptance as
    separate verdicts.
+7. Do not change code under a live run. A run that loads code from its checkout
+   whenever it (re)starts a step fails on a half-merged or half-edited file, and
+   bash reads a running script by byte offset, so editing that script in place
+   corrupts the run. Make code changes and merges for a live run in another
+   worktree. When a script in the running checkout must change, write the new
+   version to a new file in the same directory and rename it over the old one
+   (`mv new old`); never edit it in place. Before pulling or merging into a
+   checkout, check it with the monitor entrypoint, and wait while a run is live.
 
 Adapt the command names and receipt schema to the concrete product, but preserve
 the read-only observation and recoverability boundaries.

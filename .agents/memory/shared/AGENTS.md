@@ -11,7 +11,8 @@ or superseded status.
   Issue in its own Herdr worktree and agent session, which verifies to
   completion, fixes related defects and leaves conflicts to the dev checkout.
 - [`issue-close-out.md`](issue-close-out.md) — close out an Issue's worktree
-  right after its PR merges; the merge approval covers the close-out.
+  right after its PR merges; the merge approval covers the close-out, and live
+  runs in the dev checkout or containers mounting the worktree stop it.
 - [`issue-dispatch-by-difficulty.md`](issue-dispatch-by-difficulty.md) — dispatch
   each Issue agent with an explicit model and effort for its difficulty tier, and
   record it in the Issue.

@@ -136,6 +136,9 @@ Python 函数、临时 provider SDK 或第二套脚本绕过产品入口。
 - 提供一个只读 `status` 或 `monitor` 入口，展示进度、最后活动、错误、产物和恢复提示；
 - 将结构化 receipt 和日志写进当前 worktree 的状态根；
 - 明确定义 stop、checkpoint、resume、retry 和 terminal failure；
+- 不修改活动运行下的代码：代码修改和合并在另一个 worktree 进行；运行中的
+  checkout 里的脚本必须替换时，先写新文件再 rename 覆盖，不原地编辑；向该
+  checkout pull 或 merge 前先用 monitor 入口确认没有活动运行；
 - 将实现完成、运行验收和最终产物验收分开报告。
 
 通用原则和最小操作清单见 `.agents/skills/shared/cli-first-operations/` 与
