@@ -67,8 +67,20 @@ Then, in the canonical checkout:
 2. Log in each refreshing CLI once with its home pointed into `CREDENTIAL_DIR`.
    When a login stops working, log in again in the canonical checkout; do not
    restore an older copy.
-3. Start sandboxes and subprocesses with the selected variables only.
-4. Before writing a tracked file, commit, Issue, PR or log, check that it holds
+3. Before logging in again, check that the login file in the credential home (for
+   example `auth.json`) is a regular file and not a symlink. If it is a link,
+   stop and report; do not log in through it, because the CLI may write the new
+   login into the file the link points to, which another consumer owns. Rename
+   the failed login in place (for example to `auth.json.failed`) instead of
+   deleting or overwriting it, so the evidence of what went wrong is kept.
+   Agents never create, edit, copy or restore login files. They report the
+   failure and the exact login command, and the maintainer logs in interactively.
+   This check rests on the CLI writing through a link. A CLI that replaces a link
+   atomically (writes a new file and renames it over the path) would instead
+   swap the link for a regular file and leave the target untouched; if a login
+   shows that, the premise is wrong for that CLI and this point needs revising.
+4. Start sandboxes and subprocesses with the selected variables only.
+5. Before writing a tracked file, commit, Issue, PR or log, check that it holds
    no credential value and no path outside the project.
 
 In each worktree of the project, the same `CREDENTIAL_DIR` is a link to the
