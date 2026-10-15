@@ -11,3 +11,5 @@ or superseded status.
   Issue in its own Herdr worktree and agent session.
 - [`issue-close-out.md`](issue-close-out.md) — close out an Issue's worktree
   automatically after its PR merges.
+- [`llm-credentials.md`](llm-credentials.md) — share stable LLM credentials
+  through one device file; log refreshing logins in once per project.
