@@ -13,7 +13,9 @@ missing capability or cross-project improvement in the template itself.
 2. Search the template repository's open and closed Issues for an existing report.
    Reuse the existing Issue when it describes the same underlying problem.
 3. Open an Issue in the template repository with:
-   - template version and downstream repository;
+   - template version and the kind of downstream repository ("a private
+     downstream repository" or "a public downstream repository"); name the
+     repository only when it is public and its maintainer agrees;
    - concrete reproduction steps and expected behavior;
    - observed behavior and evidence;
    - why the change is cross-project rather than local;

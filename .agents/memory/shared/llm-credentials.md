@@ -11,6 +11,12 @@ superseded_by: null
 
 # Manage LLM credentials across projects
 
+Related: [`third-party-llm-compat-patches.md`](third-party-llm-compat-patches.md)
+(compatibility changes to third-party LLM tools) and
+[`../../knowledge/shared/gpt5-strict-backend-requests.md`](../../knowledge/shared/gpt5-strict-backend-requests.md)
+(request shapes strict backends reject). Read them together when a project
+calls an LLM provider or relay.
+
 ## Decision
 
 1. **Stable, reusable credentials live in one shared file per device.** API keys
@@ -51,7 +57,8 @@ worktree would need a new login for every worktree and would be lost with it.
 
 ## Apply
 
-Each project fills two parameters:
+Each project fills two parameters in the `## In this repository` section at the
+end of this record (see `template-adoption` step 5):
 
 - `SHARED_CREDENTIAL_FILE`: the device's shared file, taken from user-level
   configuration. If the device has none, the project runs without it.

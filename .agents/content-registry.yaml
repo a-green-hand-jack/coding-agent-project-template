@@ -4,7 +4,7 @@ purpose: >-
   which content belongs to one concrete project.
 template:
   repository: https://github.com/a-green-hand-jack/coding-agent-project-template
-  version: v0.1.8
+  version: v0.1.9
 default_scope: project
 matching: Most specific path wins; explicit entries override directory defaults.
 classes:
@@ -13,7 +13,12 @@ classes:
     rule: Reuse only after checking adaptation notes and local tool availability.
   shared_with_adaptation:
     meaning: Reusable structure whose paths, commands or evidence must change.
-    rule: Copy selectively and rewrite for the destination project.
+    rule: >-
+      Copy skills and memory records verbatim and write the destination's slot
+      values and step additions only in their trailing `## In this repository`
+      section (template-adoption step 5), so template-upgrade replaces the text
+      above it; copy other files selectively and rewrite them for the
+      destination project.
   project:
     meaning: Content about one project's product, environment or history.
     rule: Create independently; never copy the directory wholesale.
@@ -33,7 +38,7 @@ entries:
     note: Adapt Herdr workspace names, setup commands and repository state paths.
   - path: .agents/skills/shared/issue-workflow/
     scope: shared_with_adaptation
-    note: Fill the adaptation slots for base branch, repository, agent kind and prefix, dispatch tier models, effort arguments and fallback agent, CI, and product gate, archive and run commands.
+    note: Fill the adaptation slots for base branch, repository, agent kind and prefix, workspace label prefix, dispatch tier models, effort arguments and fallback agent, CI, and product gate, archive and run commands.
   - path: .agents/skills/shared/project-memory-governance/
     scope: shared
     note: Generic classification, registration and cleanup procedure.
@@ -53,8 +58,8 @@ entries:
     scope: shared_with_adaptation
     note: Adapt current and target release tags, local conflicts and migration evidence.
   - path: .agents/skills/shared/release-doc-audit/
-    scope: shared
-    note: Run the documented release audit against the destination tree and target tag.
+    scope: shared_with_adaptation
+    note: Set RELEASE_HEADING to the destination's release-notes layout and adapt release-note ownership; the audit runs against the destination tree and target tag.
   - path: .agents/skills/shared/asset-lifecycle/
     scope: shared_with_adaptation
     note: Adapt asset classes, storage roots and migration evidence.
@@ -76,9 +81,15 @@ entries:
   - path: .agents/memory/shared/llm-credentials.md
     scope: shared_with_adaptation
     note: Fill SHARED_CREDENTIAL_FILE from user-level configuration and CREDENTIAL_DIR (credentials) under the canonical checkout's .project/; worktrees link to it; never copy a login between projects or worktrees.
+  - path: .agents/memory/shared/product-state-root.md
+    scope: shared_with_adaptation
+    note: Fill STATE_MARKER, STATE_ENV and DEFAULT_ROOT; product commands resolve a worktree's state root from the setup marker, and the lookup stops at the repository boundary.
   - path: .agents/memory/shared/run-settings-from-config.md
     scope: shared_with_adaptation
     note: Fill CONFIG_FILE, COMMAND_TABLE, RECORD_FIELD and CONFIG_FLAG; run parameters are settings with a fixed override order, recorded at run start and reused on resume.
+  - path: .agents/memory/shared/third-party-llm-compat-patches.md
+    scope: shared_with_adaptation
+    note: Fill PATCH_DIR for the project's patches or wrappers of third-party LLM tools; they run on every run and state that metrics, prompts and reasoning effort are unchanged.
   - path: .agents/memory/project/
     scope: project
     note: Decisions owned by the destination repository; never copy wholesale.
@@ -91,6 +102,9 @@ entries:
   - path: .agents/knowledge/shared/
     scope: shared
     note: Reusable sourced facts with a refresh condition; adapt sources before reuse.
+  - path: .agents/knowledge/shared/gpt5-strict-backend-requests.md
+    scope: shared
+    note: Dated GPT-5.x request shapes that strict Responses backends reject; recheck against the backend when a provider or a named client changes, and adapt the source before reuse.
   - path: .agents/knowledge/project/
     scope: project
     note: Machine, provider, version and benchmark facts owned by the destination.

@@ -43,7 +43,8 @@ downstream adopters reached these rules separately, from different origins.
 
 ## Apply
 
-Each project fills four parameters:
+Each project fills four parameters in the `## In this repository` section at
+the end of this record (see `template-adoption` step 5):
 
 - `CONFIG_FILE`: the location and format of the shipped configuration file.
 - `COMMAND_TABLE`: how a table is named after its command.

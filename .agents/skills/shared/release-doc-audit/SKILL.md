@@ -8,13 +8,26 @@ description: Audit release documentation, version references and registry paths 
 Run this read-only audit from the repository root before creating a release tag.
 Pass the release tag being prepared as `TARGET_TAG` in the commands below. The
 skill is usable by the template repository and by downstream projects after
-adapting the repository URL and release-note ownership.
+adapting the repository URL, release-note ownership and `RELEASE_HEADING`.
+
+## Adaptation slot
+
+- `RELEASE_HEADING`: extended regular expression that matches the line of the
+  project's `RELEASE_NOTES.md` naming `TARGET_TAG`. Default: one `## <tag>`
+  heading per release, as the command in step 1 shows.
+
+A downstream project whose notes do not have one such heading per release, for
+example because they keep only the current release in the document title, sets
+`RELEASE_HEADING` to match its own layout (such as `^# .*${TARGET_TAG//./\\.}`).
+Keep the pattern anchored to the line that names the release, so that an older
+or illustrative tag elsewhere in the file does not satisfy it.
 
 1. Confirm the target release identity and version record:
 
    ```bash
-   test -n "${TARGET_TAG:?set TARGET_TAG, for example v0.1.8}"
-   grep -nE "^## ${TARGET_TAG//./\\.}([[:space:]]|$)" RELEASE_NOTES.md
+   test -n "${TARGET_TAG:?set TARGET_TAG, for example v0.1.9}"
+   RELEASE_HEADING="${RELEASE_HEADING:-^## ${TARGET_TAG//./\\.}([[:space:]]|\$)}"
+   grep -nE "$RELEASE_HEADING" RELEASE_NOTES.md
    grep -A2 '^template:' .agents/content-registry.yaml
    ```
 

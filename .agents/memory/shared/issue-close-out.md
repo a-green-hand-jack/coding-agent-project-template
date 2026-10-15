@@ -1,7 +1,7 @@
 ---
 name: issue-close-out
 date: 2026-10-13
-source: Issue #18, harvested from downstream adopters of this template; Issue #34
+source: Issue #18, harvested from downstream adopters of this template; Issues #34 and #40
 scope: shared
 applies_to: repositories that manage Issue worktrees with Herdr, develop from a dev integration branch and merge PRs back into it
 status: active
@@ -27,10 +27,17 @@ Results that cannot be rebuilt must not stay in the migration directory. They ar
 archived and registered with the project's archive command, preferably before the
 merge.
 
+The dev checkout may itself drive a long-running run. Before pulling or merging
+into it, the coordinating session runs the project's monitor command there; a live
+run goes to the maintainer and the merge waits.
+
 The coordinating session does not close out, and reports instead, when the PR only
 references its Issue and the work continues, when the maintainer asked to keep the
-worktree, or when a precondition fails: uncommitted changes, unpushed commits, an
-agent still working or a live task.
+worktree, or when a precondition fails: uncommitted changes, unpushed commits, a
+live run in the dev checkout, an agent still working, or a live task in the
+worktree. A live task includes every container, running or stopped, that mounts a
+path inside the worktree; `inspect-state.sh` lists them when a container runtime is
+installed.
 
 ## Why
 
@@ -39,7 +46,11 @@ merged PR left its worktree and branches behind and after conflicting PRs were
 resolved ad hoc. Results archived only after the merge changed tracked files too
 late, so the archive check moved ahead of the merge. While the link between merge
 approval and close-out was implicit, coordinating sessions still paused between
-the two to ask (Issue #34).
+the two to ask (Issue #34). A merge into a checkout that drove a live run left
+conflict markers in a module the run imported on its next restart, and the run
+failed; a worktree's own monitor command does not see a container that mounts the
+worktree, so removing it would remove data the container still refers to
+(Issue #40).
 
 ## Apply
 
