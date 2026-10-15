@@ -25,7 +25,7 @@ or illustrative tag elsewhere in the file does not satisfy it.
 1. Confirm the target release identity and version record:
 
    ```bash
-   test -n "${TARGET_TAG:?set TARGET_TAG, for example v0.1.8}"
+   test -n "${TARGET_TAG:?set TARGET_TAG, for example v0.1.9}"
    RELEASE_HEADING="${RELEASE_HEADING:-^## ${TARGET_TAG//./\\.}([[:space:]]|\$)}"
    grep -nE "$RELEASE_HEADING" RELEASE_NOTES.md
    grep -A2 '^template:' .agents/content-registry.yaml

@@ -13,3 +13,6 @@ or superseded status.
 - [`harvest-2026-10-15.md`](harvest-2026-10-15.md) — the harvest before v0.1.8:
   two candidates landed (#30, #31), one declined, the newly settled adopter's
   drift.
+- [`harvest-2026-10-15-v0.1.9.md`](harvest-2026-10-15-v0.1.9.md) — the check
+  before v0.1.9: downstream feedback #37-#44 landed; other adopters unchanged or
+  project-local.
