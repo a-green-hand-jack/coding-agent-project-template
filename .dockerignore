@@ -9,7 +9,6 @@ README.md
 RELEASE_NOTES.md
 USER.md
 assets/
-tests/
 *.log
 *.py[cod]
 __pycache__/

@@ -14,8 +14,9 @@ tracked source，也不写到未知的全局目录。
 `docs/issue-<N>-<slug>` 或 `chore/issue-<N>-<slug>` branch。实现和验证完成后
 提交 PR 回 `dev`；`main` 只承载已发布状态。
 
-PR 描述应说明改了什么、为什么改、如何验证、哪些内容没有验证以及仍然存在的
-风险。真实运行、构建和发布证据放在 Issue 或 PR 中，不靠 agent 的自述代替。
+PR 描述应说明改了什么、为什么改、验收和 CI 要求的每项检查的命令与结果，以及
+顺带修复的相关缺陷；只有维护者本人才能完成的步骤写成具体阻塞，说明维护者要做
+什么。真实运行、构建和发布证据放在 Issue 或 PR 中，不靠 agent 的自述代替。
 
 开始实现时，使用 Herdr 的原生 worktree 命令从 `dev` 创建 Issue branch，并在
 新 pane 启动独立的 coding-agent session。不要在当前 agent 窗口直接

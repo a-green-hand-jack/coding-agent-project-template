@@ -1,6 +1,6 @@
 ---
 name: issue-workflow
-description: Implement one Issue in its own Herdr worktree and agent session (start), merge its PR from the dev checkout (merge), and retire the worktree after the merge (close-out).
+description: Implement one Issue in its own Herdr worktree and agent session dispatched by difficulty (start), merge its PR from the dev checkout (merge), and retire the worktree after the merge (close-out).
 ---
 
 # Issue workflow
@@ -13,8 +13,9 @@ That session opens the PR; the dev session merges it after review on GitHub and
 then closes the worktree out.
 
 Run **start** when an Issue is ready to implement, **merge** when its PR is
-approved, and **close-out** automatically after a verified merge, without waiting
-to be asked (exceptions are listed under Close-out).
+approved, and **close-out** right after a verified merge. The approval to merge
+covers the close-out, so do not wait or ask again (exceptions are listed under
+Close-out).
 
 ## Adaptation slots
 
@@ -27,7 +28,11 @@ project-neutral.
 | `<BASE>` | Integration branch that worktrees start from and PRs target. | `dev` |
 | `<REPO>` | `owner/name` that owns the Issues and PRs. Pass `--repo <REPO>` to every `gh` call when the clone has no unambiguous default repository. | this repository |
 | `<AGENT_KIND>` | Herdr agent kind for the Issue session (`herdr agent start --help` lists them). | project choice |
-| `<AGENT_ARGS>` | Arguments after `--` for the agent CLI, such as its permission mode. Take them from that CLI's own `--help` and use only what the maintainer authorized. | none |
+| `<AGENT_ARGS>` | Arguments after `--` for the agent CLI other than model and effort, such as its permission mode. Take them from that CLI's own `--help` and use only what the maintainer authorized. | none |
+| `<MODEL_ARGS>` | The agent CLI's arguments that set the model and reasoning effort, written with `{model}` and `{effort}`. Map the tier efforts onto the values the CLI accepts; where it has no higher level, use its highest. | project choice |
+| `<MODEL_LOW>`, `<MODEL_MID>`, `<MODEL_HIGH>` | Models for the dispatch tiers (see Dispatch by difficulty), as the agent CLI names them. | project choice |
+| `<EXCLUDED_MODELS>` | Models never dispatched unless the maintainer asks for one by name. | none |
+| `<FALLBACK_AGENT>` | Agent kind used only when the primary agent is unavailable, with its own `<AGENT_ARGS>`, `<MODEL_ARGS>` and tier models. | none |
 | `<AGENT_PREFIX>` | Short project prefix. The agent name is `<AGENT_PREFIX>-issue-<N>` and must be unique across the whole Herdr server. | project choice |
 | `<MERGE_METHOD>` | `gh pr merge` method flag. Close-out's ancestry check assumes a merge commit. | `--merge` |
 | `<CI>` | Whether CI covers the project's checks. `yes`: rely on PR checks and the base-branch run. `no`: run `<POST_MERGE_CHECK>` in the dev checkout. | project fact |
@@ -61,8 +66,10 @@ project-neutral.
   the maintainer's confirmation.
 - Initialize the dev checkout once with `bash .agents/scripts/setup-worktree.sh`
   so `.project/home` exists and diagnostics pass there.
-- Herdr syntax below was checked against herdr 0.9.1. Run `herdr worktree --help`,
-  `herdr agent --help` and `herdr pane --help`; the installed CLI is authoritative.
+- Herdr syntax below was checked against herdr 0.9.4; the `worktree create`
+  result paths in Start step 3 were last checked against 0.9.1. Run
+  `herdr worktree --help`, `herdr agent --help` and `herdr pane --help`; the
+  installed CLI is authoritative.
   General Herdr control rules: `herdr --skill`.
 
 ## Start
@@ -81,7 +88,10 @@ Input: Issue number `<N>` and a branch `<branch>` named per `DEV.md`
    ```
 
    If the count is not 0, run `git -C <dev> pull --ff-only` first.
-2. Create the worktree with Herdr's native command. Omit `--path` and keep the
+2. Choose the tier, model and effort as described in
+   [Dispatch by difficulty](#dispatch-by-difficulty) and make sure the Issue body
+   has a matching Dispatch section; write or correct it now if it does not.
+3. Create the worktree with Herdr's native command. Omit `--path` and keep the
    default location:
 
    ```bash
@@ -92,11 +102,12 @@ Input: Issue number `<N>` and a branch `<branch>` named per `DEV.md`
    From the returned JSON record the worktree path `<worktree>`, the workspace
    id `<ws>` and the root pane id `<pane>` (herdr 0.9.1: `.result.worktree.path`,
    `.result.workspace.workspace_id`, `.result.root_pane.pane_id`).
-3. Start the agent in the new pane:
+4. Start the agent in the new pane, passing the chosen model and effort
+   explicitly through `<MODEL_ARGS>`; never rely on the CLI's default:
 
    ```bash
    herdr agent start <AGENT_PREFIX>-issue-<N> --kind <AGENT_KIND> --pane <pane> \
-     --timeout 60000 -- <AGENT_ARGS>
+     --timeout 60000 -- <AGENT_ARGS> <MODEL_ARGS>
    ```
 
    - `agent_not_ready` means a dialog blocked startup. Look with
@@ -106,8 +117,11 @@ Input: Issue number `<N>` and a branch `<branch>` named per `DEV.md`
      `herdr agent send-keys <name> enter`, then
      `herdr agent wait <name> --timeout 60000` until `idle`. Never answer any
      other dialog; hand it to the maintainer.
-   - Read the agent's screen to confirm it runs in the intended mode.
-4. The new pane is occupied by the agent, so initialize the worktree from the
+   - Read the agent's screen to confirm it runs in the intended mode, and that
+     its status line (or the CLI's own model or status command) shows the
+     dispatched model and effort. If either differs, do not deliver the prompt;
+     report to the maintainer.
+5. The new pane is occupied by the agent, so initialize the worktree from the
    dev session's own shell:
 
    ```bash
@@ -116,9 +130,12 @@ Input: Issue number `<N>` and a branch `<branch>` named per `DEV.md`
 
    Confirm the output's `root:` is `<worktree>` and `branch:` is `<branch>`. Asset
    links come only from what setup creates; do not hand-create them with `ln -s`.
-5. Generate the handoff prompt and add the Issue-specific section below. Write it
-   to `<worktree>/.project/state/initial-prompt.md`, which avoids shell quoting
-   and leaves a handoff record, then deliver it and confirm the agent started:
+6. Generate the handoff prompt and add the Issue-specific section below. The
+   generated part carries the [Issue session rules](#issue-session-rules); the
+   appended section adds what is specific to the Issue and never narrows them.
+   Write it to `<worktree>/.project/state/initial-prompt.md`, which avoids shell
+   quoting and leaves a handoff record, then deliver it and confirm the agent
+   started:
 
    ```bash
    bash .agents/scripts/new-agent-prompt.sh <N> <branch> \
@@ -131,32 +148,119 @@ Input: Issue number `<N>` and a branch `<branch>` named per `DEV.md`
    Do not add `--wait` to `agent prompt`: it blocks until the first turn ends. On
    `blocked`, read the screen and hand it to the maintainer. A timeout does not
    mean the prompt was lost: `herdr agent read <name>` first, never resend blindly.
-6. Report `<ws>`, the agent name, `<branch>` and `<worktree>` to the maintainer,
-   who switches to that workspace (or uses `herdr agent focus <name>` on request).
+7. Add the session name and `<branch>` to the Issue's Dispatch section. Report
+   `<ws>`, the agent name, `<branch>` and `<worktree>` to the maintainer, who
+   switches to that workspace (or uses `herdr agent focus <name>` on request).
    From here the dev session does not edit that worktree.
+
+### Dispatch by difficulty
+
+Judge the Issue by its scope, risk and uncertainty, not by its type (`feat`,
+`fix`, `docs`, `chore`). When unsure between two tiers, take the higher one. When
+a mistake is costly (credentials, isolation, data loss, externally visible
+state), go one tier up.
+
+| Tier | Typical Issue | Model | Effort |
+| --- | --- | --- | --- |
+| mechanical | Rename, sync documents and indexes, apply a change the Issue already spells out; no design. | `<MODEL_LOW>` | low or medium |
+| routine | Feature or fix inside the existing design, several files, decisions already in the Issue, clear acceptance. | `<MODEL_MID>` | medium or high |
+| hard | Needs design or judgment: isolation and credentials, processes and concurrency, cross-module change, a new workflow, real runs. | `<MODEL_HIGH>` | high or xhigh |
+| hardest | Hard, plus large uncertainty or results that are hard to verify. | `<MODEL_HIGH>` | max |
+
+Do not dispatch a model in `<EXCLUDED_MODELS>` unless the maintainer asks for it.
+
+Worked example for Claude Code (`<AGENT_KIND>` `claude`), whose `--help` lists
+the model aliases and the effort levels `low`, `medium`, `high`, `xhigh` and
+`max`:
+
+```text
+<MODEL_ARGS>  --model {model} --effort {effort}
+<MODEL_LOW>   haiku
+<MODEL_MID>   sonnet
+<MODEL_HIGH>  opus
+```
+
+A routine Issue then starts with `-- <AGENT_ARGS> --model sonnet --effort high`.
+
+Record the dispatch in the Issue body as the last section, in this form. A
+coordinating session that creates the Issue writes it then; otherwise Start step
+2 adds it. Session and branch are added in Start step 7. Never write a workspace
+id or local path here.
+
+```markdown
+## Dispatch
+
+- agent: <agent and permission mode>
+- model: `<model>`; effort: `<effort>`
+- reason: <tier>: <the scope, risk or uncertainty that decided it>
+- session: `<AGENT_PREFIX>-issue-<N>`, branch `<branch>`
+```
+
+Edit the body through a file rather than shell quoting:
+`gh issue view <N> --repo <REPO> --json body --jq .body > .project/state/issue-<N>-body.md`,
+edit that file, then `gh issue edit <N> --repo <REPO> --body-file .project/state/issue-<N>-body.md`.
+The Issue forms in `.github/ISSUE_TEMPLATE/` have no Dispatch field on purpose:
+whoever files the Issue cannot judge the dispatch, and the coordinating session
+writes the section.
+
+**Fallback.** Use `<FALLBACK_AGENT>` only when the primary agent is unavailable:
+out of quota, logged out or in an outage. Not for difficulty or preference. Keep
+the tier and take the fallback's model for it. If `<FALLBACK_AGENT>` is not
+defined, report the blocker to the maintainer.
+
+**Re-dispatch.** Any later change of agent, model or effort, including a
+fallback, updates the agent, model, effort and session lines and appends one
+line that keeps the history:
+
+```markdown
+- re-dispatched: <previous agent, model, effort> → <new ones>: <reason>
+```
+
+### Issue session rules
+
+`new-agent-prompt.sh` prints these rules into every handoff; change both
+together.
+
+- **Verify to completion.** The session runs every check the Issue's acceptance
+  and the project's CI call for, including real runs and, after a push,
+  `gh pr checks`, and reports one definite result with the commands and their
+  output. The acceptance bounds the checks: none is skipped, and none is added
+  for its own sake. Only a step the maintainer alone can perform (an
+  interactive login, a decision) is named, as a blocker that says what the
+  maintainer must do. There is no routine "not verified" section, and a check
+  that was not run is never claimed.
+- **Fix what you meet.** A defect met while solving the Issue that blocks it or
+  is related to it is fixed in the same worktree, verified, and listed in the
+  PR. That is part of the Issue, not an unrequested feature. Only an unrelated,
+  larger problem is reported for a separate Issue.
+- **Other worktrees are not its concern.** Parallel worktrees are expected to
+  change the same files, and the dev checkout resolves conflicts at
+  [Merge](#merge). The session completes its Issue fully and does not narrow its
+  change to avoid conflicts.
+- **Merge implies close-out.** The approval to merge the PR covers its
+  [Close-out](#close-out): right after the verified merge, the dev session
+  migrates `.project/` and removes the worktree without asking again. Results
+  that cannot be rebuilt are archived before the merge.
 
 ### Issue-specific section appended to the handoff prompt
 
 ```text
 Also read first:
-- `gh issue view <N> --comments` for the discussion;
+- `gh issue view <N>` for the Issue and `gh issue view <N> --comments` for the
+  discussion (outside a terminal, `--comments` prints only the comments);
 - <other files, linked Issues or references to read first>
 
-Scope: <what to do; what explicitly not to do>
-Acceptance: <the Issue's acceptance evidence>
-<Optional parallel-work note: files other worktrees may also touch; make small,
-append-only edits there>
+Scope: <everything in the Issue's scope; what the Issue explicitly excludes>
+Acceptance: <the Issue's acceptance evidence, as the checks to run>
 
 Constraints:
-- Work only on Issue #<N>; record out-of-scope findings and report them instead
-  of fixing them;
 - Follow AGENTS.md: no credentials or machine-private paths; local state only
   under this worktree's .project/;
 - Do not commit or push until the maintainer asks. Then open the PR from this
   worktree (repository `<REPO>`, base `<BASE>`) and do not merge it;
 - <If `<PRE_MERGE_GATE>` is defined: run it before opening the PR and fix what it lists>;
-- When finished, report with `git status` and `git diff --stat`, say what was
-  verified and what was not, and wait for confirmation.
+- When finished, report the result with its evidence, `git status` and
+  `git diff --stat`, and wait for confirmation.
 ```
 
 ## Merge
@@ -213,12 +317,15 @@ Handle one PR at a time and re-check the next one after each merge.
    succeeded: `gh run list --repo <REPO> --branch <BASE> --limit 1`. When `no`, run
    `<POST_MERGE_CHECK>` in `<dev>`. On failure, report the output; do not patch
    around it in the dev session.
-6. Close out the PR's worktree (below).
+6. Close out the PR's worktree (below) right away.
 
 ## Close-out
 
-Run after a merge whose step 5 passed, without waiting for a request. Do not
-close out, and report to the maintainer instead, when:
+The maintainer's approval to merge covers the close-out. Run it immediately after
+a merge whose step 5 passed and report the result; do not ask again. Only the
+decisions the steps below hand to the maintainer (ignored files outside
+`.project/`, a commit on `<BASE>`) still wait for them. Do not close out, and
+report to the maintainer instead, when:
 
 - the PR deliberately only references its Issue (`Refs #N`) and the Issue stays
   open, because the work continues;

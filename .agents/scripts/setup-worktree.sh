@@ -71,6 +71,13 @@ if [[ -n "$primary" ]]; then
   done
 fi
 
+# Refreshing logins live in the canonical checkout's .project/credentials; a worktree
+# links to them and never holds a login of its own (llm-credentials).
+if [[ -n "$primary" && -d "$primary/.project/credentials" && ! -e "$state/credentials" && ! -L "$state/credentials" ]]; then
+  ln -s "$primary/.project/credentials" "$state/credentials"
+  printf 'linked .project/credentials -> canonical checkout\n'
+fi
+
 if [[ -x .agents/scripts/setup-project.sh ]]; then
   .agents/scripts/setup-project.sh
 fi
