@@ -13,8 +13,9 @@ That session opens the PR; the dev session merges it after review on GitHub and
 then closes the worktree out.
 
 Run **start** when an Issue is ready to implement, **merge** when its PR is
-approved, and **close-out** automatically after a verified merge, without waiting
-to be asked (exceptions are listed under Close-out).
+approved, and **close-out** right after a verified merge. The approval to merge
+covers the close-out, so do not wait or ask again (exceptions are listed under
+Close-out).
 
 ## Adaptation slots
 
@@ -129,9 +130,12 @@ Input: Issue number `<N>` and a branch `<branch>` named per `DEV.md`
 
    Confirm the output's `root:` is `<worktree>` and `branch:` is `<branch>`. Asset
    links come only from what setup creates; do not hand-create them with `ln -s`.
-6. Generate the handoff prompt and add the Issue-specific section below. Write it
-   to `<worktree>/.project/state/initial-prompt.md`, which avoids shell quoting
-   and leaves a handoff record, then deliver it and confirm the agent started:
+6. Generate the handoff prompt and add the Issue-specific section below. The
+   generated part carries the [Issue session rules](#issue-session-rules); the
+   appended section adds what is specific to the Issue and never narrows them.
+   Write it to `<worktree>/.project/state/initial-prompt.md`, which avoids shell
+   quoting and leaves a handoff record, then deliver it and confirm the agent
+   started:
 
    ```bash
    bash .agents/scripts/new-agent-prompt.sh <N> <branch> \
@@ -212,6 +216,32 @@ line that keeps the history:
 - re-dispatched: <previous agent, model, effort> → <new ones>: <reason>
 ```
 
+### Issue session rules
+
+`new-agent-prompt.sh` prints these rules into every handoff; change both
+together.
+
+- **Verify to completion.** The session runs every check the Issue's acceptance
+  and the project's CI call for, including real runs and, after a push,
+  `gh pr checks`, and reports one definite result with the commands and their
+  output. The acceptance bounds the checks: none is skipped, and none is added
+  for its own sake. Only a step the maintainer alone can perform (an
+  interactive login, a decision) is named, as a blocker that says what the
+  maintainer must do. There is no routine "not verified" section, and a check
+  that was not run is never claimed.
+- **Fix what you meet.** A defect met while solving the Issue that blocks it or
+  is related to it is fixed in the same worktree, verified, and listed in the
+  PR. That is part of the Issue, not an unrequested feature. Only an unrelated,
+  larger problem is reported for a separate Issue.
+- **Other worktrees are not its concern.** Parallel worktrees are expected to
+  change the same files, and the dev checkout resolves conflicts at
+  [Merge](#merge). The session completes its Issue fully and does not narrow its
+  change to avoid conflicts.
+- **Merge implies close-out.** The approval to merge the PR covers its
+  [Close-out](#close-out): right after the verified merge, the dev session
+  migrates `.project/` and removes the worktree without asking again. Results
+  that cannot be rebuilt are archived before the merge.
+
 ### Issue-specific section appended to the handoff prompt
 
 ```text
@@ -220,21 +250,17 @@ Also read first:
   discussion (outside a terminal, `--comments` prints only the comments);
 - <other files, linked Issues or references to read first>
 
-Scope: <what to do; what explicitly not to do>
-Acceptance: <the Issue's acceptance evidence>
-<Optional parallel-work note: files other worktrees may also touch; make small,
-append-only edits there>
+Scope: <everything in the Issue's scope; what the Issue explicitly excludes>
+Acceptance: <the Issue's acceptance evidence, as the checks to run>
 
 Constraints:
-- Work only on Issue #<N>; record out-of-scope findings and report them instead
-  of fixing them;
 - Follow AGENTS.md: no credentials or machine-private paths; local state only
   under this worktree's .project/;
 - Do not commit or push until the maintainer asks. Then open the PR from this
   worktree (repository `<REPO>`, base `<BASE>`) and do not merge it;
 - <If `<PRE_MERGE_GATE>` is defined: run it before opening the PR and fix what it lists>;
-- When finished, report with `git status` and `git diff --stat`, say what was
-  verified and what was not, and wait for confirmation.
+- When finished, report the result with its evidence, `git status` and
+  `git diff --stat`, and wait for confirmation.
 ```
 
 ## Merge
@@ -291,12 +317,15 @@ Handle one PR at a time and re-check the next one after each merge.
    succeeded: `gh run list --repo <REPO> --branch <BASE> --limit 1`. When `no`, run
    `<POST_MERGE_CHECK>` in `<dev>`. On failure, report the output; do not patch
    around it in the dev session.
-6. Close out the PR's worktree (below).
+6. Close out the PR's worktree (below) right away.
 
 ## Close-out
 
-Run after a merge whose step 5 passed, without waiting for a request. Do not
-close out, and report to the maintainer instead, when:
+The maintainer's approval to merge covers the close-out. Run it immediately after
+a merge whose step 5 passed and report the result; do not ask again. Only the
+decisions the steps below hand to the maintainer (ignored files outside
+`.project/`, a commit on `<BASE>`) still wait for them. Do not close out, and
+report to the maintainer instead, when:
 
 - the PR deliberately only references its Issue (`Refs #N`) and the Issue stays
   open, because the work continues;

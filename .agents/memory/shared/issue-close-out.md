@@ -1,7 +1,7 @@
 ---
 name: issue-close-out
 date: 2026-10-13
-source: Issue #18, harvested from downstream adopters of this template
+source: Issue #18, harvested from downstream adopters of this template; Issue #34
 scope: shared
 applies_to: repositories that manage Issue worktrees with Herdr, develop from a dev integration branch and merge PRs back into it
 status: active
@@ -15,11 +15,13 @@ superseded_by: null
 
 The coordinating session merges the PR from the dev checkout after the maintainer
 has approved it on GitHub, and resolves conflicts between open PRs there instead of
-asking each Issue session to do so. After the merge is verified it closes the
-worktree out without waiting for a request: confirm the Issue is closed and the
-branch is in `dev`, update local `dev`, migrate `.project/` state and asset links to
-the dev checkout with `teardown-worktree.sh --migrate-to`, remove the worktree with
-`herdr worktree remove`, then delete the local and remote branches.
+asking each Issue session to do so. The maintainer's approval to merge covers the
+close-out, so after the merge is verified the coordinating session closes the
+worktree out immediately and reports, without asking again: confirm the Issue is
+closed and the branch is in `dev`, update local `dev`, migrate `.project/` state
+and asset links to the dev checkout with `teardown-worktree.sh --migrate-to`,
+remove the worktree with `herdr worktree remove`, then delete the local and remote
+branches.
 
 Results that cannot be rebuilt must not stay in the migration directory. They are
 archived and registered with the project's archive command, preferably before the
@@ -35,7 +37,9 @@ agent still working or a live task.
 Adopters that manage Issues with Herdr independently reached this procedure after a
 merged PR left its worktree and branches behind and after conflicting PRs were
 resolved ad hoc. Results archived only after the merge changed tracked files too
-late, so the archive check moved ahead of the merge.
+late, so the archive check moved ahead of the merge. While the link between merge
+approval and close-out was implicit, coordinating sessions still paused between
+the two to ask (Issue #34).
 
 ## Apply
 

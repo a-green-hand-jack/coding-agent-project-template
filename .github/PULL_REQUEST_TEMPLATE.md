@@ -10,6 +10,8 @@ Describe the behavior or boundary that changed and why.
 - [ ] Real product entrypoint/build/run, if applicable
 - [ ] Documentation and asset manifest updated
 
-## Evidence and limits
+## Evidence
 
-List commands and results. State what was not verified and any remaining risk.
+List each check the acceptance and CI call for, with its command and result.
+List the related defects fixed on the way. Name a step only the maintainer can
+perform as a blocker, with what they must do.
