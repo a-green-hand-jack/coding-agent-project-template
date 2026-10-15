@@ -57,7 +57,7 @@ Each project fills two parameters:
   configuration. If the device has none, the project runs without it.
 - `CREDENTIAL_DIR`: the name of the Git-ignored directory under the canonical
   checkout's `.project/` that holds the symlink to the shared file and the
-  project's own logins.
+  project's own logins. This project uses `credentials`.
 
 Then, in the canonical checkout:
 
@@ -72,7 +72,8 @@ Then, in the canonical checkout:
    no credential value and no path outside the project.
 
 In each worktree of the project, the same `CREDENTIAL_DIR` is a link to the
-canonical checkout's directory. A worktree never holds a login of its own, never
-logs in, and never restores a login from a snapshot. Teardown and migration of a
-worktree drop that link and never copy a login, in particular never over the
-canonical one.
+canonical checkout's directory. `setup-worktree.sh` creates that link when the
+canonical checkout has the directory. A worktree never holds a login of its own,
+never logs in, and never restores a login from a snapshot. `migrate-assets.sh`
+(used by worktree teardown) drops the link and never copies a login; a real copy
+of a login inside a worktree blocks the migration until someone checks it by hand.
