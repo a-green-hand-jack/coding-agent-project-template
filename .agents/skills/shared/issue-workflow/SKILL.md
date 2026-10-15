@@ -39,7 +39,7 @@ project-neutral.
 | `<POST_MERGE_CHECK>` | Verification commands from `DEV.md`, used when `<CI>` is `no`. | `DEV.md` verification strategy |
 | `<PRE_MERGE_GATE>` | Optional read-only product command that must pass before merging, for example `<cmd> archive --check`. | none |
 | `<ARCHIVE_CMD>` | Product command that archives and registers non-rebuildable results before a worktree is retired. | none |
-| `<MONITOR_CMD>`, `<STOP_CMD>` | Product commands that list live runs in a worktree and stop one. | none |
+| `<MONITOR_CMD>`, `<STOP_CMD>` | Product commands that list live runs in a checkout (the dev checkout or a worktree) and stop one. | none |
 
 ## Shared boundaries
 
@@ -66,6 +66,12 @@ project-neutral.
   the maintainer's confirmation.
 - Initialize the dev checkout once with `bash .agents/scripts/setup-worktree.sh`
   so `.project/home` exists and diagnostics pass there.
+- The dev checkout may drive a long-running product run, which fails when a
+  pull or merge changes the code under it (see `long-running-supervision`).
+  Before every `git pull` or `git merge` in `<dev>` below, run the *dev live-run
+  check*: when `<MONITOR_CMD>` is defined, `(cd <dev> && <MONITOR_CMD>)`. A live
+  run it lists goes to the maintainer, and the pull or merge waits until the run
+  ends or the maintainer decides. Do not stop the run to make way for it.
 - Herdr syntax below was checked against herdr 0.9.4; the `worktree create`
   result paths in Start step 3 were last checked against 0.9.1. Run
   `herdr worktree --help`, `herdr agent --help` and `herdr pane --help`; the
@@ -87,7 +93,8 @@ Input: Issue number `<N>` and a branch `<branch>` named per `DEV.md`
    git -C <dev> rev-list --count <BASE>..origin/<BASE>
    ```
 
-   If the count is not 0, run `git -C <dev> pull --ff-only` first.
+   If the count is not 0, run the dev live-run check, then
+   `git -C <dev> pull --ff-only`.
 2. Choose the tier, model and effort as described in
    [Dispatch by difficulty](#dispatch-by-difficulty) and make sure the Issue body
    has a matching Dispatch section; write or correct it now if it does not.
@@ -272,8 +279,9 @@ conflicts in the dev checkout. Do not ask the Issue sessions to rebase or merge
 
 Handle one PR at a time and re-check the next one after each merge.
 
-1. Update the dev checkout: `git -C <dev> pull --ff-only` (locate `<dev>` as in
-   Close-out step 1).
+1. Update the dev checkout (locate `<dev>` as in Close-out step 1). Run the dev
+   live-run check first; with a live run, stop here and report, before pulling.
+   Otherwise `git -C <dev> pull --ff-only`.
 2. Inspect the PR:
 
    ```bash
@@ -299,7 +307,8 @@ Handle one PR at a time and re-check the next one after each merge.
    Close-out deletes the branch. Then do step 5 and Close-out before the next PR.
 
    When `mergeable` is `CONFLICTING`, resolve it in the dev checkout using the
-   PR's remote branch:
+   PR's remote branch. Run the dev live-run check again first, since a run may
+   have started after step 1; with a live run, stop and report before merging.
 
    ```bash
    git -C <dev> fetch origin
@@ -330,8 +339,9 @@ report to the maintainer instead, when:
 - the PR deliberately only references its Issue (`Refs #N`) and the Issue stays
   open, because the work continues;
 - the maintainer said to keep the worktree;
-- a precondition in step 3 or 5 fails: uncommitted changes, unpushed commits, an
-  agent still working or a live task.
+- a precondition in step 3, 4 or 5 fails: uncommitted changes, unpushed commits,
+  a live run in the dev checkout, an agent still working or a live task in the
+  worktree (a live run or a container mounting it).
 
 Removing a worktree closes its workspace panes, so run these steps from another
 workspace, normally the dev checkout's.
@@ -367,7 +377,8 @@ workspace, normally the dev checkout's.
    with its own evidence that the branch's content reached `<BASE>` and records the
    evidence in the report.
 4. Bring the dev checkout's `<BASE>` up to date so it contains the merged PR
-   (step 6 copies state into it and step 8's `branch -d` judges against it):
+   (step 6 copies state into it and step 8's `branch -d` judges against it).
+   Run the dev live-run check first, then:
 
    ```bash
    git -C <dev> pull --ff-only
@@ -379,14 +390,27 @@ workspace, normally the dev checkout's.
 5. Confirm nothing is running. `herdr pane list --workspace <ws>` must show the
    agent as `idle` or `done`. When `<MONITOR_CMD>` is defined, run it in
    `<worktree>`; a live run goes to the maintainer, and is stopped only through
-   `<STOP_CMD>`.
+   `<STOP_CMD>`. Then list the containers that mount the worktree, which
+   `<MONITOR_CMD>` does not see (a stopped run kept for resume, a background job):
+
+   ```bash
+   (cd <worktree> && bash .agents/scripts/inspect-state.sh)
+   ```
+
+   Its `## containers mounting this worktree` section names every container,
+   running or stopped, with a mount whose source is inside `<worktree>`. Exit 3
+   means it found one, or an installed runtime could not be queried; each is a
+   live task that goes to the maintainer. Do not stop or remove the container.
+   With no container runtime installed the section prints `skip` and the check
+   passes.
 6. Migrate local state and asset links to the dev checkout:
 
    ```bash
    (cd <worktree> && bash .agents/scripts/teardown-worktree.sh --migrate-to <dev>)
    ```
 
-   The script prints `inspect-state.sh` output, then `migrate-assets.sh` copies
+   The script prints `inspect-state.sh` output (and exits 3 without migrating
+   when step 5's container check fails), then `migrate-assets.sh` copies
    `.project/state`, `runs`, `artifacts` and `manifest` into
    `<dev>/.project/migrations/<worktree-dir>-<UTC-timestamp>/`, and copies
    untracked `assets/` entries (asset links) into `<dev>/assets/`. Tracked files
