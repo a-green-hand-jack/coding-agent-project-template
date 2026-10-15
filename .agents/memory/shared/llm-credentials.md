@@ -1,7 +1,7 @@
 ---
 name: llm-credentials
 date: 2026-10-15
-source: Issue #23 (policy); Issue #27 (per-canonical-checkout decision by the template maintainer)
+source: Issue #23 (policy); Issue #27 (per-canonical-checkout decision by the template maintainer); Issue #31 (safe re-login)
 scope: shared
 applies_to: repositories whose code, tools or agents call LLM providers with API keys, tokens or OAuth logins
 status: active
