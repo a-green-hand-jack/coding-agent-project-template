@@ -79,6 +79,9 @@ entries:
   - path: .agents/memory/shared/run-settings-from-config.md
     scope: shared_with_adaptation
     note: Fill CONFIG_FILE, COMMAND_TABLE, RECORD_FIELD and CONFIG_FLAG; run parameters are settings with a fixed override order, recorded at run start and reused on resume.
+  - path: .agents/memory/shared/third-party-llm-compat-patches.md
+    scope: shared_with_adaptation
+    note: Fill PATCH_DIR for the project's patches or wrappers of third-party LLM tools; they run on every run and state that metrics, prompts and reasoning effort are unchanged.
   - path: .agents/memory/project/
     scope: project
     note: Decisions owned by the destination repository; never copy wholesale.
@@ -91,6 +94,9 @@ entries:
   - path: .agents/knowledge/shared/
     scope: shared
     note: Reusable sourced facts with a refresh condition; adapt sources before reuse.
+  - path: .agents/knowledge/shared/gpt5-strict-backend-requests.md
+    scope: shared
+    note: Dated GPT-5.x request shapes that strict Responses backends reject; recheck against the backend when a provider or a named client changes, and adapt the source before reuse.
   - path: .agents/knowledge/project/
     scope: project
     note: Machine, provider, version and benchmark facts owned by the destination.

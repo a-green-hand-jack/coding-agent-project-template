@@ -7,4 +7,6 @@ refresh or expiry condition.
 
 ## Index
 
-No shared knowledge records are present in this template yet.
+- [`gpt5-strict-backend-requests.md`](gpt5-strict-backend-requests.md) — the three
+  GPT-5.x request shapes strict Responses backends reject, what to send instead,
+  that a relay can hide the rejections, and which common clients produce them.

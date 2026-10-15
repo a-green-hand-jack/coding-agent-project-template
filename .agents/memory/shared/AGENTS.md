@@ -21,3 +21,7 @@ or superseded status.
 - [`run-settings-from-config.md`](run-settings-from-config.md) — run parameters
   are settings loaded from configuration with a fixed override order, recorded
   at run start and reused on resume; never constants in code.
+- [`third-party-llm-compat-patches.md`](third-party-llm-compat-patches.md) —
+  compatibility changes to third-party LLM tools live in the repository and run
+  every time; check one captured request body before a batch; no retry-without-
+  the-parameter fallbacks.
