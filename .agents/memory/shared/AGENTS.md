@@ -17,3 +17,6 @@ or superseded status.
 - [`llm-credentials.md`](llm-credentials.md) — share stable LLM credentials
   through one device file; log refreshing logins in once per canonical checkout,
   whose worktrees link to them.
+- [`run-settings-from-config.md`](run-settings-from-config.md) — run parameters
+  are settings loaded from configuration with a fixed override order, recorded
+  at run start and reused on resume; never constants in code.

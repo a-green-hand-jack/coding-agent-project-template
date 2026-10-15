@@ -76,6 +76,9 @@ entries:
   - path: .agents/memory/shared/llm-credentials.md
     scope: shared_with_adaptation
     note: Fill SHARED_CREDENTIAL_FILE from user-level configuration and CREDENTIAL_DIR (credentials) under the canonical checkout's .project/; worktrees link to it; never copy a login between projects or worktrees.
+  - path: .agents/memory/shared/run-settings-from-config.md
+    scope: shared_with_adaptation
+    note: Fill CONFIG_FILE, COMMAND_TABLE, RECORD_FIELD and CONFIG_FLAG; run parameters are settings with a fixed override order, recorded at run start and reused on resume.
   - path: .agents/memory/project/
     scope: project
     note: Decisions owned by the destination repository; never copy wholesale.
