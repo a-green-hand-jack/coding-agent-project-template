@@ -1,5 +1,11 @@
 # Release notes
 
+## v0.1.10 — 2026-10-16
+
+- `release-doc-audit`: the example `RELEASE_HEADING` for notes that title only the current release now ends the tag like the default (`([[:space:]]|\$)`), so a shorter tag such as `v0.4` no longer matches a `v0.4.0` title.
+- `template-adoption` step 5: a slot value that does not fit a Slot/Value table cell (a pattern or command containing `|`) is written as a code block under the `## In this repository` section, naming its slot.
+- Recorded the pre-release downstream harvest in project memory.
+
 ## v0.1.9 — 2026-10-15
 
 - Shared skills and memory records registered `shared_with_adaptation` keep the template text verbatim; each adopter writes its slot values and step-keyed additions in one trailing `## In this repository` section, so `template-upgrade` replaces the text above it without conflicts. `template-adoption`, `template-upgrade`, the registry rule and `issue-workflow` state the convention, and `diagnose-environment.sh` warns when a downstream file lacks the section.

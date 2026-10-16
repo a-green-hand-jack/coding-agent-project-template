@@ -72,7 +72,9 @@ example assets or project-specific memory and knowledge.
      it is the template's and is never edited.
    - Write slot values as a table with the columns Slot and Value, one row per
      slot the file defines (for example the `issue-workflow` adaptation slots).
-     A slot left out takes its default.
+     A slot left out takes its default. A value that does not fit a table cell
+     (a pattern or command containing `|`) is written as a code block under the
+     section, naming its slot.
    - Write every other adaptation as an addition keyed to the step it extends,
      naming the step and its first words so that a renumbered step is noticed
      at upgrade, for example "Start step 4 (Start the agent): also pass ...".

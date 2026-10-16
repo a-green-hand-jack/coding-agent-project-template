@@ -18,14 +18,16 @@ adapting the repository URL, release-note ownership and `RELEASE_HEADING`.
 
 A downstream project whose notes do not have one such heading per release, for
 example because they keep only the current release in the document title, sets
-`RELEASE_HEADING` to match its own layout (such as `^# .*${TARGET_TAG//./\\.}`).
+`RELEASE_HEADING` to match its own layout (such as `^# .*${TARGET_TAG//./\\.}([[:space:]]|\$)`).
 Keep the pattern anchored to the line that names the release, so that an older
-or illustrative tag elsewhere in the file does not satisfy it.
+or illustrative tag elsewhere in the file does not satisfy it, and end the tag
+the way the default does so that a shorter tag (`v0.4`) does not match a longer
+one (`v0.4.0`).
 
 1. Confirm the target release identity and version record:
 
    ```bash
-   test -n "${TARGET_TAG:?set TARGET_TAG, for example v0.1.9}"
+   test -n "${TARGET_TAG:?set TARGET_TAG, for example v0.1.10}"
    RELEASE_HEADING="${RELEASE_HEADING:-^## ${TARGET_TAG//./\\.}([[:space:]]|\$)}"
    grep -nE "$RELEASE_HEADING" RELEASE_NOTES.md
    grep -A2 '^template:' .agents/content-registry.yaml
