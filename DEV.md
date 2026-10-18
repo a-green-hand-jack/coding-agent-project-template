@@ -50,7 +50,10 @@ bash .agents/scripts/teardown-worktree.sh --migrate-to /path/to/canonical-projec
 ```
 
 该命令会检查 ignored state、复制可保留的本地状态、保留资产软链接并写入迁移
-记录；它不会自动删除 worktree。确认资产已迁移、相关进程已停止、没有唯一副本
+记录；它不会自动删除 worktree。`setup-project.sh` 在 `.project/` 下创建的条目，
+在 `.agents/scripts/migrate-project.rules` 里逐行写明迁移方式
+（`NAME|ACTION|WHY`，ACTION 为 `copy`、`drop` 或 `login`），否则 teardown 会
+停下来要求决定。确认资产已迁移、相关进程已停止、没有唯一副本
 留在旧目录后，再用 worktree 管理工具销毁 worktree 和 branch。
 
 ## 环境变量与资产

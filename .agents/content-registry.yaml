@@ -128,7 +128,7 @@ entries:
     note: Maintainer procedure that collects settled downstream practice; keep it in the template repository and never copy it downstream.
   - path: .agents/scripts/
     scope: shared_with_adaptation
-    note: Preserve lifecycle boundaries but adapt project setup hooks and tools.
+    note: Adopt the template's scripts unchanged and preserve lifecycle boundaries; put project setup in setup-project.sh and the teardown rules for the .project/ entries it creates in migrate-project.rules, which the template never ships.
   - path: .project/
     scope: project
     note: Worktree-local state is never copied into a new repository template.
