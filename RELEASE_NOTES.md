@@ -1,5 +1,11 @@
 # Release notes
 
+## v0.1.11 — 2026-10-18
+
+- `migrate-assets.sh` reads an optional, project-owned `.agents/scripts/migrate-project.rules` (one `NAME|ACTION|WHY` line per `.project/` entry the project's setup hook creates; actions `copy`, `drop` with a reason, `login`), so a downstream's own entries no longer stop every teardown and a local edit to the script is not needed. `login` is the rule the script already applied to `credentials`: a link to the canonical checkout's login is dropped, a real copy blocks, and `--also`/`--skip` on a login is refused (exit 2). A rule for an entry the template handles itself is refused, so a new template rule shows up as a conflict after an upgrade. `template-adoption` step 5, `template-upgrade` step 5, `llm-credentials`, `issue-workflow` and `DEV.md` describe it.
+- Added the `docker-objects-prefixed-and-removed` shared memory record (`shared_with_adaptation`, parameter `DOCKER_PREFIX`): everything a project starts in Docker carries its prefix, what expires is removed promptly and only the project's own and never with `-f`, and `issue-close-out` removes the image tags only the merged branch used.
+- Recorded the pre-release downstream harvest in project memory.
+
 ## v0.1.10 — 2026-10-16
 
 - `release-doc-audit`: the example `RELEASE_HEADING` for notes that title only the current release now ends the tag like the default (`([[:space:]]|\$)`), so a shorter tag such as `v0.4` no longer matches a `v0.4.0` title.
