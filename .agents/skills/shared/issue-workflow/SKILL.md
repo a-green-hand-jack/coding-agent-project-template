@@ -423,7 +423,8 @@ workspace, normally the dev checkout's.
 
    The script prints `inspect-state.sh` output (and exits 3 without migrating
    when step 5's container check fails), then `migrate-assets.sh` copies
-   `.project/state`, `runs`, `artifacts` and `manifest` into
+   `.project/state`, `runs`, `artifacts`, `manifest` and the entries
+   `.agents/scripts/migrate-project.rules` marks `copy` into
    `<dev>/.project/migrations/<worktree-dir>-<UTC-timestamp>/`, and copies
    untracked `assets/` entries (asset links) into `<dev>/assets/`. Tracked files
    arrive through Git, and it refuses to overwrite a different existing destination

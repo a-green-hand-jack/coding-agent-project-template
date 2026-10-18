@@ -73,6 +73,14 @@ downstream repository with the template tree or merge template history into it.
      `git -C <template> diff <SOURCE_TAG> <TARGET_TAG> -- <path>` for new,
      renamed or removed slots and for steps that moved or changed, and update the
      slot rows and the step keys of the additions.
+
+   Replace adopted scripts whole; the project's
+   `.agents/scripts/setup-project.sh` and `.agents/scripts/migrate-project.rules`
+   are not template files and stay. A local edit to an adopted script is a local
+   conflict: move it into one of those two files (`template-adoption` step 5), or
+   report it through `template-feedback` when neither can hold it. When the
+   target `migrate-assets.sh` handles an entry itself, it refuses the project's
+   rule for that entry; remove the line.
 6. Run setup, diagnostics, public CLI checks, relevant seam tests and any required
    long-running supervision checks. Verify assets and worktree state remain
    visible and no local product files were overwritten.
