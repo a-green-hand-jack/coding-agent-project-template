@@ -39,6 +39,10 @@ worktree. A live task includes every container, running or stopped, that mounts 
 path inside the worktree; `inspect-state.sh` lists them when a container runtime is
 installed.
 
+When the merged PR changed an image or a test fixture, the close-out also removes
+the Docker image tags only that branch used, under the rules in
+[`docker-objects-prefixed-and-removed.md`](docker-objects-prefixed-and-removed.md).
+
 ## Why
 
 Adopters that manage Issues with Herdr independently reached this procedure after a

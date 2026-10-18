@@ -4,7 +4,7 @@ purpose: >-
   which content belongs to one concrete project.
 template:
   repository: https://github.com/a-green-hand-jack/coding-agent-project-template
-  version: v0.1.10
+  version: v0.1.11
 default_scope: project
 matching: Most specific path wins; explicit entries override directory defaults.
 classes:
@@ -69,6 +69,9 @@ entries:
   - path: .agents/memory/shared/
     scope: shared
     note: Reusable durable decisions; adapt paths and commands before reuse.
+  - path: .agents/memory/shared/docker-objects-prefixed-and-removed.md
+    scope: shared_with_adaptation
+    note: Fill DOCKER_PREFIX; every Docker object the project makes carries it and expired ones are removed promptly, only the project's own and never with -f; unnecessary for a project that uses no containers.
   - path: .agents/memory/shared/issue-in-herdr-worktree.md
     scope: shared
     note: Each Issue runs in its own Herdr worktree and agent session under the handoff's working rules; applies to repositories developing from a dev branch.
@@ -128,7 +131,7 @@ entries:
     note: Maintainer procedure that collects settled downstream practice; keep it in the template repository and never copy it downstream.
   - path: .agents/scripts/
     scope: shared_with_adaptation
-    note: Preserve lifecycle boundaries but adapt project setup hooks and tools.
+    note: Adopt the template's scripts unchanged and preserve lifecycle boundaries; put project setup in setup-project.sh and the teardown rules for the .project/ entries it creates in migrate-project.rules, which the template never ships.
   - path: .project/
     scope: project
     note: Worktree-local state is never copied into a new repository template.

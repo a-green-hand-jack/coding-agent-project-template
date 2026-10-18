@@ -5,10 +5,13 @@
 #   migrate-assets.sh --to CANONICAL_PROJECT [--also NAME]... [--skip NAME=REASON]...
 #
 # Every top-level entry of .project/ gets one line: its action, size and why it
-# may be left behind. An entry this project has no rule for, and that holds
-# something, stops the migration (exit 3) until it is named with --also (copy it
-# too) or --skip (leave it, with the reason). Exit 1: an asset or link mapping
-# would be overwritten, or the copy does not match its source.
+# may be left behind. The template's rules are in template_rule() below; a project
+# adds rules for its own entries in .agents/scripts/migrate-project.rules (format
+# below). An entry without a rule that holds something stops the migration
+# (exit 3) until it gets a rule or is named with --also (copy it too) or --skip
+# (leave it, with the reason). Exit 1: a real copy of a login, an asset or link
+# mapping would be overwritten, or the copy does not match its source. Exit 2:
+# wrong arguments or an invalid rules file.
 set -euo pipefail
 
 usage() {
@@ -32,18 +35,63 @@ root=$(git rev-parse --show-toplevel)
 cd "$root"
 [[ "$destination" != "$root" && "$destination" != "$root"/* ]] || { echo 'destination must be outside this worktree' >&2; exit 1; }
 
-# What this project does with each top-level entry of .project/ (adapt this table
-# per project). Prints "<action>|<why>": copy, merge, drop or unknown.
-classify() {
+in_list() { printf '%s' "$2" | grep -qxF -- "$1"; }
+
+# The template's rule for each top-level entry of .project/ it creates. Do not edit
+# it in a project: template-upgrade replaces this script. Prints "<action>|<why>":
+# copy, merge, drop, login or unknown. A login is a link to the canonical
+# checkout's login directory (llm-credentials): the link is dropped, and a real
+# directory or file is never migrated.
+template_rule() {
   case $1 in
     state|runs|artifacts|manifest) echo 'copy|' ;;
     assets.links) echo "merge|the mappings are added to the destination's .project/assets.links" ;;
     home|worktree.env) echo 'drop|setup-worktree.sh rewrites it and it only names this worktree' ;;
+    credentials) echo 'login|' ;;
     *) echo 'unknown|' ;;
   esac
 }
 
-in_list() { printf '%s' "$2" | grep -qxF -- "$1"; }
+# The project's rules for the entries its own setup creates, one per line:
+#   NAME|ACTION|WHY
+# with ACTION copy, drop (WHY says why it may be left behind) or login. Blank lines
+# and lines starting with '#' are ignored. The template never ships this file, so
+# template-upgrade keeps it; a rule for an entry the template already handles is
+# refused, so a new template rule shows up as a conflict instead of being hidden.
+rules_file=.agents/scripts/migrate-project.rules
+project_rules=
+if [[ -f $rules_file ]]; then
+  line_no=0
+  while IFS= read -r line || [[ -n $line ]]; do
+    line_no=$((line_no + 1))
+    [[ -z "${line//[[:space:]]/}" || $line == \#* ]] && continue
+    IFS='|' read -r name action why <<<"$line"
+    problem=
+    if [[ -z $name || $name == */* || $name == . || $name == .. || $name == [[:space:]]* || $name == *[[:space:]] ]]; then
+      problem="'$name' is not a plain entry name of .project/"
+    elif [[ $(template_rule "$name") != 'unknown|' ]]; then
+      problem="the template already has a rule for $name; remove this line"
+    elif in_list "$name" "$(printf '%s' "$project_rules" | cut -d'|' -f1)"; then
+      problem="a second rule for $name"
+    else
+      case $action in
+        copy|login) ;;
+        drop) [[ -n "${why//[[:space:]]/}" ]] || problem="drop needs a reason: $name|drop|WHY" ;;
+        *) problem="unknown action '$action' for $name (copy, drop or login)" ;;
+      esac
+    fi
+    [[ -z $problem ]] || { echo "$rules_file:$line_no: $problem" >&2; exit 2; }
+    project_rules+="$name|$action|$why"$'\n'
+  done < "$rules_file"
+fi
+
+classify() {
+  local rule
+  rule=$(template_rule "$1")
+  [[ $rule == 'unknown|' ]] || { printf '%s\n' "$rule"; return; }
+  printf '%s' "$project_rules" | awk -F'|' -v n="$1" '$1 == n { sub(/^[^|]*[|]/, ""); print; found = 1; exit } END { if (!found) print "unknown|" }'
+}
+
 skip_reason() { printf '%s' "$skip_list" | awk -F= -v n="$1" '$1 == n { sub(/^[^=]*=/, ""); print; exit }'; }
 holds_nothing() {
   if [[ -L "$1" ]]; then return 1; fi
@@ -68,9 +116,11 @@ for path in .project/* .project/.[!.]*; do
   seen+="$name"$'\n'
   size=$(du -sh "$path" 2>/dev/null | cut -f1 || true)
   IFS='|' read -r action why <<<"$(classify "$name")"
-  if [[ $name == credentials ]]; then
-    # Refreshing logins live in the canonical checkout (llm-credentials). A worktree
-    # only links to them: the link is dropped, a real copy is never migrated.
+  if [[ $action == login ]]; then
+    if in_list "$name" "$also_list" || in_list "$name" "$(printf '%s' "$skip_list" | cut -d= -f1)"; then
+      echo "--also/--skip $name: it is a login, which is never copied and never left by choice" >&2
+      exit 2
+    fi
     if [[ -L "$path" ]]; then
       action=drop
       why="link to the canonical checkout's login; the link is dropped and the login is never copied"
@@ -92,7 +142,7 @@ for path in .project/* .project/.[!.]*; do
       action=drop
       why='empty; nothing to keep'
     else
-      why='no rule for it: decide with --also NAME (copy it too) or --skip NAME=REASON (leave it)'
+      why="no rule for it: add one to $rules_file, or decide with --also NAME (copy it too) or --skip NAME=REASON (leave it)"
       fail_with 3
     fi
   fi

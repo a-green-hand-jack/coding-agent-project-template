@@ -18,3 +18,5 @@ or superseded status.
   project-local.
 - [`harvest-2026-10-16-v0.1.10.md`](harvest-2026-10-16-v0.1.10.md) — the check
   before v0.1.10: downstream feedback #50 landed; no new shared candidate.
+- [`harvest-2026-10-18-v0.1.11.md`](harvest-2026-10-18-v0.1.11.md) — the check
+  before v0.1.11: downstream feedback #53 and #54 landed; no new shared candidate.

@@ -83,7 +83,13 @@ example assets or project-specific memory and knowledge.
    - When nothing needs adapting, the section says so in one line.
 
    Adopt scripts unchanged and put project-specific setup in the
-   `.agents/scripts/setup-project.sh` hook. Rewrite the other
+   `.agents/scripts/setup-project.sh` hook. When that hook creates entries in
+   `.project/`, say in `.agents/scripts/migrate-project.rules` how teardown
+   migrates each one, one `NAME|ACTION|WHY` line per entry: `copy`, `drop` with
+   the reason it may be left behind, or `login` for a link to the canonical
+   checkout's login directory (`llm-credentials`; the link is dropped and a real
+   copy blocks). The template ships neither file, so `template-upgrade` keeps
+   both. Rewrite the other
    `shared_with_adaptation` files (`AGENTS.md`, the registry, product skeletons)
    for the repository.
 6. Run the target repository's setup, diagnostics, CLI entrypoints and relevant

@@ -10,6 +10,10 @@ the record's own text never contains that heading line.
 
 ## Index
 
+- [`docker-objects-prefixed-and-removed.md`](docker-objects-prefixed-and-removed.md)
+  — every image, container, network and volume a project starts in Docker
+  carries its prefix; expired ones are removed promptly, only the project's own,
+  never with `-f`.
 - [`issue-in-herdr-worktree.md`](issue-in-herdr-worktree.md) — implement each
   Issue in its own Herdr worktree and agent session, which verifies to
   completion, fixes related defects and leaves conflicts to the dev checkout.
