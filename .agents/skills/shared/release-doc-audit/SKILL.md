@@ -27,7 +27,7 @@ one (`v0.4.0`).
 1. Confirm the target release identity and version record:
 
    ```bash
-   test -n "${TARGET_TAG:?set TARGET_TAG, for example v0.1.12}"
+   test -n "${TARGET_TAG:?set TARGET_TAG, for example v0.1.13}"
    RELEASE_HEADING="${RELEASE_HEADING:-^## ${TARGET_TAG//./\\.}([[:space:]]|\$)}"
    grep -nE "$RELEASE_HEADING" RELEASE_NOTES.md
    sed -n '/^template:/,/^[^[:space:]]/p' .agents/content-registry.yaml

@@ -1,6 +1,6 @@
 # Release notes
 
-## Unreleased
+## v0.1.13 — 2026-10-20
 
 - Declared product tree: a project declares its product tree in `AGENTS.md` and the `README.md` directory table, with `src/` as the default. A non-code product tree, such as a paper's `paper/`, follows the same rules: it is self-contained, never reads `.agents/`, and builds into `.project/`. `AGENTS.md`, `README.md`, `DEV.md`, the registry notes, `template-adoption` and `template-upgrade` say so.
 - New registry field `template.upstream` (`repository`, `version`) for a derived template, a template built from this one that projects are made from: its `template` block names itself and its own release, and `template.upstream` names the template it follows and that template's tag. A project made from a derived template records only that template and removes the copied `upstream` block. `DEV.md` ("与模板的关系") defines the field with a table of the four repository kinds, and the registry carries it as a comment.
@@ -10,6 +10,7 @@
   - `release-doc-audit` prints the whole `template` block and accepts the recorded upstream tag as a version reference.
   - `diagnose-environment.sh` reports the upstream template, fails when `template.upstream` lacks `repository` or `version`, and warns when a repository whose origin is not `template.repository` carries an `upstream` block.
 - `template-harvest` recognizes a derived template by `template.upstream` and pins it to `template.upstream.version`, skips projects made from another template, and lists the public paper template [`paper-agent-project-template`](https://github.com/a-green-hand-jack/paper-agent-project-template) as a known derived template. `README.md` names it as the starting point for papers.
+- Recorded the pre-release downstream harvest in project memory.
 
 ## v0.1.12 — 2026-10-19
 
