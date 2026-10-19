@@ -20,3 +20,6 @@ or superseded status.
   before v0.1.10: downstream feedback #50 landed; no new shared candidate.
 - [`harvest-2026-10-18-v0.1.11.md`](harvest-2026-10-18-v0.1.11.md) — the check
   before v0.1.11: downstream feedback #53 and #54 landed; no new shared candidate.
+- [`harvest-2026-10-19-v0.1.12.md`](harvest-2026-10-19-v0.1.12.md) — the check
+  before v0.1.12, read through GitHub only: three shared candidates and the
+  GitHub-only channel landed as #59.

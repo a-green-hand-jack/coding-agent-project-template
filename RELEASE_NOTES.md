@@ -1,5 +1,16 @@
 # Release notes
 
+## v0.1.12 — 2026-10-19
+
+- Added the `resolve-real-paths-before-moving` shared memory record: before moving, copy-then-deleting, replacing or symlinking a directory, resolve both paths (`readlink -f`, device and inode) and stop on overlap; verify two different data sets; confirm the delete frees space; let a person choose which copy to delete. Linked from `asset-lifecycle`.
+- `llm-credentials` rule 4: a credential never travels as a command-line argument (readable through `ps`); pass it as an environment variable selected by name (`docker run --env KEY`) or through the tool's own channel (`GIT_CONFIG_*` for git headers).
+- 工作单元分级：较大的改动仍走 Issue → worktree → PR；文档、注释、memory/索引、拼写、
+  单文件且没有设计决定的小修复，以及不改产品代码的验收运行，可以直接在 `dev` checkout
+  里做。拿不准时按大的走；小改动变大或出现设计问题时停下来开 Issue。`AGENTS.md`、
+  `DEV.md` 和 `README.md` 同步说明，`issue-workflow` 增加 "When this flow is not needed" 一节。
+- `template-harvest` works through GitHub only: adopters are found with `gh repo list` and read with `gh api` (registry marker, tree comparison against a release tag, comparison from the watermark), the local state is keyed by repository, and requests to an adopter are Issues. The local-roots and worktree-resolution steps are gone; a note covers converting an older local-path record.
+- Recorded the pre-release downstream harvest in project memory.
+
 ## v0.1.11 — 2026-10-18
 
 - `migrate-assets.sh` reads an optional, project-owned `.agents/scripts/migrate-project.rules` (one `NAME|ACTION|WHY` line per `.project/` entry the project's setup hook creates; actions `copy`, `drop` with a reason, `login`), so a downstream's own entries no longer stop every teardown and a local edit to the script is not needed. `login` is the rule the script already applied to `credentials`: a link to the canonical checkout's login is dropped, a real copy blocks, and `--also`/`--skip` on a login is refused (exit 2). A rule for an entry the template handles itself is refused, so a new template rule shows up as a conflict after an upgrade. `template-adoption` step 5, `template-upgrade` step 5, `llm-credentials`, `issue-workflow` and `DEV.md` describe it.

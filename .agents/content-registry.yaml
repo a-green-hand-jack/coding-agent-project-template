@@ -4,7 +4,7 @@ purpose: >-
   which content belongs to one concrete project.
 template:
   repository: https://github.com/a-green-hand-jack/coding-agent-project-template
-  version: v0.1.11
+  version: v0.1.12
 default_scope: project
 matching: Most specific path wins; explicit entries override directory defaults.
 classes:
@@ -83,10 +83,13 @@ entries:
     note: Dispatch each Issue agent with an explicit model and effort per difficulty tier and record it in the Issue; fill the tier models in the issue-workflow slots.
   - path: .agents/memory/shared/llm-credentials.md
     scope: shared_with_adaptation
-    note: Fill SHARED_CREDENTIAL_FILE from user-level configuration and CREDENTIAL_DIR (credentials) under the canonical checkout's .project/; worktrees link to it; never copy a login between projects or worktrees.
+    note: Fill SHARED_CREDENTIAL_FILE from user-level configuration and CREDENTIAL_DIR (credentials) under the canonical checkout's .project/; worktrees link to it; never copy a login between projects or worktrees; credentials pass by variable name or the tool's own channel, never as command-line arguments.
   - path: .agents/memory/shared/product-state-root.md
     scope: shared_with_adaptation
     note: Fill STATE_MARKER, STATE_ENV and DEFAULT_ROOT; product commands resolve a worktree's state root from the setup marker, and the lookup stops at the repository boundary.
+  - path: .agents/memory/shared/resolve-real-paths-before-moving.md
+    scope: shared
+    note: Before moving, replacing or symlinking a directory, resolve both paths and compare device and inode, verify two different data sets, confirm the delete frees space, and let a person choose what to delete.
   - path: .agents/memory/shared/run-settings-from-config.md
     scope: shared_with_adaptation
     note: Fill CONFIG_FILE, COMMAND_TABLE, RECORD_FIELD and CONFIG_FLAG; run parameters are settings with a fixed override order, recorded at run start and reused on resume.
