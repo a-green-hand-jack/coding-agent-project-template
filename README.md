@@ -7,8 +7,9 @@
 - **human 面**：`README.md`、`USER.md`、`DEV.md`、Issue、PR 和 release notes。
 
 模板提供可复用的开发控制面：coding agent 可以自行读懂仓库，human 不需要反复
-讲述上下文，每个 worktree 有自己的状态和环境，大资产有可见的仓库内入口，
-Issue/branch/PR 构成可追溯的交付单元。
+讲述上下文，每个 worktree 有自己的状态和环境，大资产有可见的仓库内入口。
+较大的工作单元由 Issue/branch/PR 构成可追溯的交付单元；小修小改直接在 `dev`
+里做，不建 Issue、worktree 或 PR。
 
 ## 开始一个新项目
 

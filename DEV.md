@@ -9,11 +9,13 @@ tracked source，也不写到未知的全局目录。
 
 ## Issue、branch 和 PR
 
-每个工作单元先有 Issue，Issue 先收敛问题、范围、验收方式和风险，再开始实现。
-小改动（文档、注释、memory 记录、无需设计决定的单文件修复等）直接在 `dev`
-checkout 完成，不开 Issue 和 worktree；范围见 `issue-workflow` 的
-When this flow is not needed。
-从 `dev` 创建 `fix/issue-<N>-<slug>`、`feat/issue-<N>-<slug>`、
+较大的工作单元先有 Issue，Issue 先收敛问题、范围、验收方式和风险，再开始实现。
+小修小改可以直接在 `dev` checkout 里做，不建 Issue、worktree 或 PR；这类改动包括
+文档、注释、memory/索引、拼写、单文件且没有设计决定的小修复，以及运行现有命令做
+验收而不改产品代码。拿不准时按大的走；小改动变大或出现设计问题时停下来开 Issue。
+小改动同样不自动提交或推送；运行适用的检查，并报告证据。
+
+需要 Issue 的工作单元，从 `dev` 创建 `fix/issue-<N>-<slug>`、`feat/issue-<N>-<slug>`、
 `docs/issue-<N>-<slug>` 或 `chore/issue-<N>-<slug>` branch。实现和验证完成后
 提交 PR 回 `dev`；`main` 只承载已发布状态。
 
@@ -21,9 +23,9 @@ PR 描述应说明改了什么、为什么改、验收和 CI 要求的每项检�
 顺带修复的相关缺陷；只有维护者本人才能完成的步骤写成具体阻塞，说明维护者要做
 什么。真实运行、构建和发布证据放在 Issue 或 PR 中，不靠 agent 的自述代替。
 
-开始实现时，使用 Herdr 的原生 worktree 命令从 `dev` 创建 Issue branch，并在
-新 pane 启动独立的 coding-agent session。不要在当前 agent 窗口直接
-`git switch -c`。新 session 的第一步是运行 setup；父 session 可用下面的命令
+开始实现需要 Issue 的工作单元时，使用 Herdr 的原生 worktree 命令从 `dev` 创建
+Issue branch，并在新 pane 启动独立的 coding-agent session。不要在当前 agent 窗口
+直接 `git switch -c`。新 session 的第一步是运行 setup；父 session 可用下面的命令
 生成包含 Issue 链接、分支、读取范围和验收要求的初始 prompt：
 
 ```bash

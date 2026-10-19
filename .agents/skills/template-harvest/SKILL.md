@@ -254,9 +254,10 @@ For each shared candidate:
    `memory/shared/` or `memory/project/`), the number and independence of
    adopters as counts, and the compatibility and cleanup impact. Include no
    adopter name, private decision or raw log.
-3. Implement only under this repository's own Issue, a Herdr-created worktree
-   from `dev` and a PR (root `AGENTS.md`). Never from the harvest session and
-   never by editing an adopter.
+3. Implement it after the harvest run, as root `AGENTS.md` sorts the work: a
+   larger unit through that Issue, a Herdr-created worktree from `dev` and a PR;
+   a small change directly in the dev checkout, citing the Issue. Never by
+   editing an adopter.
 4. When the change ships, record in `adopters.yaml` `landing` which adopter takes
    it in which release; step 5 asks the adopter for the upgrade. An adopter whose
    copy diverged resolves it there as a local conflict.

@@ -19,26 +19,30 @@ Close-out).
 
 ## When this flow is not needed
 
-A *small change* needs no Issue, worktree or Issue session: the dev session
-makes it directly in the dev checkout, on `<BASE>`. A change is small only when
-it is one of these:
+`AGENTS.md` separates larger units of work from small changes. Larger units (a
+new feature, a cross-file or architectural change, isolation and credentials,
+public behavior, a long experiment that changes the product, a change that needs
+review) use this flow: an Issue, a Herdr worktree and a PR. A *small change*
+needs no Issue, worktree or PR; the dev session makes it directly in the dev
+checkout, on `<BASE>`. A change is small only when it is one of these:
 
-- documentation, comments or a typo;
-- a memory or knowledge record and its index and registry entries;
+- documentation or comments;
+- memory records and their index entries;
+- a spelling fix;
 - a fix confined to one file that needs no design decision;
-- running existing commands for acceptance or diagnosis, without changing them.
+- running an existing command as acceptance, without changing product code.
 
-When unsure, treat the change as large and use [Start](#start). A small change
-that grows (a second file, a design choice, changed product behavior, a new
-command) stops there: open an Issue for it, continue under Start, and tell the
-maintainer which uncommitted edits in the dev checkout belong to it.
+When unsure, treat the change as larger and use [Start](#start). When a small
+change grows or raises a design question, stop: open an Issue for it, continue
+under Start, and tell the maintainer which uncommitted edits in the dev checkout
+belong to it.
 
-Run the dev live-run check (Shared boundaries) before editing. While a run is
-live, nothing the run executes is edited in place; that change waits or becomes
-an Issue. The other shared boundaries concern Herdr worktrees and do not apply.
-A small change still follows `AGENTS.md`: it is not committed or pushed until
-the maintainer asks, and its evidence is reported like any other, with the
-commands run and their output, tests and real runs separately.
+A small change is not committed or pushed automatically either: only when the
+maintainer asks. Run the applicable checks and report the evidence, with the
+commands and their output. Before editing, run the dev live-run check (Shared
+boundaries): while a run is live, nothing the run executes is edited in place
+(`long-running-supervision`), so that change waits or becomes an Issue. The other
+shared boundaries concern Herdr worktrees and do not apply.
 
 ## Adaptation slots
 
