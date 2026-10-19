@@ -17,6 +17,9 @@ should not be committed to Git.
 4. Before retiring a worktree, migrate the manifest, link and any durable records
    using the repository teardown procedure. Check that no unique copy remains in
    the old worktree.
+   Before moving, replacing or re-linking an asset's storage, or deleting a copy,
+   follow [`resolve-real-paths-before-moving`](../../../memory/shared/resolve-real-paths-before-moving.md):
+   a link can make source and destination the same directory.
 5. Never put credentials, raw auth files or unregistered personal data in the
    asset directory.
 

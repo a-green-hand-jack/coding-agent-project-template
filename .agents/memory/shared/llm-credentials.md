@@ -1,7 +1,7 @@
 ---
 name: llm-credentials
 date: 2026-10-15
-source: Issue #23 (policy); Issue #27 (per-canonical-checkout decision by the template maintainer); Issue #31 (safe re-login)
+source: Issue #23 (policy); Issue #27 (per-canonical-checkout decision by the template maintainer); Issue #31 (safe re-login); Issue #59 (no credentials in command-line arguments)
 scope: shared
 applies_to: repositories whose code, tools or agents call LLM providers with API keys, tokens or OAuth logins
 status: active
@@ -37,9 +37,15 @@ calls an LLM provider or relay.
    reference only paths inside the project. The shared file is reached through a
    symlink in a Git-ignored project directory. Credential values never enter Git,
    logs, Issues or PRs.
-4. **Hand over only what is needed.** When passing credentials to a sandbox or
-   subprocess, the project selects the variables that process needs and never
-   passes the whole shared file.
+4. **Hand over only what is needed, never on the command line.** When passing
+   credentials to a sandbox or subprocess, the project selects the variables
+   that process needs and never passes the whole shared file. A credential never
+   travels as a command-line argument: every local user can read a process's
+   arguments through `ps`. Pass it as an environment variable selected by name
+   (`docker run --env KEY`, with no value, copies `KEY` from the caller's
+   environment) or through the tool's own environment or configuration channel
+   (for git headers, `GIT_CONFIG_COUNT`, `GIT_CONFIG_KEY_<n>` and
+   `GIT_CONFIG_VALUE_<n>` instead of `git -c http.extraHeader=...`).
 
 ## Why
 
@@ -50,6 +56,11 @@ refreshing login invalidate each other once both refresh, because a refresh
 token such as Codex's is single-use. Restoring an older snapshot of a refreshing
 login over a newer one silently overwrites the refreshed token. Stable keys do
 not have this problem, so one guarded copy per device is enough for them.
+
+Adopters that passed keys as `docker run -e KEY=<value>` or a header through
+`git -c` exposed them to every local user for the life of the process, because
+arguments are world-readable in `ps` while a process's environment is readable
+only by its owner and root.
 
 The worktrees of one project are one consumer. Each reads the same login through
 its link, so a refresh made in one session is seen by all of them. A login per
@@ -86,7 +97,9 @@ Then, in the canonical checkout:
    atomically (writes a new file and renames it over the path) would instead
    swap the link for a regular file and leave the target untouched; if a login
    shows that, the premise is wrong for that CLI and this point needs revising.
-4. Start sandboxes and subprocesses with the selected variables only.
+4. Start sandboxes and subprocesses with the selected variables only, passed by
+   name or through the tool's own channel; check that no credential value
+   appears in a command line, a script's argument list or a logged command.
 5. Before writing a tracked file, commit, Issue, PR or log, check that it holds
    no credential value and no path outside the project.
 

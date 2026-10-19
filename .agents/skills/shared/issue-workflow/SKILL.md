@@ -1,6 +1,6 @@
 ---
 name: issue-workflow
-description: Implement one Issue in its own Herdr worktree and agent session dispatched by difficulty (start), merge its PR from the dev checkout (merge), and retire the worktree after the merge (close-out).
+description: Implement one Issue in its own Herdr worktree and agent session dispatched by difficulty (start), merge its PR from the dev checkout (merge), and retire the worktree after the merge (close-out); small changes are made directly in the dev checkout.
 ---
 
 # Issue workflow
@@ -16,6 +16,33 @@ Run **start** when an Issue is ready to implement, **merge** when its PR is
 approved, and **close-out** right after a verified merge. The approval to merge
 covers the close-out, so do not wait or ask again (exceptions are listed under
 Close-out).
+
+## When this flow is not needed
+
+`AGENTS.md` separates larger units of work from small changes. Larger units (a
+new feature, a cross-file or architectural change, isolation and credentials,
+public behavior, a long experiment that changes the product, a change that needs
+review) use this flow: an Issue, a Herdr worktree and a PR. A *small change*
+needs no Issue, worktree or PR; the dev session makes it directly in the dev
+checkout, on `<BASE>`. A change is small only when it is one of these:
+
+- documentation or comments;
+- memory records and their index entries;
+- a spelling fix;
+- a fix confined to one file that needs no design decision;
+- running an existing command as acceptance, without changing product code.
+
+When unsure, treat the change as larger and use [Start](#start). When a small
+change grows or raises a design question, stop: open an Issue for it, continue
+under Start, and tell the maintainer which uncommitted edits in the dev checkout
+belong to it.
+
+A small change is not committed or pushed automatically either: only when the
+maintainer asks. Run the applicable checks and report the evidence, with the
+commands and their output. Before editing, run the dev live-run check (Shared
+boundaries): while a run is live, nothing the run executes is edited in place
+(`long-running-supervision`), so that change waits or becomes an Issue. The other
+shared boundaries concern Herdr worktrees and do not apply.
 
 ## Adaptation slots
 
