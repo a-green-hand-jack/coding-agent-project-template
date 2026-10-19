@@ -1,6 +1,6 @@
 ---
 name: issue-workflow
-description: Implement one Issue in its own Herdr worktree and agent session dispatched by difficulty (start), merge its PR from the dev checkout (merge), and retire the worktree after the merge (close-out).
+description: Implement one Issue in its own Herdr worktree and agent session dispatched by difficulty (start), merge its PR from the dev checkout (merge), and retire the worktree after the merge (close-out); small changes are made directly in the dev checkout.
 ---
 
 # Issue workflow
@@ -16,6 +16,29 @@ Run **start** when an Issue is ready to implement, **merge** when its PR is
 approved, and **close-out** right after a verified merge. The approval to merge
 covers the close-out, so do not wait or ask again (exceptions are listed under
 Close-out).
+
+## When this flow is not needed
+
+A *small change* needs no Issue, worktree or Issue session: the dev session
+makes it directly in the dev checkout, on `<BASE>`. A change is small only when
+it is one of these:
+
+- documentation, comments or a typo;
+- a memory or knowledge record and its index and registry entries;
+- a fix confined to one file that needs no design decision;
+- running existing commands for acceptance or diagnosis, without changing them.
+
+When unsure, treat the change as large and use [Start](#start). A small change
+that grows (a second file, a design choice, changed product behavior, a new
+command) stops there: open an Issue for it, continue under Start, and tell the
+maintainer which uncommitted edits in the dev checkout belong to it.
+
+Run the dev live-run check (Shared boundaries) before editing. While a run is
+live, nothing the run executes is edited in place; that change waits or becomes
+an Issue. The other shared boundaries concern Herdr worktrees and do not apply.
+A small change still follows `AGENTS.md`: it is not committed or pushed until
+the maintainer asks, and its evidence is reported like any other, with the
+commands run and their output, tests and real runs separately.
 
 ## Adaptation slots
 

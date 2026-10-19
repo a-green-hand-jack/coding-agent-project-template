@@ -19,7 +19,11 @@
 
 ## 工作方式
 
-- 先通过 Issue 收敛范围、设计和验收，再修改代码；
+- 先通过 Issue 收敛范围、设计和验收，再修改代码；小改动除外：文档、注释、
+  错别字、memory/knowledge 记录及其索引、无需设计决定的单文件修复、运行已有
+  命令做验收，可以不开 Issue，直接在 `dev` checkout 修改。拿不准就按大改动处理；
+  小改动变大时停下来开 Issue。小改动同样不得未经要求提交或推送，证据规则不变
+  （见 `issue-workflow` 的 When this flow is not needed）；
 - 开始实现 Issue 时不要在当前 agent 窗口直接切分支。通过 Herdr 的原生
   worktree 能力从 `dev` 创建 Issue worktree，在新 pane 启动独立 agent session，
   运行 `bash .agents/scripts/setup-worktree.sh`，再用

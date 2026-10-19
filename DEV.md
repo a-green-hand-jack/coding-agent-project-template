@@ -10,6 +10,9 @@ tracked source，也不写到未知的全局目录。
 ## Issue、branch 和 PR
 
 每个工作单元先有 Issue，Issue 先收敛问题、范围、验收方式和风险，再开始实现。
+小改动（文档、注释、memory 记录、无需设计决定的单文件修复等）直接在 `dev`
+checkout 完成，不开 Issue 和 worktree；范围见 `issue-workflow` 的
+When this flow is not needed。
 从 `dev` 创建 `fix/issue-<N>-<slug>`、`feat/issue-<N>-<slug>`、
 `docs/issue-<N>-<slug>` 或 `chore/issue-<N>-<slug>` branch。实现和验证完成后
 提交 PR 回 `dev`；`main` 只承载已发布状态。
