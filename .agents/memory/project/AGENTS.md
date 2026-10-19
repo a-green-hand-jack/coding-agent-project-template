@@ -23,3 +23,6 @@ or superseded status.
 - [`harvest-2026-10-19-v0.1.12.md`](harvest-2026-10-19-v0.1.12.md) — the check
   before v0.1.12, read through GitHub only: three shared candidates and the
   GitHub-only channel landed as #59.
+- [`harvest-2026-10-20-v0.1.13.md`](harvest-2026-10-20-v0.1.13.md) — the check
+  before v0.1.13: two adopters upgraded cleanly to v0.1.12, no shared candidate;
+  the paper template is a derived template awaiting its marker.

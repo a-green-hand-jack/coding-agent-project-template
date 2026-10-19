@@ -4,7 +4,13 @@ purpose: >-
   which content belongs to one concrete project.
 template:
   repository: https://github.com/a-green-hand-jack/coding-agent-project-template
-  version: v0.1.12
+  version: v0.1.13
+  # A derived template (a template built from another template) records itself
+  # above and the template it follows here; nobody else writes this block, and a
+  # project made from a derived template removes it (DEV.md, template relationship):
+  # upstream:
+  #   repository: <URL of the template it was built from>
+  #   version: <release tag of that template it follows>
 default_scope: project
 matching: Most specific path wins; explicit entries override directory defaults.
 classes:
@@ -125,7 +131,7 @@ entries:
     note: Keep the uniform directory guardrails, then adapt wording to the destination.
   - path: .agents/content-registry.yaml
     scope: shared_with_adaptation
-    note: Rewrite entries as the destination project grows; do not copy template history.
+    note: Rewrite entries as the destination project grows; do not copy template history. Keep the template block; template.upstream appears only in a derived template, and a project made from one records only that template.
   - path: RELEASE_NOTES.md
     scope: template
     note: Template release history stays in the template repository; downstream projects keep their own release notes.
@@ -143,7 +149,7 @@ entries:
     note: Keep the schema, then register the destination project's actual assets.
   - path: pyproject.toml
     scope: shared_with_adaptation
-    note: Replace project metadata and dependencies; keep the package boundary under src/.
+    note: Replace project metadata and dependencies; keep the package boundary under the product tree (src/ by default).
   - path: Dockerfile
     scope: shared_with_adaptation
     note: Replace the base image and entrypoint; keep development-plane files out of the build context.

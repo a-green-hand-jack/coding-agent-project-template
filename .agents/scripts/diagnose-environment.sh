@@ -89,6 +89,25 @@ else
   done < <(awk '/^  - path: / { p = $3 } /^    scope: shared_with_adaptation$/ && (p ~ /^\.agents\/skills\/.+\/$/ || p ~ /^\.agents\/memory\/.+\.md$/) { print p }' "$registry")
 fi
 
+# Only a derived template records the template it follows, in template.upstream
+# (DEV.md, template relationship); a project made from it records only it.
+upstream_block=
+[[ ! -f "$registry" ]] || upstream_block=$(sed -n '/^template:/,/^[^[:space:]]/p' "$registry" |
+  awk '/^  upstream:/ { u = 1; print; next } u && /^    / { print; next } u && /^  [^ #]/ { exit }')
+if [[ -n "$upstream_block" ]]; then
+  upstream_repo=$(sed -n 's/^    repository: *//p' <<<"$upstream_block" | head -n 1)
+  upstream_version=$(sed -n 's/^    version: *//p' <<<"$upstream_block" | head -n 1)
+  if [[ -n "$upstream_repo" && -n "$upstream_version" ]]; then
+    printf 'ok   upstream template: %s %s\n' "$upstream_repo" "$upstream_version"
+  else
+    printf 'FAIL template.upstream in %s needs `repository:` and `version:` lines, indented four spaces\n' "$registry"
+    fail=1
+  fi
+  if [[ -n "$origin_url" && -n "$template_repo" && "$(remote_id "$origin_url")" != "$(remote_id "$template_repo")" ]]; then
+    printf 'warn %s has template.upstream but origin is not %s: a project made from a derived template records only that template; remove the `upstream:` block\n' "$registry" "$template_repo"
+  fi
+fi
+
 for product_file in pyproject.toml Dockerfile install.sh .dockerignore; do
   if [[ -f "$product_file" ]]; then
     printf 'ok   optional product file: %s\n' "$product_file"

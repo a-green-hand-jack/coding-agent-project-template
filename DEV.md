@@ -2,10 +2,15 @@
 
 ## 开发边界
 
-`src/` 是产品面；`.agents/` 是 coding agent 开发面；`README.md`、`USER.md`
-和本文是 human 面。一个主题只在一个权威位置展开，其他位置链接过去。
+项目声明的产品树是产品面，默认是 `src/`，声明写在 `AGENTS.md` 的“三个平面”
+和 `README.md` 的目录表；`.agents/` 是 coding agent 开发面；`README.md`、
+`USER.md` 和本文是 human 面。一个主题只在一个权威位置展开，其他位置链接过去。
 运行状态、日志、receipt 和临时产物进入当前 worktree 的 `.project/`，不进入
 tracked source，也不写到未知的全局目录。
+
+非代码产品树（例如论文的 `paper/`）同样自包含：只复制产品树本身就能构建，
+不读取 `.agents/` 中的任何文件；构建输出和中间文件写入 `.project/`（例如
+`.project/build/`），不写回产品树或仓库根目录。
 
 ## Issue、branch 和 PR
 
@@ -102,9 +107,9 @@ bash .agents/scripts/inspect-state.sh
 
 需要 Python 包、容器或安装入口的项目从根目录的 `pyproject.toml`、`Dockerfile`
 和 `install.sh` 占位文件开始，替换项目名、依赖、基础镜像和 public entrypoint。
-包清单只从 `src/` 收集产品代码；`.dockerignore` 排除 `.agents/`、`.project/`、
-`AGENTS.md`、`CLAUDE.md` 和开发文档。非 Python 或不需要镜像的项目可以删除或
-改写对应骨架，并在 adoption/upgrade 迁移地图中记录取舍。
+包清单只从产品树（默认 `src/`）收集产品代码；`.dockerignore` 排除 `.agents/`、
+`.project/`、`AGENTS.md`、`CLAUDE.md` 和开发文档。非 Python、非代码或不需要镜像的
+项目可以删除或改写对应骨架，并在 adoption/upgrade 迁移地图中记录取舍。
 
 ## 与模板的关系
 
@@ -118,6 +123,33 @@ bash .agents/scripts/inspect-state.sh
 缺陷或缺失能力时用 `.agents/skills/shared/template-feedback/` 向上游开 Issue；
 模板维护者主动收集下游已沉淀的通用实践用 `.agents/skills/template-harvest/`
 （只属于模板仓库，下游不复制）。只有 URL 是项目专用的，其余规则通用。
+
+派生模板是从本模板建立、自己又作为模板供其他项目使用的仓库，例如论文模板
+[`paper-agent-project-template`](https://github.com/a-green-hand-jack/paper-agent-project-template)。
+它的 registry 用 `template` 记录它自己和它自己的版本，并用 `template.upstream`
+记录它所跟随的上游模板：
+
+```yaml
+template:
+  repository: <派生模板自己的仓库 URL>
+  version: <派生模板自己的 release tag>
+  upstream:
+    repository: https://github.com/a-green-hand-jack/coding-agent-project-template
+    version: <它跟随的本模板 release tag>
+```
+
+| 仓库 | `template.repository` / `template.version` | `template.upstream` |
+| --- | --- | --- |
+| 本模板 | 本模板，当前模板版本 | 无 |
+| 从本模板创建的项目 | 本模板，采用的 tag | 无 |
+| 派生模板 | 派生模板自己，它自己的 release | 本模板和它跟随的 tag |
+| 从派生模板创建的项目 | 派生模板，采用的 tag | 无 |
+
+一个仓库跟随的模板是 `template.upstream`（有这一字段时），否则是 `template`
+（本模板自身除外）。`template-adoption` 写入这一字段，`template-upgrade` 从它读取
+升级的源版本并把它更新到目标 tag，`template-feedback` 用它把派生模板从上游继承的
+缺陷路由到上游仓库。从派生模板创建的项目只记录该派生模板，删除复制来的
+`upstream` 块；它的反馈先到派生模板，由派生模板判断是否转给上游。
 
 ## 发布
 
