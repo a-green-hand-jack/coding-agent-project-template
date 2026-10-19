@@ -30,12 +30,14 @@ one (`v0.4.0`).
    test -n "${TARGET_TAG:?set TARGET_TAG, for example v0.1.12}"
    RELEASE_HEADING="${RELEASE_HEADING:-^## ${TARGET_TAG//./\\.}([[:space:]]|\$)}"
    grep -nE "$RELEASE_HEADING" RELEASE_NOTES.md
-   grep -A2 '^template:' .agents/content-registry.yaml
+   sed -n '/^template:/,/^[^[:space:]]/p' .agents/content-registry.yaml
    ```
 
    The registry's `template.version` must equal `TARGET_TAG` for the template
-   repository. A downstream project records the template tag it adopted in the
-   same field and keeps its own `RELEASE_NOTES.md` separate.
+   repository, and for a derived template, whose `template` names itself;
+   its `template.upstream.version` is the upstream tag it follows, not
+   `TARGET_TAG`. A downstream project records the template tag it adopted in
+   `template.version` and keeps its own `RELEASE_NOTES.md` separate.
 
 2. Enumerate version-like references and classify every result:
 
@@ -45,7 +47,9 @@ one (`v0.4.0`).
    ```
 
    Accept a reference only when it is the target release, historical release
-   history, or an explicitly illustrative example in a command or skill. A
+   history, the followed template's tag recorded in the registry
+   (`template.upstream.version`, or a downstream's `template.version`), or an
+   explicitly illustrative example in a command or skill. A
    copy-ready prompt must use `TARGET_TAG`/`<TEMPLATE_TAG>` or name the release
    being prepared. Record any unclassified reference as a finding and fix it
    before tagging.

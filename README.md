@@ -2,7 +2,7 @@
 
 这是一个面向 coding agent 的通用项目起点。它把项目分成三个平面：
 
-- **产品面**：`src/`、正式配置、运行入口和发布产物；
+- **产品面**：项目声明的产品树（默认 `src/`）、正式配置、运行入口和发布产物；
 - **开发面**：`AGENTS.md`、`.agents/`、worktree setup、状态和资产工具；
 - **human 面**：`README.md`、`USER.md`、`DEV.md`、Issue、PR 和 release notes。
 
@@ -18,7 +18,8 @@
    将 GitHub 默认分支设为 `dev`；之后 Issue branch 从 `dev` 创建，发布才合并
    到 `main`。
 3. 修改本 README、`USER.md` 和 `DEV.md` 中的项目占位内容。
-4. 在 `src/` 放入产品代码。
+4. 在产品树放入产品：默认是 `src/`；产品树不是 `src/` 时（例如论文的 `paper/`），
+   在 `AGENTS.md` 的“三个平面”和下面的目录表中写明。
 5. 在每个 worktree 中运行：
 
    ```bash
@@ -27,6 +28,14 @@
 
 6. 让 coding agent 先读取 `AGENTS.md`、`.agents/AGENTS.md` 和当前 Issue，
    再开始修改。
+
+### 论文项目
+
+写论文从派生模板
+[`paper-agent-project-template`](https://github.com/a-green-hand-jack/paper-agent-project-template)
+开始，不从本模板开始。它建立在本模板之上，产品树是自包含的 `paper/`，并在自己的
+registry 里用 `template.upstream` 记录跟随的本模板版本（见 `DEV.md` 的“与模板的
+关系”）。从它创建的论文项目只记录该论文模板，按它自己的 README 开始。
 
 ### 可见性与公开边界
 
@@ -40,7 +49,7 @@ Private 是默认建议：Issue 中的候选筛选、实验结果、日志和路
 
 | 路径 | 归属 | 用途 |
 | --- | --- | --- |
-| `src/` | 产品面 | 唯一的产品实现入口 |
+| `src/` | 产品面 | 默认的产品树，唯一的产品实现入口 |
 | `pyproject.toml` | 产品面 | 可选的 Python 包清单，占位元数据和 `src/` 包边界 |
 | `Dockerfile` | 产品面 | 可选的容器构建入口，占位运行命令 |
 | `install.sh` | 产品面 | 可选的安装入口，占位安装策略 |
@@ -62,11 +71,14 @@ checkpoint 和其他不适合进入 Git 的资产可以放在外部存储；仓�
 `.project/assets.links`，说明来源、版本、checksum
 和可重建性。凭据不进入仓库，只通过 `.env.example` 中声明的路径或变量注入。
 
+非代码产品树（例如论文的 `paper/`）同样自包含：不依赖 `.agents/`，构建输出和
+中间文件进入 `.project/`，不写回产品树或仓库根目录。
+
 项目讨论不属于模板产品。模板只保留已经收敛的规则、目录、脚本和占位文档。
 
 发布骨架是可选的，模板不绑定 Python、容器或发布渠道。需要这些入口的项目应
 替换根目录的 `pyproject.toml`、`Dockerfile` 和 `install.sh` 占位内容，并保持包
-清单只从 `src/` 收集产品代码；`.dockerignore` 默认排除 `.agents/`、`.project/`、
+清单只从产品树收集产品代码；`.dockerignore` 默认排除 `.agents/`、`.project/`、
 `AGENTS.md`、`CLAUDE.md` 和开发文档，避免 coding-agent 开发面进入产品产物。
 
 `.agents/content-registry.yaml` 登记哪些内容可以跨项目复用、哪些内容必须在新

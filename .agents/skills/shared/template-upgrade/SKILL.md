@@ -17,12 +17,16 @@ downstream repository with the template tree or merge template history into it.
 
 ## Procedure
 
-1. Identify `template.repository` and `template.version` from the downstream
-   registry and record the target release tag, branch, worktree, clean/dirty
-   state and current tests. If the registry has no `template:` block or no
-   `version:` line (repositories adopted before `v0.1.5`), backfill it first as
-   described in "Backfill a missing template record"; without it the upgrade has
-   no recorded source version.
+1. Identify the template this repository follows from the downstream
+   registry (`sed -n '/^template:/,/^[^[:space:]]/p' .agents/content-registry.yaml`):
+   `template.upstream` when the block has one (a derived template, whose own
+   `template.version` is its own release line and is not changed here),
+   otherwise `template.repository` and `template.version`. Below, the template's
+   repository and version mean that pair. Record the target release tag,
+   branch, worktree, clean/dirty state and current tests. If the registry has
+   no `template:` block or no `version:` line (repositories adopted before
+   `v0.1.5`), backfill it first as described in "Backfill a missing template
+   record"; without it the upgrade has no recorded source version.
 2. Fetch the target template tag and inspect its release notes and registry. Build
    a path-level migration map from current version to target.
 3. Classify each difference as shared addition, required adaptation, local conflict,
@@ -35,22 +39,26 @@ downstream repository with the template tree or merge template history into it.
    unresolved records readable until classification is complete.
    Treat the product release skeleton as optional: preserve an existing package,
    container or installer contract and adapt only the missing pieces, including
-   the development-plane exclusions in `.dockerignore`.
+   the development-plane exclusions in `.dockerignore`. Keep the repository's
+   declared product tree (`src/` by default) where template wording names
+   `src/`.
    Treat the template repository's `RELEASE_NOTES.md` as template-only content;
    it is not copied into the downstream project's release history.
 4. Present the migration map and acceptance plan before mutating a repository when
    conflicts, public behavior or asset paths are involved.
 5. Work on an Issue branch. Apply only approved shared changes, adapt commands and
    paths, update `CLAUDE.md` and `.agents/**/AGENTS.md` consistently, and update
-   the downstream content registry's `template.version` to the target tag
-   (creating the block if the backfill has not been done yet).
+   the version of the followed template in the downstream registry to the target
+   tag: `template.upstream.version` in a derived template, otherwise
+   `template.version` (creating the block if the backfill has not been done
+   yet).
 
    Upgrade each adopted shared skill and memory record by replacing the template
    text above its `## In this repository` section (the whole file when it has
    no section; see `template-adoption` step 5) and keeping the section. With
-   `<template>` a clone of `template.repository` under `.project/` holding both
-   tags, `<SOURCE_TAG>` the registry's current `template.version` and `<path>`
-   the file:
+   `<template>` a clone of the followed template's repository under `.project/`
+   holding both tags, `<SOURCE_TAG>` its version currently in the registry and
+   `<path>` the file:
 
    ```bash
    H='## In this repository'
@@ -72,7 +80,10 @@ downstream repository with the template tree or merge template history into it.
    - Reconcile only the section. Read
      `git -C <template> diff <SOURCE_TAG> <TARGET_TAG> -- <path>` for new,
      renamed or removed slots and for steps that moved or changed, and update the
-     slot rows and the step keys of the additions.
+     slot rows and the step keys of the additions. When the followed template
+     is a derived template, that diff also shows changes to its own section,
+     which this repository's section continues; carry them over in the same
+     way.
 
    Replace adopted scripts whole; the project's
    `.agents/scripts/setup-project.sh` and `.agents/scripts/migrate-project.rules`

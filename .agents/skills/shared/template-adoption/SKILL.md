@@ -43,6 +43,18 @@ example assets or project-specific memory and knowledge.
    conflict; never overwrite an existing product build entrypoint.
    Record the adopted template repository and tag in the registry's `template`
    field; keep the downstream project's own `RELEASE_NOTES.md` separate.
+   When the target repository is itself a template that other projects will be
+   made from (a derived template), `template` names the target repository and
+   its own release instead, and the adopted repository and tag go in
+   `template.upstream` (`repository` and `version`, block style). Map the
+   `scope: template` content of the adopted template as rejected; the derived
+   template writes its own release notes. When the adopted template is itself a
+   derived template (its registry has `template.upstream`), record only that
+   template and never copy its `upstream` block.
+   Map the target's product tree: `src/` by default, or the tree the repository
+   already has (for example `paper/`), declared in `AGENTS.md` and `README.md`.
+   A product tree is self-contained, never reads `.agents/`, and builds into
+   `.project/`; list any build output it writes elsewhere as an adaptation.
    If the repository already carries an earlier adoption whose registry has no
    `template:` block, read the adopted tag from its developer docs or git history
    and backfill the block first, following `template-upgrade`
@@ -81,6 +93,10 @@ example assets or project-specific memory and knowledge.
      A local rule that has to replace a template step is keyed the same way,
      says "instead", and is reported through `template-feedback`.
    - When nothing needs adapting, the section says so in one line.
+   - A derived template adapts the files it inherits the same way. A project
+     made from a derived template copies such a file with the derived
+     template's section and continues that section with its own rows and
+     additions.
 
    Adopt scripts unchanged and put project-specific setup in the
    `.agents/scripts/setup-project.sh` hook. When that hook creates entries in

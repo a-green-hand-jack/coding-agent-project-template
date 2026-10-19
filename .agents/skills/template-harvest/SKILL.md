@@ -21,7 +21,9 @@ checkout of an adopter is scanned, resolved or needed.
 
 - This repository is public; the adopter set is not. An adopter's name, private
   decision or raw log never enters a tracked file, Issue, PR, commit message or
-  memory record here. Use a local id and counts ("two adopters").
+  memory record here. Use a local id and counts ("two adopters"). The one
+  exception is a public derived template listed under "Derived templates"
+  below, which may be named.
 - Adopters are read-only. The allowed reads are `gh repo list`, `gh repo view`,
   `gh issue list`, `gh pr list`, `gh search commits`, and `gh api` GET requests
   on `repos/<repo>` and its `branches`, `commits`, `compare`, `contents`,
@@ -34,6 +36,21 @@ checkout of an adopter is scanned, resolved or needed.
   scheduled job.
 - Harvest decides what the template should gain. Landing it in an adopter is
   `template-upgrade`, run in that adopter's own repository.
+
+## Derived templates
+
+A derived template is built from this template and is itself a template that
+projects are made from. Its registry names itself in `template` and this
+template in `template.upstream` (`DEV.md`, template relationship). It is an
+adopter here, with `template.upstream.version` as its pin. The projects made
+from it record only the derived template; they are its adopters, not this
+template's, and what they find in inherited content reaches here as
+`template-feedback` from the derived template.
+
+Known derived templates, public and the maintainer's own:
+
+- `a-green-hand-jack/paper-agent-project-template`: the paper template, with
+  the product tree `paper/`.
 
 ## Local state
 
@@ -51,12 +68,13 @@ last_run: <UTC time of the last completed discovery>
 adopters:
   - id: adopter-1            # local alias; the only name allowed in Issues and memory here
     repo: <owner/name>       # the key; never a local path
+    kind: project | derived-template
     visibility: private | public
     state: settled | in-progress | unresolvable
     integration_branch: dev
     scanned_commit: <sha>
     pin: <template tag> | needs-backfill
-    pin_source: registry | DEV.md | commit-history
+    pin_source: registry | upstream | DEV.md | commit-history
     watermark: null          # integration-branch sha whose delta is fully classified
     landing:                 # filled once a candidate becomes a template change
       - { candidate: <template Issue>, release: <tag>, status: pending | landed }
@@ -125,6 +143,13 @@ not a smaller adopter; read that repository's directories one by one instead.
    - **Registry marker.** A `template:` block whose `repository` equals this
      template's. Its `version` is the pin. This repository carries the marker
      too; it is not an adopter.
+   - **Derived-template marker.** A `template:` block whose `upstream`
+     `repository` equals this template's. Record `kind: derived-template`,
+     `pin_source: upstream` and its `upstream` `version` as the pin. A
+     repository in "Derived templates" above that lacks the marker is still
+     probed every run and reported; a listed name is not evidence.
+   - **Another template's project.** A `template:` block that names another
+     repository and has no such `upstream` is not an adopter here; skip it.
    - **Pre-marker adopter.** No `template:` block, or no registry. Do not skip
      it. Require a template reference in the fixed files
      `AGENTS.md DEV.md README.md USER.md .agents/AGENTS.md` (read each with
@@ -188,6 +213,11 @@ with `read_file`:
    change a temporary downstream fix points at a template Issue to look up.
 4. Registry model changes: top-level keys, `classes`, entry fields, `scope` values.
 5. Non-product rules added to the adopter's `AGENTS.md` (skip project background).
+
+In a derived template, its own domain content (its product tree, skills and
+records for that domain) is project-local unless it passes the generality gate
+without its domain. Its `## In this repository` sections are adaptation points
+like any adopter's.
 
 After the first run, review only the range from the watermark:
 
