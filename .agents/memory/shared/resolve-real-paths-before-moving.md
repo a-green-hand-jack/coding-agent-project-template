@@ -58,5 +58,10 @@ nested entry is a link: renamed checkouts, asset links, mounted volumes.
 Run steps 1 and 2 before the first write, step 3 after the copy, and steps 4 to
 6 before any delete. Report the resolved paths, the device and inode pair and
 the space figures with the result. A script that moves or replaces directories
-performs steps 1 and 2 itself and refuses on overlap. `migrate-assets.sh` copies
-and deletes nothing, so worktree teardown already follows step 5.
+performs steps 1 and 2 itself and refuses on overlap. In worktree teardown,
+`migrate-assets.sh` copies state and asset links into the canonical checkout
+(`cp -a`), verifies the copy and deletes nothing from the source. Removing the
+worktree is a separate step, `issue-workflow` close-out's
+`herdr worktree remove`, which runs only under the maintainer's merge approval.
+Teardown therefore follows step 5: copy, verify, then delete on a person's
+decision.
