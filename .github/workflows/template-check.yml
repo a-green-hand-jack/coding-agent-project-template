@@ -1,12 +1,21 @@
 name: Template checks
 
+# Optional content: a project whose issue-workflow <CI> slot is `no` leaves this
+# file out (template-adoption step 3), and template-upgrade keeps it out.
 on:
-  push:
   pull_request:
+    branches: [dev, main]
+  push:
+    branches: [dev, main]
+
+concurrency:
+  group: template-check-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   structure:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - name: Check shell syntax
@@ -15,3 +24,10 @@ jobs:
         run: bash .agents/scripts/setup-worktree.sh
       - name: Diagnose template
         run: bash .agents/scripts/diagnose-environment.sh
+      # The template's own tests (scope: template) exist only in the template
+      # repository; elsewhere this step is skipped.
+      - name: Run the template's own tests
+        if: hashFiles('.agents/tests/test_template_*.py') != ''
+        run: |
+          git fetch --quiet --depth=1 origin '+refs/tags/*:refs/tags/*'
+          python3 -m unittest discover -s .agents/tests -p 'test_template_*.py' -v
