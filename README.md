@@ -14,6 +14,9 @@
 ## 开始一个新项目
 
 1. 在 GitHub 使用 **Use this template** 创建新仓库，并优先选择 **Private**。
+   在 `.agents/content-registry.yaml` 的 `writing:` 写本项目的工作语言和 Issue
+   开头段落，或删掉这一块（不声明）；不用托管 CI 时删掉
+   `.github/workflows/template-check.yml`。
 2. 在新仓库运行 `bash .agents/scripts/init-branches.sh`，建立 `dev`、推送它并
    将 GitHub 默认分支设为 `dev`；之后 Issue branch 从 `dev` 创建，发布才合并
    到 `main`。
@@ -69,7 +72,9 @@ Private 是默认建议：Issue 中的候选筛选、实验结果、日志和路
 checkpoint 和其他不适合进入 Git 的资产可以放在外部存储；仓库内必须保留
 `assets/MANIFEST.yaml` 的稳定条目，机器相关软链接放入被忽略的
 `.project/assets.links`，说明来源、版本、checksum
-和可重建性。凭据不进入仓库，只通过 `.env.example` 中声明的路径或变量注入。
+和可重建性。凭据不进入仓库：项目需要哪些凭据只按名字登记在 `credentials.yaml`，
+值只通过 `.project/credentials/` 中指向设备共享文件的链接或运行时环境注入，
+探测时只打印状态行（见 `.agents/memory/shared/llm-credentials.md`）。
 
 非代码产品树（例如论文的 `paper/`）同样自包含：不依赖 `.agents/`，构建输出和
 中间文件进入 `.project/`，不写回产品树或仓库根目录。
@@ -101,5 +106,8 @@ git push -u origin main
 ```
 
 使用某个模板版本后，先阅读模板仓库对应 tag 中的 `RELEASE_NOTES.md`；下游项目
-应维护自己的 `RELEASE_NOTES.md`，不要把模板发布历史拷入下游。跨项目反馈请按
+应维护自己的 `RELEASE_NOTES.md`，不要把模板发布历史拷入下游。升级到新的模板版本
+先运行 `bash .agents/scripts/upgrade-template.sh --check <TEMPLATE_TAG>` 看计划：
+跨过的每个版本都是 **Command only.** 且没有冲突时，一条命令加项目检查就完成升级，
+否则按 `.agents/skills/shared/template-upgrade/` 走完整流程。跨项目反馈请按
 `.agents/skills/shared/template-feedback/` 的流程向模板仓库提 Issue。

@@ -37,7 +37,19 @@ example assets or project-specific memory and knowledge.
    `gpt5-strict-backend-requests` knowledge record together: adapt the
    credential parameters, locate any local edits to third-party tools and move
    them into the repository as patches, and keep the knowledge record's date and
-   refresh condition. Skip them when the project calls no LLM.
+   refresh condition. Map the credentials the project uses into a
+   `credentials.yaml` (names only; a first draft can list the variable names in
+   `.env.example`) and the device's inventory rows they need. Skip them when
+   the project calls no LLM.
+   Map the optional content the registry marks `optional: true` as adopted or
+   rejected; a rejected path is left out, and `template-upgrade` keeps it out.
+   Decide `.github/workflows/template-check.yml` with the `issue-workflow`
+   `<CI>` slot: adopted when it is `yes`, rejected when it is `no`.
+   Map the writing conventions (`issue-workflow`, "Writing conventions"): write
+   the maintainer's working language and Issue opening sections in the
+   registry's `writing:` block, or leave the block out when nothing is
+   declared. Map the template's Issue and PR forms as adopted, or adapted to the
+   declared sections in the repository's own forms.
    Map the optional product release skeleton (`pyproject.toml`, `Dockerfile`,
    `install.sh`, `.dockerignore`) as adopted, adapted, preserved or a local
    conflict; never overwrite an existing product build entrypoint.
@@ -110,7 +122,11 @@ example assets or project-specific memory and knowledge.
    for the repository.
 6. Run the target repository's setup, diagnostics, CLI entrypoints and relevant
    seam checks. Confirm that product payloads do not include `.agents/`, secrets
-   or worktree-local state.
+   or worktree-local state. In a repository that had only `main`, `dev` is
+   created by the maintainer with `init-branches.sh` after the adoption merges;
+   until then `diagnose-environment.sh` reports the three branch-model checks
+   (local `dev`, `origin/dev`, GitHub default branch) as expected warnings,
+   and they do not fail the adoption.
 7. Report adopted files, adapted files, preserved files, validation evidence and
    unresolved decisions. Leave commit and PR publication to the user's workflow.
 

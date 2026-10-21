@@ -24,6 +24,12 @@ tracked source，也不写到未知的全局目录。
 `docs/issue-<N>-<slug>` 或 `chore/issue-<N>-<slug>` branch。实现和验证完成后
 提交 PR 回 `dev`；`main` 只承载已发布状态。
 
+分阶段的工作开一个父 Issue，每个阶段一个子 Issue（GitHub sub-issue 关系，父 Issue
+列出阶段清单），每个阶段照常走 Issue、worktree 和 PR；做法和 `gh` 命令见
+`.agents/skills/shared/issue-workflow/` 的 “Phased work”。Issue、PR 和 human 文档的
+工作语言与 Issue 开头段落在 registry 的 `writing:` 声明（同一 skill 的 “Writing
+conventions”）；本仓库声明为中文。
+
 PR 描述应说明改了什么、为什么改、验收和 CI 要求的每项检查的命令与结果，以及
 顺带修复的相关缺陷；只有维护者本人才能完成的步骤写成具体阻塞，说明维护者要做
 什么。真实运行、构建和发布证据放在 Issue 或 PR 中，不靠 agent 的自述代替。
@@ -68,11 +74,18 @@ bash .agents/scripts/teardown-worktree.sh --migrate-to /path/to/canonical-projec
 
 ## 环境变量与资产
 
-`.env.example` 只声明变量名、用途和文件路径约定，不包含秘密。大资产放在
-外部存储时，在仓库内的 `assets/` 登记稳定逻辑入口，并在 `assets/MANIFEST.yaml`
-登记：用途、来源、版本、checksum、可重建性和删除 worktree 前的保留要求。
-机器相关的软链接写在被忽略的 `.project/assets.links` 中，由 setup 创建；不要
-提交软链接或其绝对目标路径。
+`.env.example` 只声明变量名、用途和文件路径约定，不包含秘密。项目需要的凭据
+按名字登记在根目录受跟踪的 `credentials.yaml`：需要设备清单 `inventory.yaml`
+的哪些行、工具用什么名字读取、给哪个沙箱或岗位、必需还是可选。setup 运行
+`bash .agents/scripts/probe-credentials.sh --check`，对缺行、空占位和未设置的
+必需凭据报错；diagnose 运行只读探测，逐个报告 `credential <name>: ok | failed |
+not-probed`。任何输出都不包含凭据值；格式和规则见
+`.agents/memory/shared/llm-credentials.md`。
+
+大资产放在外部存储时，在仓库内的 `assets/` 登记稳定逻辑入口，并在
+`assets/MANIFEST.yaml` 登记：用途、来源、版本、checksum、可重建性和删除 worktree
+前的保留要求。机器相关的软链接写在被忽略的 `.project/assets.links` 中，由 setup
+创建；不要提交软链接或其绝对目标路径。
 
 ## Memory 与 knowledge
 
@@ -103,6 +116,17 @@ bash .agents/scripts/diagnose-environment.sh
 bash .agents/scripts/inspect-state.sh
 ```
 
+模板仓库自己的脚本测试是 `.agents/tests/test_template_*.py`（只属于模板，下游
+不复制）：
+
+```bash
+python3 -m unittest discover -s .agents/tests -p 'test_template_*.py'
+```
+
+`.github/workflows/template-check.yml` 只在指向 `dev`、`main` 的 PR 和推送到
+`dev`、`main` 时运行，同一 ref 的新运行取消旧运行，并有超时。它是可选内容：
+`issue-workflow` 的 `<CI>` 为 `no` 的项目不采用它，模板升级也不会把它加回来。
+
 ## 产品构建与安装骨架
 
 需要 Python 包、容器或安装入口的项目从根目录的 `pyproject.toml`、`Dockerfile`
@@ -119,7 +143,12 @@ bash .agents/scripts/inspect-state.sh
 
 从模板创建的项目在自己的 registry 里记录它采用的 `template.repository` 与
 `template.version`，并保留自己的 `RELEASE_NOTES.md`，不复制模板的发布历史。
-升级到新的模板版本用 `.agents/skills/shared/template-upgrade/`；发现模板本身的
+升级到新的模板版本用 `.agents/skills/shared/template-upgrade/`：
+`bash .agents/scripts/upgrade-template.sh [--check] <TAG>` 按 registry 完成机械部分，
+跨过的每个版本在 `RELEASE_NOTES.md` 的升级段都标为 **Command only.** 且没有冲突
+时走轻量路径，否则以命令的计划为起点走完整流程。模板每个版本的 release notes
+都要有 `### Upgrading a project from <上一个 tag>` 段，以 **Command only.** 开头
+或列出手动步骤（`release-doc-audit` 检查）。发现模板本身的
 缺陷或缺失能力时用 `.agents/skills/shared/template-feedback/` 向上游开 Issue；
 模板维护者主动收集下游已沉淀的通用实践用 `.agents/skills/template-harvest/`
 （只属于模板仓库，下游不复制）。只有 URL 是项目专用的，其余规则通用。
