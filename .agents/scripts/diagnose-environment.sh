@@ -126,18 +126,27 @@ if [[ -f .dockerignore ]]; then
   done
 fi
 
-if git show-ref --verify --quiet refs/heads/dev || {
-  [[ "${GITHUB_ACTIONS:-}" == true ]] &&
-  git ls-remote --exit-code --heads origin dev >/dev/null 2>&1
-}; then
+# While a repository adopts the template from a branch other than main, dev
+# exists neither here nor on origin: the maintainer creates it with
+# init-branches.sh after the adoption merges (template-adoption step 6), so the
+# three branch-model checks only warn. Once dev exists anywhere they fail again.
+local_dev=0 origin_dev=0
+git show-ref --verify --quiet refs/heads/dev && local_dev=1
+git remote get-url origin >/dev/null 2>&1 && git ls-remote --exit-code --heads origin dev >/dev/null 2>&1 && origin_dev=1
+branch_level=FAIL branch_hint='run .agents/scripts/init-branches.sh'
+if [[ $local_dev == 0 && $origin_dev == 0 && "$(git symbolic-ref --quiet --short HEAD || true)" != main ]]; then
+  branch_level=warn branch_hint='expected while adopting: the maintainer runs .agents/scripts/init-branches.sh after the adoption merges'
+fi
+branch_problem() { printf '%-4s %s (%s)\n' "$branch_level" "$1" "$branch_hint"; [[ $branch_level == warn ]] || fail=1; }
+if [[ $local_dev == 1 || ( "${GITHUB_ACTIONS:-}" == true && $origin_dev == 1 ) ]]; then
   printf 'ok   dev branch available\n'
 else
-  echo 'FAIL local dev branch (run .agents/scripts/init-branches.sh)'; fail=1
+  branch_problem 'local dev branch'
 fi
-if git remote get-url origin >/dev/null 2>&1 && git ls-remote --exit-code --heads origin dev >/dev/null 2>&1; then
+if [[ $origin_dev == 1 ]]; then
   printf 'ok   origin/dev branch\n'
 else
-  echo 'FAIL origin/dev branch (run .agents/scripts/init-branches.sh)'; fail=1
+  branch_problem 'origin/dev branch'
 fi
 
 if command -v gh >/dev/null 2>&1 && repo_view=$(gh repo view --json visibility,nameWithOwner,defaultBranchRef 2>/dev/null); then
@@ -147,8 +156,7 @@ if command -v gh >/dev/null 2>&1 && repo_view=$(gh repo view --json visibility,n
   if [[ "$default_branch" == dev ]]; then
     printf 'ok   GitHub default branch: dev\n'
   else
-    printf 'FAIL GitHub default branch: %s (run .agents/scripts/init-branches.sh)\n' "$default_branch"
-    fail=1
+    branch_problem "GitHub default branch: $default_branch"
   fi
 else
   echo 'skip repository visibility/default branch (gh unavailable or unauthenticated)'
@@ -160,6 +168,25 @@ if [[ -f .project/home ]]; then
 else
   echo 'FAIL .project/home (run setup-worktree.sh)'
   fail=1
+fi
+
+# One status line per credential credentials.yaml needs, from its read-only
+# probe; no value is printed (llm-credentials).
+if [[ -f credentials.yaml ]]; then
+  probe_status=0
+  probe_output=$(bash .agents/scripts/probe-credentials.sh 2>&1) || probe_status=$?
+  while IFS= read -r line; do
+    case $line in
+      'credential '*': ok '*) printf 'ok   %s\n' "$line" ;;
+      'credential '*': failed (required'*) printf 'FAIL %s\n' "$line"; fail=1 ;;
+      'credential '*': failed '*) printf 'warn %s\n' "$line" ;;
+      'credential '*': not-probed '*) printf 'skip %s\n' "$line" ;;
+      *) printf '%s %s\n' "$([[ $probe_status == 2 ]] && echo FAIL || echo warn)" "$line" ;;
+    esac
+  done <<<"$probe_output"
+  [[ $probe_status != 2 ]] || fail=1
+else
+  echo 'skip credentials: no credentials.yaml (llm-credentials)'
 fi
 
 while IFS= read -r -d '' link; do

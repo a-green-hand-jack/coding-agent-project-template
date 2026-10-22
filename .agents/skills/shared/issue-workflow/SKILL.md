@@ -67,11 +67,68 @@ project-neutral.
 | `<AGENT_PREFIX>` | Short project prefix. The agent name is `<AGENT_PREFIX>-issue-<N>` and must be unique across the whole Herdr server. | project choice |
 | `<WORKSPACE_PREFIX>` | Prefix of the Herdr workspace label, so that a server holding worktrees of several repositories shows which repository an Issue workspace belongs to. Herdr accepts upper-case letters in labels but not in agent names, so a project may prefer an upper-case prefix here. | `<AGENT_PREFIX>` |
 | `<MERGE_METHOD>` | `gh pr merge` method flag. Close-out's ancestry check assumes a merge commit. | `--merge` |
-| `<CI>` | Whether CI covers the project's checks. `yes`: rely on PR checks and the base-branch run. `no`: run `<POST_MERGE_CHECK>` in the dev checkout. | project fact |
+| `<CI>` | Whether CI covers the project's checks. `yes`: rely on PR checks and the base-branch run; the template's optional `.github/workflows/template-check.yml` is adopted. `no`: run `<POST_MERGE_CHECK>` in the dev checkout; that workflow is left out (`template-adoption` step 3). | project fact |
 | `<POST_MERGE_CHECK>` | Verification commands from `DEV.md`, used when `<CI>` is `no`. | `DEV.md` verification strategy |
 | `<PRE_MERGE_GATE>` | Optional read-only product command that must pass before merging, for example `<cmd> archive --check`. | none |
 | `<ARCHIVE_CMD>` | Product command that archives and registers non-rebuildable results before a worktree is retired. | none |
 | `<MONITOR_CMD>`, `<STOP_CMD>` | Product commands that list live runs in a checkout (the dev checkout or a worktree) and stop one. | none |
+
+## Writing conventions
+
+A project declares how it writes in one place, the `writing:` block of
+`.agents/content-registry.yaml`:
+
+```yaml
+writing:
+  language: <working language>
+  issue_sections: <first section>, <second section>, ...
+```
+
+- `language`: the working language of Issues, PRs, review and Issue comments,
+  the Issue-specific section of a handoff prompt, and the human documents
+  (`README.md`, `USER.md`, `DEV.md` and the project's release notes).
+- `issue_sections`: the sections an Issue body starts with, in order, for
+  example the goal and the approach before the details. The project may use
+  them as the fields of its own Issue forms; the template's forms in
+  `.github/ISSUE_TEMPLATE/` stay as they are.
+- Text the template ships keeps the template's language and is never
+  translated: the text of shared skills and memory records above their
+  `## In this repository` section, script output, and the fixed markers other
+  tools read (such as the release notes' upgrade-section marker). Slot values
+  and additions in that section may use the working language.
+- Without the block, or without a field, nothing is declared for it: each file
+  keeps the language it has, and Issues follow the forms' fields.
+
+`new-agent-prompt.sh` prints the declaration into every handoff,
+`template-adoption` writes the block, and `template-upgrade` never changes it.
+
+## Phased work
+
+Work that has several phases, each needing its own review, is one parent Issue
+with one sub-Issue per phase, so that progress is checked off phase by phase.
+
+1. The parent Issue holds the goal, the phases and a checklist with one line
+   per phase (`- [ ] #<C> <phase>`). Phasing does not change scope: every phase
+   stays part of the parent's plan, and the parent closes when the last phase
+   merges.
+2. Each phase is a sub-Issue with its own scope and acceptance, linked to the
+   parent with GitHub's sub-issue relation. It goes through [Start](#start),
+   [Merge](#merge) and [Close-out](#close-out) like any Issue, and its PR says
+   `Closes #<C>` and names the parent.
+3. Link a sub-Issue `<C>` to its parent `<P>`:
+
+   ```bash
+   parent=$(gh issue view <P> --repo <REPO> --json id --jq .id)
+   child=$(gh issue view <C> --repo <REPO> --json id --jq .id)
+   gh api graphql -H 'GraphQL-Features: sub_issues' \
+     -f query='mutation($parent: ID!, $child: ID!) { addSubIssue(input: {issueId: $parent, subIssueId: $child}) { issue { number } subIssue { number } } }' \
+     -f parent="$parent" -f child="$child"
+   ```
+
+   `removeSubIssue` with the same input removes the link, and
+   `gh issue view <P>` lists the sub-issues. Recent `gh` releases also offer
+   `gh issue create --parent <P>` and `gh issue edit <P> --add-sub-issue <C>`
+   (see `gh issue edit --help`).
 
 ## Shared boundaries
 
@@ -286,6 +343,11 @@ together.
   [Close-out](#close-out): right after the verified merge, the dev session
   migrates `.project/` and removes the worktree without asking again. Results
   that cannot be rebuilt are archived before the merge.
+- **Write in the declared language.** When the registry declares
+  [writing conventions](#writing-conventions), the session writes Issues, PRs,
+  comments and human documents in that language and starts Issue bodies with
+  the declared sections; template text keeps its language. The generated
+  handoff carries this rule only when a language is declared.
 
 ### Issue-specific section appended to the handoff prompt
 

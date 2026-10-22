@@ -44,12 +44,17 @@
 - 除非用户明确要求，不提交或推送 Git。
 - 对外可见的 Issue、PR、推送或发布写入前先检查仓库可见性；无论仓库公开还是
   私有，都不得写入凭据、私有数据、本机绝对路径或未经脱敏的日志。
+- Issue、PR、评论和 human 文档使用 `.agents/content-registry.yaml` 的
+  `writing.language` 声明的工作语言，Issue 正文以 `writing.issue_sections`
+  的段落开头；没有声明时沿用各文件已有的语言。模板自带的共享文本（
+  `## In this repository` 段以上的部分）保持模板的语言，不翻译。
 
 ## 上下文与状态
 
 每个 worktree 必须先运行 `.agents/scripts/setup-worktree.sh`。所有本地状态进入
 该 worktree 的 `.project/`。外部大资产必须有仓库内 `assets/` 软链接和 manifest；
-凭据只通过路径或运行时环境注入，绝不写入 Git、日志或 manifest。
+凭据只通过路径或运行时环境注入，绝不写入 Git、日志或 manifest；项目需要的凭据
+只按名字登记在根目录的 `credentials.yaml`（见 `llm-credentials`）。
 
 ## 证据
 
