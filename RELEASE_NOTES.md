@@ -1,6 +1,6 @@
 # Release notes
 
-## Unreleased
+## v0.1.15 — 2026-10-22
 
 - **真实运行小而足够**：`issue-workflow` 的 “Issue session rules” 和 `new-agent-prompt.sh` 的交接 prompt 新增同一条规则：真实运行前先判断改动会不会影响系统必须继续做到的事，回归检查已覆盖的改动不需要真实运行；需要的运行用最小的任务、最少的部件和小预算证明本次改动，复用已有证据，除非改动涉及最贵的 provider 否则不用它们；计划和 PR 写明每次运行证明什么、为什么必须跑。它不放宽 “Verify to completion”。
 - **CI**：`.github/workflows/template-check.yml` 的 `actions/checkout` 从 v4 升到 v5，去掉 GitHub 对 Node.js 20 的弃用警告。
