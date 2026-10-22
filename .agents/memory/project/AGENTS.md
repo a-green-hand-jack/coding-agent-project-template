@@ -26,3 +26,6 @@ or superseded status.
 - [`harvest-2026-10-20-v0.1.13.md`](harvest-2026-10-20-v0.1.13.md) — the check
   before v0.1.13: two adopters upgraded cleanly to v0.1.12, no shared candidate;
   the paper template is a derived template awaiting its marker.
+- [`harvest-2026-10-22-v0.1.14.md`](harvest-2026-10-22-v0.1.14.md) — the check
+  before v0.1.14: #65–#69 landed through #70; one new adopter; one new candidate
+  (keep real runs small and sufficient) left for a later Issue.
