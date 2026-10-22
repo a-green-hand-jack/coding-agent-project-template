@@ -331,6 +331,14 @@ together.
   interactive login, a decision) is named, as a blocker that says what the
   maintainer must do. There is no routine "not verified" section, and a check
   that was not run is never claimed.
+- **Keep real runs small and sufficient.** Before a real run, judge whether the
+  change can affect something the system must keep doing; a change the
+  regression checks already cover needs no real run. A run that is needed uses
+  the smallest task, the fewest components and a small budget to prove this
+  change, reuses evidence that already answers the question, and avoids the
+  most expensive providers unless the change concerns them. The plan and the PR
+  state what each run proves and why it must run. This does not relax "Verify to
+  completion": every check the acceptance calls for still runs.
 - **Fix what you meet.** A defect met while solving the Issue that blocks it or
   is related to it is fixed in the same worktree, verified, and listed in the
   PR. That is part of the Issue, not an unrequested feature. Only an unrelated,
