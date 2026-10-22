@@ -302,9 +302,14 @@ Upgrade requests and feedback reach an adopter as an Issue in its own
 repository, opened only for the requests the maintainer approved in this run:
 
 - **Upgrade request**: the adopter is behind a release that lands something it
-  needs (`landing`, or drift from step 3). Name the current pin, the target tag
+  needs (`landing`, or drift from step 3). The target is always the current
+  latest release, never an intermediate one: an adopter several releases behind
+  upgrades once, and `upgrade-template.sh` crosses every release in between
+  (it prints each one's upgrade section). Name the current pin, the latest tag
   with a link to this repository's release notes, the items that concern it, and
-  `template-upgrade` as the procedure.
+  `template-upgrade` as the procedure. An open upgrade request that targets an
+  older release is updated by a comment naming the latest release, not
+  replaced by a second Issue.
 - **Feedback**: a question or observation about the adopter's own delta, for
   example a temporary patch the template now fixes, or a candidate whose
   generality needs the adopter's confirmation.
