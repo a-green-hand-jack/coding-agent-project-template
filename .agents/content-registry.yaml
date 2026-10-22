@@ -4,13 +4,19 @@ purpose: >-
   which content belongs to one concrete project.
 template:
   repository: https://github.com/a-green-hand-jack/coding-agent-project-template
-  version: v0.1.13
+  version: v0.1.14
   # A derived template (a template built from another template) records itself
   # above and the template it follows here; nobody else writes this block, and a
   # project made from a derived template removes it (DEV.md, template relationship):
   # upstream:
   #   repository: <URL of the template it was built from>
   #   version: <release tag of that template it follows>
+# This repository's writing conventions (issue-workflow, "Writing
+# conventions"). A project writes its own block or none; template-upgrade
+# never changes it.
+writing:
+  language: 中文
+  issue_sections: 最终目标, 实现哲学, 现状和问题, 怎么办, 验收, 不做
 default_scope: project
 matching: Most specific path wins; explicit entries override directory defaults.
 classes:
@@ -31,6 +37,13 @@ classes:
   template:
     meaning: Content that defines this template itself.
     rule: Keep in the template repository only.
+entry_fields:
+  optional: >-
+    true: a project may leave the path out. template-adoption maps it as
+    adopted or rejected, and template-upgrade keeps a rejected path out.
+  upgrade: >-
+    review: a file the project owns once it has started. template-upgrade
+    never changes it and shows the release's change for review.
 entries:
   - path: AGENTS.md
     scope: shared_with_adaptation
@@ -77,6 +90,7 @@ entries:
     note: Reusable durable decisions; adapt paths and commands before reuse.
   - path: .agents/memory/shared/docker-objects-prefixed-and-removed.md
     scope: shared_with_adaptation
+    optional: true
     note: Fill DOCKER_PREFIX; every Docker object the project makes carries it and expired ones are removed promptly, only the project's own and never with -f; unnecessary for a project that uses no containers.
   - path: .agents/memory/shared/issue-in-herdr-worktree.md
     scope: shared
@@ -89,7 +103,8 @@ entries:
     note: Dispatch each Issue agent with an explicit model and effort per difficulty tier and record it in the Issue; fill the tier models in the issue-workflow slots.
   - path: .agents/memory/shared/llm-credentials.md
     scope: shared_with_adaptation
-    note: Fill SHARED_CREDENTIAL_FILE from user-level configuration and CREDENTIAL_DIR (credentials) under the canonical checkout's .project/; worktrees link to it; never copy a login between projects or worktrees; credentials pass by variable name or the tool's own channel, never as command-line arguments.
+    optional: true
+    note: Fill SHARED_CREDENTIAL_FILE from user-level configuration and CREDENTIAL_DIR (credentials) under the canonical checkout's .project/; worktrees link to it; never copy a login between projects or worktrees; credentials pass by variable name or the tool's own channel, never as command-line arguments. The device's inventory.yaml beside the shared file names every variable, and the project's credentials.yaml names the rows it needs; probe-credentials.sh checks and probes them without printing a value.
   - path: .agents/memory/shared/product-state-root.md
     scope: shared_with_adaptation
     note: Fill STATE_MARKER, STATE_ENV and DEFAULT_ROOT; product commands resolve a worktree's state root from the setup marker, and the lookup stops at the repository boundary.
@@ -101,6 +116,7 @@ entries:
     note: Fill CONFIG_FILE, COMMAND_TABLE, RECORD_FIELD and CONFIG_FLAG; run parameters are settings with a fixed override order, recorded at run start and reused on resume.
   - path: .agents/memory/shared/third-party-llm-compat-patches.md
     scope: shared_with_adaptation
+    optional: true
     note: Fill PATCH_DIR for the project's patches or wrappers of third-party LLM tools; they run on every run and state that metrics, prompts and reasoning effort are unchanged.
   - path: .agents/memory/project/
     scope: project
@@ -116,6 +132,7 @@ entries:
     note: Reusable sourced facts with a refresh condition; adapt sources before reuse.
   - path: .agents/knowledge/shared/gpt5-strict-backend-requests.md
     scope: shared
+    optional: true
     note: Dated GPT-5.x request shapes that strict Responses backends reject; recheck against the backend when a provider or a named client changes, and adapt the source before reuse.
   - path: .agents/knowledge/project/
     scope: project
@@ -131,16 +148,23 @@ entries:
     note: Keep the uniform directory guardrails, then adapt wording to the destination.
   - path: .agents/content-registry.yaml
     scope: shared_with_adaptation
-    note: Rewrite entries as the destination project grows; do not copy template history. Keep the template block; template.upstream appears only in a derived template, and a project made from one records only that template.
+    note: Rewrite entries as the destination project grows; do not copy template history. Keep the template block; template.upstream appears only in a derived template, and a project made from one records only that template. The writing block holds the project's own writing conventions (issue-workflow) or is left out; template-upgrade never changes it.
   - path: RELEASE_NOTES.md
     scope: template
     note: Template release history stays in the template repository; downstream projects keep their own release notes.
   - path: .agents/skills/template-harvest/
     scope: template
     note: Maintainer procedure that collects settled downstream practice; keep it in the template repository and never copy it downstream.
+  - path: .agents/tests/test_template_*.py
+    scope: template
+    note: The template's own tests of its scripts, run by its CI; never copied downstream.
   - path: .agents/scripts/
     scope: shared_with_adaptation
     note: Adopt the template's scripts unchanged and preserve lifecycle boundaries; put project setup in setup-project.sh and the teardown rules for the .project/ entries it creates in migrate-project.rules, which the template never ships.
+  - path: .github/workflows/template-check.yml
+    scope: shared_with_adaptation
+    optional: true
+    note: Hosted CI for the template checks. Adopt it when the issue-workflow <CI> slot is yes; leave it out when it is no, and template-upgrade keeps it out.
   - path: .project/
     scope: project
     note: Worktree-local state is never copied into a new repository template.
@@ -149,13 +173,17 @@ entries:
     note: Keep the schema, then register the destination project's actual assets.
   - path: pyproject.toml
     scope: shared_with_adaptation
+    optional: true
     note: Replace project metadata and dependencies; keep the package boundary under the product tree (src/ by default).
   - path: Dockerfile
     scope: shared_with_adaptation
+    optional: true
     note: Replace the base image and entrypoint; keep development-plane files out of the build context.
   - path: install.sh
     scope: shared_with_adaptation
+    optional: true
     note: Replace the installation policy and retain a stable public installer entrypoint.
   - path: .dockerignore
     scope: shared_with_adaptation
+    optional: true
     note: Adapt product inputs but keep .agents, .project and agent instruction files excluded.

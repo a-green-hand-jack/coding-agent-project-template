@@ -26,7 +26,8 @@ the record's own text never contains that heading line.
 - [`llm-credentials.md`](llm-credentials.md) — share stable LLM credentials
   through one device file; log refreshing logins in once per canonical checkout,
   whose worktrees link to them; never pass a credential as a command-line
-  argument.
+  argument; name every credential in a device inventory and the project's
+  `credentials.yaml`, and probe it without printing a value.
 - [`product-state-root.md`](product-state-root.md) — product commands resolve
   the worktree's state root from an argument, an environment variable, the
   nearest setup marker (stopping at the repository boundary), then a default.

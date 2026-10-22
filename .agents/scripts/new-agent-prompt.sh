@@ -13,6 +13,12 @@ number=$(jq -r .number <<<"$json")
 title=$(jq -r .title <<<"$json")
 url=$(jq -r .url <<<"$json")
 [[ -n "$branch" ]] || branch="fix/issue-$number"
+# The project's declared writing conventions (issue-workflow, "Writing conventions").
+registry="$(git rev-parse --show-toplevel)/.agents/content-registry.yaml"
+writing=
+[[ ! -f "$registry" ]] || writing=$(sed -n '/^writing:/,/^[^[:space:]]/p' "$registry")
+language=$(sed -n 's/^  language: *//p' <<<"$writing" | head -n 1)
+sections=$(sed -n 's/^  issue_sections: *//p' <<<"$writing" | head -n 1)
 # The working rules mirror "Issue session rules" in the issue-workflow skill.
 cat <<PROMPT
 Work on Issue #$number: $title
@@ -46,3 +52,11 @@ Working rules for this session:
   removes this worktree without asking again, so archive results that cannot
   be rebuilt before the merge.
 PROMPT
+if [[ -n "$language" ]]; then
+  cat <<PROMPT
+- Write Issues, PRs, comments and human documents in $language (the
+  registry's writing block). Text the template ships, above an "In this
+  repository" section or printed by its scripts, keeps its language.
+PROMPT
+  [[ -z "$sections" ]] || printf '  An Issue body starts with: %s.\n' "$sections"
+fi

@@ -82,4 +82,15 @@ if [[ -x .agents/scripts/setup-project.sh ]]; then
   .agents/scripts/setup-project.sh
 fi
 
+# The rows credentials.yaml needs must exist in the device's inventory and not be
+# empty placeholders (llm-credentials); the check prints names, never values.
+credentials=0
+if [[ -f credentials.yaml ]]; then
+  bash .agents/scripts/probe-credentials.sh --check || credentials=$?
+fi
+
 printf 'worktree initialized\n  root: %s\n  branch: %s\n  state: %s\n' "$root" "$branch" "$state"
+if [[ $credentials != 0 ]]; then
+  echo 'error: the credentials credentials.yaml needs are not in order; see the lines above' >&2
+  exit "$credentials"
+fi
