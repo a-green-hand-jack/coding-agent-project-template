@@ -40,6 +40,14 @@ Working rules for this session:
   step the maintainer alone can perform (an interactive login, a decision) as
   a blocker, saying what they must do. Do not add a "not verified" list, and
   never claim a check that was not run.
+- Keep real runs small and sufficient. Before a real run, judge whether the
+  change can affect something the system must keep doing; a change the
+  regression checks already cover needs no real run. A run that is needed uses
+  the smallest task, the fewest components and a small budget to prove this
+  change, reuses evidence that already answers the question, and avoids the
+  most expensive providers unless the change concerns them. State in the plan
+  and the PR what each run proves and why it must run. This does not relax
+  "Verify to completion": every check the acceptance calls for still runs.
 - Fix what you meet. A defect met on the way that blocks this Issue or is
   related to it is fixed here, verified and listed in the PR; that is part of
   the Issue, not an unrequested feature. Only an unrelated, larger problem is

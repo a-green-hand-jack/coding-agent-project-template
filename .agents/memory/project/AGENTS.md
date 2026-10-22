@@ -29,3 +29,6 @@ or superseded status.
 - [`harvest-2026-10-22-v0.1.14.md`](harvest-2026-10-22-v0.1.14.md) — the check
   before v0.1.14: #65–#69 landed through #70; one new adopter; one new candidate
   (keep real runs small and sufficient) left for a later Issue.
+- [`harvest-2026-10-22-v0.1.15.md`](harvest-2026-10-22-v0.1.15.md) — the check
+  before v0.1.15: no adopter moved; the real-runs rule landed through #73;
+  upgrade requests target the latest release.
