@@ -14,6 +14,10 @@ the record's own text never contains that heading line.
   — every image, container, network and volume a project starts in Docker
   carries its prefix; expired ones are removed promptly, only the project's own,
   never with `-f`.
+- [`host-files-owned-by-running-user.md`](host-files-owned-by-running-user.md)
+  — files, logs, caches and mounted output left on the host belong to the
+  running user; no `sudo` for project files; cleanup that meets foreign-owned
+  files stops and reports.
 - [`issue-in-herdr-worktree.md`](issue-in-herdr-worktree.md) — implement each
   Issue in its own Herdr worktree and agent session, which verifies to
   completion, fixes related defects and leaves conflicts to the dev checkout.
@@ -23,6 +27,11 @@ the record's own text never contains that heading line.
 - [`issue-dispatch-by-difficulty.md`](issue-dispatch-by-difficulty.md) — dispatch
   each Issue agent with an explicit model and effort for its difficulty tier, and
   record it in the Issue.
+- [`look-at-the-artifact-before-concluding.md`](look-at-the-artifact-before-concluding.md)
+  — before reporting a generated or evaluated result, look at the artifacts
+  yourself next to their references; automatic checks and cross-checks are
+  leads, not acceptance evidence; when they disagree, suspect the metric, and
+  say what was looked at.
 - [`llm-credentials.md`](llm-credentials.md) — share stable LLM credentials
   through one device file; log refreshing logins in once per canonical checkout,
   whose worktrees link to them; never pass a credential as a command-line
@@ -38,6 +47,15 @@ the record's own text never contains that heading line.
 - [`run-settings-from-config.md`](run-settings-from-config.md) — run parameters
   are settings loaded from configuration with a fixed override order, recorded
   at run start and reused on resume; never constants in code.
+- [`screen-with-scriptable-fakes.md`](screen-with-scriptable-fakes.md) — screen
+  boundary failure paths before a real run with one scriptable fake (scenarios
+  as data, requests recorded with credentials masked by key name, upstream and
+  agent-executor boundaries); it is a sieve, not acceptance.
+- [`speed-and-parallelism-by-measurement.md`](speed-and-parallelism-by-measurement.md)
+  — speed is a quality: independent work runs in parallel and only a real
+  dependency queues; concurrency is set from measured resources and provider
+  health, reported apart from wall clock and cost; remove repeated work, never a
+  check or a spending limit.
 - [`third-party-llm-compat-patches.md`](third-party-llm-compat-patches.md) —
   compatibility changes to third-party LLM tools live in the repository and run
   every time; check one captured request body before a batch; no retry-without-

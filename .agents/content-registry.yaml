@@ -4,7 +4,7 @@ purpose: >-
   which content belongs to one concrete project.
 template:
   repository: https://github.com/a-green-hand-jack/coding-agent-project-template
-  version: v0.1.15
+  version: v0.1.16
   # A derived template (a template built from another template) records itself
   # above and the template it follows here; nobody else writes this block, and a
   # project made from a derived template removes it (DEV.md, template relationship):
@@ -92,6 +92,9 @@ entries:
     scope: shared_with_adaptation
     optional: true
     note: Fill DOCKER_PREFIX; every Docker object the project makes carries it and expired ones are removed promptly, only the project's own and never with -f; unnecessary for a project that uses no containers.
+  - path: .agents/memory/shared/host-files-owned-by-running-user.md
+    scope: shared
+    note: Files, logs, caches and mounted output the project leaves on the host belong to the running user; no sudo for project files, and cleanup that meets foreign-owned files stops and reports.
   - path: .agents/memory/shared/issue-in-herdr-worktree.md
     scope: shared
     note: Each Issue runs in its own Herdr worktree and agent session under the handoff's working rules; applies to repositories developing from a dev branch.
@@ -105,6 +108,9 @@ entries:
     scope: shared_with_adaptation
     optional: true
     note: Fill SHARED_CREDENTIAL_FILE from user-level configuration and CREDENTIAL_DIR (credentials) under the canonical checkout's .project/; worktrees link to it; never copy a login between projects or worktrees; credentials pass by variable name or the tool's own channel, never as command-line arguments. The device's inventory.yaml beside the shared file names every variable, and the project's credentials.yaml names the rows it needs; probe-credentials.sh checks and probes them without printing a value.
+  - path: .agents/memory/shared/look-at-the-artifact-before-concluding.md
+    scope: shared
+    note: Before reporting a generated or evaluated result, look at the artifacts next to their references; automatic checks and cross-checks are leads, not evidence; when they disagree suspect the metric, and name what was looked at.
   - path: .agents/memory/shared/product-state-root.md
     scope: shared_with_adaptation
     note: Fill STATE_MARKER, STATE_ENV and DEFAULT_ROOT; product commands resolve a worktree's state root from the setup marker, and the lookup stops at the repository boundary.
@@ -114,6 +120,12 @@ entries:
   - path: .agents/memory/shared/run-settings-from-config.md
     scope: shared_with_adaptation
     note: Fill CONFIG_FILE, COMMAND_TABLE, RECORD_FIELD and CONFIG_FLAG; run parameters are settings with a fixed override order, recorded at run start and reused on resume.
+  - path: .agents/memory/shared/screen-with-scriptable-fakes.md
+    scope: shared
+    note: Screen boundary failure paths with one scriptable fake (scenarios as data, requests recorded with credentials masked by key name) before a real run; it is a sieve, not acceptance, and stays out of the product tree and image.
+  - path: .agents/memory/shared/speed-and-parallelism-by-measurement.md
+    scope: shared
+    note: Independent work runs in parallel and only a real dependency queues; concurrency is set from measured resources and provider health and reported apart from wall clock and cost; remove repeated work, never a check or a spending limit.
   - path: .agents/memory/shared/third-party-llm-compat-patches.md
     scope: shared_with_adaptation
     optional: true

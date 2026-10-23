@@ -255,6 +255,14 @@ Input: Issue number `<N>` and a branch `<branch>` named per `DEV.md`
    switches to that workspace (or uses `herdr agent focus <name>` on request).
    From here the dev session does not edit that worktree.
 
+### Independent Issues run in parallel
+
+Issues that do not depend on each other are started together, each through Start
+in its own worktree and session; do not queue them by arrival order. Only a real
+dependency waits, for example an Issue that needs another's merged result. This
+changes when sessions start, never the checks each one runs
+(`speed-and-parallelism-by-measurement`).
+
 ### Dispatch by difficulty
 
 Judge the Issue by its scope, risk and uncertainty, not by its type (`feat`,
@@ -377,6 +385,27 @@ Constraints:
 - When finished, report the result with its evidence, `git status` and
   `git diff --stat`, and wait for confirmation.
 ```
+
+### Messages to a running Issue session
+
+The handoff prompt in Start step 6 goes to an agent whose input line is empty.
+Every later message from the dev session is different: the maintainer shares
+the pane with the agent and may have a draft typed in its input line.
+
+- **Look before sending.** `herdr agent prompt <name> "..."` appends to whatever
+  the input line holds, so a draft and the message merge into one. Before
+  sending a follow-up to an agent that is already running, run
+  `herdr agent read <name> --source visible` and look at the input line. If it
+  is not empty, do not send. Put the message in an Issue comment, or ask the
+  maintainer to include it in their own message.
+- **Relay the result and the constraints, not the commands.** When passing on a
+  maintainer decision, write the outcome to reach and the constraints it must
+  respect. Leave the commands to the project's skills, which know what each
+  command can and cannot change. A command named in the relay may not do what
+  the dev session assumed.
+- **When the named way does not work,** the Issue session follows the path its
+  project documentation gives, says where it deviated and why, and records that
+  in the Issue.
 
 ## Merge
 

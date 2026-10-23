@@ -17,12 +17,41 @@ workers, or create durable artifacts.
    state, progress, last activity, errors, artifacts and recovery hints without
    mutating the run or reading secrets.
 4. Persist structured receipts and logs under the worktree state root. A terminal
-   message or process exit code alone is not completion evidence.
+   message or process exit code alone is not completion evidence. Neither is a
+   pass against a scriptable fake of the upstream or agent executor: that is a
+   cheap screen run before the real run, not completion evidence (memory
+   `screen-with-scriptable-fakes`).
 5. Define checkpoint, stop, resume, retry and terminal-failure behavior. On
    restart, replay or reconcile durable results before starting duplicate work.
 6. Report implementation, runtime acceptance and final artifact acceptance as
    separate verdicts.
-7. Do not change code under a live run. A run that loads code from its checkout
+7. Judge health by progress, not by liveness. A driver that retries with backoff
+   keeps its process alive while no work advances, for example when the upstream
+   rejects every unit of work for quota, so neither "the process is alive" nor a
+   status summary that says "nothing to do" is progress evidence. Each report:
+   - compares the progress counters (completed units of work, budget consumed)
+     with the previous report;
+   - reads each unit's latest result and failure reason from its receipt, not
+     only the aggregate summary;
+   - states what was not checked.
+
+   When waiting for a process to end, bind the wait to its exit or a change of
+   its state, never to "the process still exists": a watcher on a process that
+   already ended runs until its timeout.
+8. Schedule and size the concurrency (`speed-and-parallelism-by-measurement`).
+   - Run independent work units concurrently; queue only a real dependency.
+   - Start a downstream step (review, the next stage) when its upstream unit
+     delivers its receipt, not when the whole batch ends. Keep a rolling queue:
+     a freed slot takes the next ready unit.
+   - Decide the concurrency from measured CPU, memory, disk and the provider's
+     observed error rate, not from a container limit, a configured cap or the
+     session count. Raise it while the measurements stay healthy, lower it when
+     they degrade, and never exceed a declared spending or quota limit.
+   - Report the concurrency level, the wall-clock time and the cost separately.
+   - Remove repeated work before adding concurrency: preinstalled images, shared
+     toolchains and caches per scope, snapshots of finished builds, and the
+     receipt reconciliation of step 5.
+9. Do not change code under a live run. A run that loads code from its checkout
    whenever it (re)starts a step fails on a half-merged or half-edited file, and
    bash reads a running script by byte offset, so editing that script in place
    corrupts the run. Make code changes and merges for a live run in another
