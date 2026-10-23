@@ -92,6 +92,9 @@ entries:
     scope: shared_with_adaptation
     optional: true
     note: Fill DOCKER_PREFIX; every Docker object the project makes carries it and expired ones are removed promptly, only the project's own and never with -f; unnecessary for a project that uses no containers.
+  - path: .agents/memory/shared/host-files-owned-by-running-user.md
+    scope: shared
+    note: Files, logs, caches and mounted output the project leaves on the host belong to the running user; no sudo for project files, and cleanup that meets foreign-owned files stops and reports.
   - path: .agents/memory/shared/issue-in-herdr-worktree.md
     scope: shared
     note: Each Issue runs in its own Herdr worktree and agent session under the handoff's working rules; applies to repositories developing from a dev branch.
