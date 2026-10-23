@@ -1,5 +1,21 @@
 # Release notes
 
+## v0.1.16 — 2026-10-23
+
+收进下游反馈 #76 与 2026-10-23 这轮 harvest 的三条共享规则（#78–#80）。
+
+- **监督看进度不看存活**（#76）：`long-running-supervision` 新增第 7 步。每次汇报和上一次比较完成数与预算消耗，读每个工作单元最近一次的结果和失败原因，写明没查什么；“进程活着”和“摘要说正常”都不算进度证据；等待一个过程结束要绑在它退出或状态变化上。原第 7 步顺延为第 9 步。
+- **给运行中的 Issue session 发后续消息前先看输入行**（#76）：`issue-workflow` 新增 “Messages to a running Issue session”。用 `herdr agent read <name> --source visible` 看输入行，不为空就不发，改走 Issue 评论或请维护者带上；转达维护者的决定只写要达到的结果和约束，命令以项目 skill 为准；指定的做法行不通时按文档路径做、说明偏离并记进 Issue。
+- **独立 Issue 并行派出**（#78）：`issue-workflow` 的 Start 之后新增 “Independent Issues run in parallel”，不按先来后到排队，只有真实依赖才等待。
+- **速度、并行与效率优化**（#78）：新增共享 memory `speed-and-parallelism-by-measurement`；`long-running-supervision` 新增第 8 步“调度与并发”：独立工作单元并发、交付即触发下游、滚动队列、按实测资源和 provider 健康决定并发、并发度与墙钟和成本分开报告、先消除重复工作。不放宽验证、凭据/安全边界，也不突破明确的花费上限。
+- **host 文件归运行用户**（#79）：新增共享 memory `host-files-owned-by-running-user`。项目、agent 和容器留在 host 上的文件、日志、缓存和挂载输出归运行用户；不用 sudo 创建或修改项目文件；清理遇到不属于自己的文件停下来报告；发布和归档前确认归属。
+- **可编排的假外部边界**（#80）：新增共享 memory `screen-with-scriptable-fakes`；`long-running-supervision` 第 4 步写明：对 fake 的通过只是真实运行前的便宜筛子，不是完成证据。
+- 维护者侧：`template-harvest` 允许一个反馈 Issue 把它来自哪个 adopter 写为来源（`scope: template`，不随升级下发）；模板维护的 Issue 默认用 Pi + DeepSeek 派出（项目 memory，不下发）。
+
+### Upgrading a project from v0.1.15
+
+**Command only.** 运行 `upgrade-template.sh`。它新增三个共享 memory 文件，替换 `issue-workflow` 和 `long-running-supervision` 里 `## In this repository` 段以上的文本，并在 registry 增加三个条目；各项目的 `## In this repository` 段保持不变。下游若在 section 以上自行加过调度、并发或假边界的文字，命令把它报为冲突，保留发布的文本并删去本地副本即可。
+
 ## v0.1.15 — 2026-10-22
 
 - **真实运行小而足够**：`issue-workflow` 的 “Issue session rules” 和 `new-agent-prompt.sh` 的交接 prompt 新增同一条规则：真实运行前先判断改动会不会影响系统必须继续做到的事，回归检查已覆盖的改动不需要真实运行；需要的运行用最小的任务、最少的部件和小预算证明本次改动，复用已有证据，除非改动涉及最贵的 provider 否则不用它们；计划和 PR 写明每次运行证明什么、为什么必须跑。它不放宽 “Verify to completion”。
