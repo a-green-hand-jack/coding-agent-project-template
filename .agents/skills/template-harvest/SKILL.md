@@ -19,11 +19,14 @@ checkout of an adopter is scanned, resolved or needed.
 
 ## Boundaries
 
-- This repository is public; the adopter set is not. An adopter's name, private
-  decision or raw log never enters a tracked file, Issue, PR, commit message or
-  memory record here. Use a local id and counts ("two adopters"). The one
-  exception is a public derived template listed under "Derived templates"
-  below, which may be named.
+- This repository is public; the adopter set is not. A private decision, raw
+  log, local path or credential never enters a tracked file, Issue, PR, commit
+  message or memory record here. Use a local id and counts ("two adopters") for
+  the set. Two exceptions may be named: a public derived template listed under
+  "Derived templates" below, and the adopter an Issue came from, recorded as
+  that Issue's source (step 4). The source mark names one repository; it does
+  not make the adopter set public and does not license naming any other
+  adopter.
 - Adopters are read-only. The allowed reads are `gh repo list`, `gh repo view`,
   `gh issue list`, `gh pr list`, `gh search commits`, and `gh api` GET requests
   on `repos/<repo>` and its `branches`, `commits`, `compare`, `contents`,
@@ -282,8 +285,9 @@ For each shared candidate:
    template script). State the generic practice, its parameters and adaptation
    points, the destination (`shared/` or `shared_with_adaptation`;
    `memory/shared/` or `memory/project/`), the number and independence of
-   adopters as counts, and the compatibility and cleanup impact. Include no
-   adopter name, private decision or raw log.
+   adopters as counts, and the compatibility and cleanup impact. The Issue may
+   name the adopter it came from as its source, so the report stays traceable;
+   include no other adopter's name, no private decision and no raw log.
 3. Implement it after the harvest run, as root `AGENTS.md` sorts the work: a
    larger unit through that Issue, a Herdr-created worktree from `dev` and a PR;
    a small change directly in the dev checkout, citing the Issue. Never by
