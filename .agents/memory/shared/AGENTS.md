@@ -14,6 +14,10 @@ the record's own text never contains that heading line.
   — every image, container, network and volume a project starts in Docker
   carries its prefix; expired ones are removed promptly, only the project's own,
   never with `-f`.
+- [`host-files-owned-by-running-user.md`](host-files-owned-by-running-user.md)
+  — files, logs, caches and mounted output left on the host belong to the
+  running user; no `sudo` for project files; cleanup that meets foreign-owned
+  files stops and reports.
 - [`issue-in-herdr-worktree.md`](issue-in-herdr-worktree.md) — implement each
   Issue in its own Herdr worktree and agent session, which verifies to
   completion, fixes related defects and leaves conflicts to the dev checkout.
