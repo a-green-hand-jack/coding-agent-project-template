@@ -120,6 +120,9 @@ entries:
   - path: .agents/memory/shared/run-settings-from-config.md
     scope: shared_with_adaptation
     note: Fill CONFIG_FILE, COMMAND_TABLE, RECORD_FIELD and CONFIG_FLAG; run parameters are settings with a fixed override order, recorded at run start and reused on resume.
+  - path: .agents/memory/shared/screen-with-scriptable-fakes.md
+    scope: shared
+    note: Screen boundary failure paths with one scriptable fake (scenarios as data, requests recorded with credentials masked by key name) before a real run; it is a sieve, not acceptance, and stays out of the product tree and image.
   - path: .agents/memory/shared/third-party-llm-compat-patches.md
     scope: shared_with_adaptation
     optional: true

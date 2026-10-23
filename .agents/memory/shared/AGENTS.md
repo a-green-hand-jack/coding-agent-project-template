@@ -47,6 +47,10 @@ the record's own text never contains that heading line.
 - [`run-settings-from-config.md`](run-settings-from-config.md) — run parameters
   are settings loaded from configuration with a fixed override order, recorded
   at run start and reused on resume; never constants in code.
+- [`screen-with-scriptable-fakes.md`](screen-with-scriptable-fakes.md) — screen
+  boundary failure paths before a real run with one scriptable fake (scenarios
+  as data, requests recorded with credentials masked by key name, upstream and
+  agent-executor boundaries); it is a sieve, not acceptance.
 - [`third-party-llm-compat-patches.md`](third-party-llm-compat-patches.md) —
   compatibility changes to third-party LLM tools live in the repository and run
   every time; check one captured request body before a batch; no retry-without-

@@ -17,7 +17,10 @@ workers, or create durable artifacts.
    state, progress, last activity, errors, artifacts and recovery hints without
    mutating the run or reading secrets.
 4. Persist structured receipts and logs under the worktree state root. A terminal
-   message or process exit code alone is not completion evidence.
+   message or process exit code alone is not completion evidence. Neither is a
+   pass against a scriptable fake of the upstream or agent executor: that is a
+   cheap screen run before the real run, not completion evidence (memory
+   `screen-with-scriptable-fakes`).
 5. Define checkpoint, stop, resume, retry and terminal-failure behavior. On
    restart, replay or reconcile durable results before starting duplicate work.
 6. Report implementation, runtime acceptance and final artifact acceptance as
