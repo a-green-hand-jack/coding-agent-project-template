@@ -51,6 +51,11 @@ the record's own text never contains that heading line.
   boundary failure paths before a real run with one scriptable fake (scenarios
   as data, requests recorded with credentials masked by key name, upstream and
   agent-executor boundaries); it is a sieve, not acceptance.
+- [`speed-and-parallelism-by-measurement.md`](speed-and-parallelism-by-measurement.md)
+  — speed is a quality: independent work runs in parallel and only a real
+  dependency queues; concurrency is set from measured resources and provider
+  health, reported apart from wall clock and cost; remove repeated work, never a
+  check or a spending limit.
 - [`third-party-llm-compat-patches.md`](third-party-llm-compat-patches.md) —
   compatibility changes to third-party LLM tools live in the repository and run
   every time; check one captured request body before a batch; no retry-without-
