@@ -32,3 +32,7 @@ or superseded status.
 - [`harvest-2026-10-22-v0.1.15.md`](harvest-2026-10-22-v0.1.15.md) — the check
   before v0.1.15: no adopter moved; the real-runs rule landed through #73;
   upgrade requests target the latest release.
+- [`template-work-runs-on-pi-deepseek.md`](template-work-runs-on-pi-deepseek.md)
+  — template maintenance is dispatched with Pi and DeepSeek; the Dispatch
+  section still records agent, model and effort, and a hard Issue is
+  re-dispatched with the reason.
