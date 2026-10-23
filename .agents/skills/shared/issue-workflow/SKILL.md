@@ -378,6 +378,27 @@ Constraints:
   `git diff --stat`, and wait for confirmation.
 ```
 
+### Messages to a running Issue session
+
+The handoff prompt in Start step 6 goes to an agent whose input line is empty.
+Every later message from the dev session is different: the maintainer shares
+the pane with the agent and may have a draft typed in its input line.
+
+- **Look before sending.** `herdr agent prompt <name> "..."` appends to whatever
+  the input line holds, so a draft and the message merge into one. Before
+  sending a follow-up to an agent that is already running, run
+  `herdr agent read <name> --source visible` and look at the input line. If it
+  is not empty, do not send. Put the message in an Issue comment, or ask the
+  maintainer to include it in their own message.
+- **Relay the result and the constraints, not the commands.** When passing on a
+  maintainer decision, write the outcome to reach and the constraints it must
+  respect. Leave the commands to the project's skills, which know what each
+  command can and cannot change. A command named in the relay may not do what
+  the dev session assumed.
+- **When the named way does not work,** the Issue session follows the path its
+  project documentation gives, says where it deviated and why, and records that
+  in the Issue.
+
 ## Merge
 
 The dev session merges PRs into `<BASE>`. Several PRs may be open at once and

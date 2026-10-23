@@ -23,6 +23,11 @@ the record's own text never contains that heading line.
 - [`issue-dispatch-by-difficulty.md`](issue-dispatch-by-difficulty.md) — dispatch
   each Issue agent with an explicit model and effort for its difficulty tier, and
   record it in the Issue.
+- [`look-at-the-artifact-before-concluding.md`](look-at-the-artifact-before-concluding.md)
+  — before reporting a generated or evaluated result, look at the artifacts
+  yourself next to their references; automatic checks and cross-checks are
+  leads, not acceptance evidence; when they disagree, suspect the metric, and
+  say what was looked at.
 - [`llm-credentials.md`](llm-credentials.md) — share stable LLM credentials
   through one device file; log refreshing logins in once per canonical checkout,
   whose worktrees link to them; never pass a credential as a command-line
