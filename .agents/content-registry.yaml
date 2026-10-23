@@ -117,6 +117,9 @@ entries:
   - path: .agents/memory/shared/run-settings-from-config.md
     scope: shared_with_adaptation
     note: Fill CONFIG_FILE, COMMAND_TABLE, RECORD_FIELD and CONFIG_FLAG; run parameters are settings with a fixed override order, recorded at run start and reused on resume.
+  - path: .agents/memory/shared/speed-and-parallelism-by-measurement.md
+    scope: shared
+    note: Independent work runs in parallel and only a real dependency queues; concurrency is set from measured resources and provider health and reported apart from wall clock and cost; remove repeated work, never a check or a spending limit.
   - path: .agents/memory/shared/third-party-llm-compat-patches.md
     scope: shared_with_adaptation
     optional: true

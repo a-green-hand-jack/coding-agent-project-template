@@ -255,6 +255,14 @@ Input: Issue number `<N>` and a branch `<branch>` named per `DEV.md`
    switches to that workspace (or uses `herdr agent focus <name>` on request).
    From here the dev session does not edit that worktree.
 
+### Independent Issues run in parallel
+
+Issues that do not depend on each other are started together, each through Start
+in its own worktree and session; do not queue them by arrival order. Only a real
+dependency waits, for example an Issue that needs another's merged result. This
+changes when sessions start, never the checks each one runs
+(`speed-and-parallelism-by-measurement`).
+
 ### Dispatch by difficulty
 
 Judge the Issue by its scope, risk and uncertainty, not by its type (`feat`,

@@ -43,6 +43,11 @@ the record's own text never contains that heading line.
 - [`run-settings-from-config.md`](run-settings-from-config.md) — run parameters
   are settings loaded from configuration with a fixed override order, recorded
   at run start and reused on resume; never constants in code.
+- [`speed-and-parallelism-by-measurement.md`](speed-and-parallelism-by-measurement.md)
+  — speed is a quality: independent work runs in parallel and only a real
+  dependency queues; concurrency is set from measured resources and provider
+  health, reported apart from wall clock and cost; remove repeated work, never a
+  check or a spending limit.
 - [`third-party-llm-compat-patches.md`](third-party-llm-compat-patches.md) —
   compatibility changes to third-party LLM tools live in the repository and run
   every time; check one captured request body before a batch; no retry-without-

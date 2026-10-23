@@ -35,7 +35,20 @@ workers, or create durable artifacts.
    When waiting for a process to end, bind the wait to its exit or a change of
    its state, never to "the process still exists": a watcher on a process that
    already ended runs until its timeout.
-8. Do not change code under a live run. A run that loads code from its checkout
+8. Schedule and size the concurrency (`speed-and-parallelism-by-measurement`).
+   - Run independent work units concurrently; queue only a real dependency.
+   - Start a downstream step (review, the next stage) when its upstream unit
+     delivers its receipt, not when the whole batch ends. Keep a rolling queue:
+     a freed slot takes the next ready unit.
+   - Decide the concurrency from measured CPU, memory, disk and the provider's
+     observed error rate, not from a container limit, a configured cap or the
+     session count. Raise it while the measurements stay healthy, lower it when
+     they degrade, and never exceed a declared spending or quota limit.
+   - Report the concurrency level, the wall-clock time and the cost separately.
+   - Remove repeated work before adding concurrency: preinstalled images, shared
+     toolchains and caches per scope, snapshots of finished builds, and the
+     receipt reconciliation of step 5.
+9. Do not change code under a live run. A run that loads code from its checkout
    whenever it (re)starts a step fails on a half-merged or half-edited file, and
    bash reads a running script by byte offset, so editing that script in place
    corrupts the run. Make code changes and merges for a live run in another
