@@ -105,6 +105,9 @@ entries:
     scope: shared_with_adaptation
     optional: true
     note: Fill SHARED_CREDENTIAL_FILE from user-level configuration and CREDENTIAL_DIR (credentials) under the canonical checkout's .project/; worktrees link to it; never copy a login between projects or worktrees; credentials pass by variable name or the tool's own channel, never as command-line arguments. The device's inventory.yaml beside the shared file names every variable, and the project's credentials.yaml names the rows it needs; probe-credentials.sh checks and probes them without printing a value.
+  - path: .agents/memory/shared/look-at-the-artifact-before-concluding.md
+    scope: shared
+    note: Before reporting a generated or evaluated result, look at the artifacts next to their references; automatic checks and cross-checks are leads, not evidence; when they disagree suspect the metric, and name what was looked at.
   - path: .agents/memory/shared/product-state-root.md
     scope: shared_with_adaptation
     note: Fill STATE_MARKER, STATE_ENV and DEFAULT_ROOT; product commands resolve a worktree's state root from the setup marker, and the lookup stops at the repository boundary.
