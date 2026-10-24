@@ -129,8 +129,8 @@ project-neutral.
 | `<AGENT_PREFIX>` | Short project prefix. The agent name is `<AGENT_PREFIX>-issue-<N>` and must be unique across the whole Herdr server. | project choice |
 | `<WORKSPACE_PREFIX>` | Prefix of the Herdr workspace label, so that a server holding worktrees of several repositories shows which repository an Issue workspace belongs to. Herdr accepts upper-case letters in labels but not in agent names, so a project may prefer an upper-case prefix here. | `<AGENT_PREFIX>` |
 | `<MERGE_METHOD>` | `gh pr merge` method flag. Close-out's ancestry check assumes a merge commit. | `--merge` |
-| `<CI>` | Whether CI covers the project's checks. `yes`: rely on PR checks and the base-branch run; the template's optional `.github/workflows/template-check.yml` is adopted. `no`: run `<POST_MERGE_CHECK>` in the dev checkout; that workflow is left out (`template-adoption` step 3). | project fact |
-| `<POST_MERGE_CHECK>` | Verification commands from `DEV.md`, used when `<CI>` is `no`. | `DEV.md` verification strategy |
+| `<CI>` | Whether the project adopts the template's optional `.github/workflows/template-check.yml`. `yes`: adopted; its result is read and noted on the PR, never waited for and never a condition (see Merge). `no`: that workflow is left out (`template-adoption` step 3). | project fact |
+| `<LOCAL_CHECK>` | The verification commands from `DEV.md`, always filled whatever `<CI>` is. They are the merge gate, run locally; when `<CI>` is `yes` they are the same steps the workflow runs. | `DEV.md` verification strategy |
 | `<PRE_MERGE_GATE>` | Optional read-only product command that must pass before merging, for example `<cmd> archive --check`. | none |
 | `<ARCHIVE_CMD>` | Product command that archives and registers non-rebuildable results before a worktree is retired. | none |
 | `<MONITOR_CMD>`, `<STOP_CMD>` | Product commands that list live runs in a checkout (the dev checkout or a worktree) and stop one. | none |
@@ -449,9 +449,11 @@ line that keeps the history:
 together.
 
 - **Verify to completion.** The session runs every check the Issue's acceptance
-  and the project's CI call for, including real runs and, after a push,
-  `gh pr checks`, and reports one definite result with the commands and their
-  output. The acceptance bounds the checks: none is skipped, and none is added
+  and `<LOCAL_CHECK>` call for, including real runs, and reports one definite
+  result with the commands and their output. After a push it may read
+  `gh pr checks` and report the CI state (passed, failed or not run), but it
+  does not wait for it and does not stop because CI did not run (for example
+  for billing); the local result is the evidence. The acceptance bounds the checks: none is skipped, and none is added
   for its own sake. Only a step the maintainer alone can perform (an
   interactive login, a decision) is named, as a blocker that says what the
   maintainer must do. There is no routine "not verified" section, and a check
@@ -552,9 +554,28 @@ moved, go back to step 2.
    ```
 
    `state` must be `OPEN` and the base `<BASE>`. Maintainer approval must be
-   visible on the PR or the Issue; without it, do not merge and report. When `<CI>`
-   is `yes`, `gh pr checks <PR> --repo <REPO>` must be green. `mergeable`
-   `UNKNOWN` means GitHub is still computing it; query again.
+   visible on the PR or the Issue; without it, do not merge and report.
+   `mergeable` `UNKNOWN` means GitHub is still computing it; query again.
+
+   The gate is `<LOCAL_CHECK>`, not CI. Locate `<worktree>` as in Close-out
+   step 1, confirm it is at the PR's latest commit
+   (`git -C <worktree> fetch origin` and compare `git -C <worktree> rev-parse HEAD`
+   with `gh pr view <PR> --repo <REPO> --json headRefOid --jq .headRefOid`;
+   if they differ, `git -C <worktree> merge --ff-only origin/<branch>`), run
+   `<LOCAL_CHECK>` there, and leave one comment on the PR with:
+
+   - the commit SHA the checks ran on;
+   - each command and its result (pass, or fail with the failing output);
+   - the CI state read once with `gh pr checks <PR> --repo <REPO>`: passed,
+     failed or not run (for example because Actions could not start). Do not
+     wait for it to finish.
+
+   `<LOCAL_CHECK>` all passing and the maintainer's approval are enough to
+   merge; if it fails, do not merge, and the Issue session fixes it. A CI
+   failure with a passing `<LOCAL_CHECK>` does not block: say so in the PR
+   comment and in the report to the maintainer, who decides whether to open an
+   Issue to look into the difference. A new head after a push needs this step
+   again.
 3. Run the pre-merge gate when `<PRE_MERGE_GATE>` is defined. Locate `<worktree>`
    as in Close-out step 1, then `(cd <worktree> && <PRE_MERGE_GATE>)`.
    - Passing: continue.
@@ -589,23 +610,21 @@ moved, go back to step 2.
    `git commit`; `git -C <worktree> merge --abort` backs out. Keep both sides of
    a mechanical conflict (both appended index lines). For a semantic conflict,
    where the two sides decided the same thing differently, do not choose: list
-   both sides for the maintainer and resolve as they decide. When `<CI>` is
-   `no`, run `<POST_MERGE_CHECK>` in `<worktree>`. Commit the merge and
+   both sides for the maintainer and resolve as they decide. Run
+   `<LOCAL_CHECK>` in `<worktree>`. Commit the merge and
    `git -C <worktree> push origin <branch>` only after the maintainer confirms,
-   then re-check from step 2: the new head needs its checks again before
-   `gh pr merge`.
-5. Verify the merged `<BASE>`. When `<CI>` is `yes`, confirm the run for this
-   PR's merge commit succeeded, not merely the latest run, which may be another
-   coordinator's:
+   then re-check from step 2: the new head needs `<LOCAL_CHECK>` and its PR
+   comment again before `gh pr merge`.
+5. Verify the merged `<BASE>`: run the dev live-run check, `git -C <dev> pull --ff-only`,
+   then `<LOCAL_CHECK>` in `<dev>`. On failure, report the output; do not patch
+   around it in the dev checkout. The CI run on this PR's merge commit is only
+   noted in the report, not waited for:
 
    ```bash
    sha=$(gh pr view <PR> --repo <REPO> --json mergeCommit --jq .mergeCommit.oid)
    gh run list --repo <REPO> --branch <BASE> --commit "$sha"
    ```
 
-   When `no`, run the dev live-run check, `git -C <dev> pull --ff-only`, then
-   `<POST_MERGE_CHECK>` in `<dev>`. On failure, report the output; do not patch
-   around it in the dev checkout.
 6. Close out the PR's worktree (below) right away.
 
 ## Close-out
