@@ -10,11 +10,19 @@
   - `issue-in-herdr-worktree`、`issue-close-out`、`issue-dispatch-by-difficulty` 去掉复述 `issue-workflow` 的步骤，指向 Start、Dispatch by difficulty、Merge、Close-out。`issue-close-out` 里“合并的 PR 改了镜像或测试 fixture 时删掉只有该分支用的镜像 tag”补进 `issue-workflow` Close-out 第 8 步。
   - 维护者侧：`template-harvest` 每次运行不再写一条 memory，细节只在运行报告、发布说明和 `adopters.yaml`；长期决定（被否掉的候选和原因）合进项目 memory `harvest-decisions`，原来 10 条 `harvest-*` 记录删除。交付副本（带模板标记、但是另一个下游的副本）不单独算一个下游，写进 skill 第 1 步。
 
+- **dev checkout 里可以有多个协调者**（#89）：`issue-workflow` 不再假设 dev checkout 里只有一个协调 session。
+  - 新增 “Several coordinators”：每个协调者认领一个 Issue（连同它的 sub-issue），只动自己认领的 Issue 的 worktree、session、PR 和分支；别人认领的 Issue 不碰，接手由维护者决定。认领时协调者先用 `herdr agent rename "$HERDR_PANE_ID" <AGENT_PREFIX>-coord-<N>` 给自己一个能在 Herdr 里找到的名字，确认 Dispatch 段没有别人的 `- coordinator:` 行后写上自己，再读一遍确认。查看别人在干什么只用现有命令：`gh issue list`/`gh issue view`/`gh pr list` 看认领和进度，`herdr agent list`、`herdr worktree list` 看正在跑的 session 和 worktree。没有新脚本、状态文件或锁。
+  - Merge：PR 和当时的 `dev` 冲突时，认领的协调者在**这个 PR 自己的 worktree** 里把最新的 `dev` 合进分支、解决、经维护者确认后推送，再在 GitHub 上合并；可以自己做（Issue session 空闲时），也可以交给 Issue session。共用的 dev checkout 只做 `git pull --ff-only`。机械冲突两边保留，语义冲突交维护者。合并后的 CI 按本 PR 的 merge commit 查，不看最近一次运行（可能是别的协调者的）；`<CI>` 为 `no` 时先 pull 再在 dev checkout 跑 `<POST_MERGE_CHECK>`。
+  - Shared boundaries 新增共用 dev checkout 的规矩：不留下做了一半的状态；小改动只 `git add` 自己的文件、提交后马上推送，推送被拒就报告；`pull --ff-only` 因为别人的本地改动或提交失败时报告并等待，不 stash、不 reset、不替别人提交。
+  - “Phased work” 新增第 3 步：认领父 Issue 的协调者派出每个 sub-issue 的 worktree，互不依赖的同时派，有依赖的等前一个合并（原第 3 步顺延为第 4 步）。
+  - `issue-close-out`、`issue-in-herdr-worktree` 和 `new-agent-prompt.sh` 的交接规则同步改为：冲突由认领的协调者在合并时、在本 worktree 里处理。
+
 ### Upgrading a project from v0.1.16
 
 1. 运行 `upgrade-template.sh`。它替换 `llm-credentials`、`resolve-real-paths-before-moving`、三条 `issue-*` 记录以及 `asset-lifecycle`、`issue-workflow`、`template-adoption` 在 `## In this repository` 段以上的文本，并合并 registry；各项目的 `## In this repository` 段保持不变。
 2. 命令把三项新的可选内容列为手动项：`serve-the-coding-agent`（共享 memory）、`credential-setup`（共享 skill）和 `credential-inventory`（共享 knowledge）。采用了 `llm-credentials` 的项目按命令给出的 `git show` 采用后两项，否则 `llm-credentials` 指向的步骤和格式就不在仓库里；没有采用 `llm-credentials` 的项目把它们留在外面。`serve-the-coding-agent` 需要时按 `template-adoption` 第 3 步采用，并在该记录的 `## In this repository` 段填 `GUIDANCE`、`COMMANDS`、`ISOLATION`、`TRACE`、`ACCOUNTING` 五项。
 3. `llm-credentials` 的 `## In this repository` 段如果有按原 Apply 某一步写的补充，改写为对应 `credential-setup` 的步骤（原第 1–5 步就是新的第 1–5 步）；补充仍写在 `llm-credentials` 的这一段里。
+4. `issue-workflow` 的 `## In this repository` 段如果有按 Merge 第 4 步写的“在 dev checkout 里解决冲突”的补充，改到 PR 自己的 worktree 里做；按 “Phased work” 第 3 步写的补充改挂第 4 步。协调者的 agent 名用已有的 `<AGENT_PREFIX>`，不新增槽位。
 
 ## v0.1.16 — 2026-10-23
 

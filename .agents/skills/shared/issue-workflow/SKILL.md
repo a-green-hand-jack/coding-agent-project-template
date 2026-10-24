@@ -1,21 +1,77 @@
 ---
 name: issue-workflow
-description: Implement one Issue in its own Herdr worktree and agent session dispatched by difficulty (start), merge its PR from the dev checkout (merge), and retire the worktree after the merge (close-out); small changes are made directly in the dev checkout.
+description: Several coordinator sessions share the dev checkout, each claiming one Issue; the claimant implements it in its own Herdr worktree and agent session dispatched by difficulty (start), merges its PR after resolving conflicts with the current dev in that worktree (merge), and retires the worktree after the merge (close-out); small changes are made directly in the dev checkout.
 ---
 
 # Issue workflow
 
-Use this skill when the coordinating agent session (the *dev session*, running
-in the primary checkout of the integration branch) starts, merges or retires the
-work of one Issue. Each Issue is implemented by a separate agent session in its
-own Herdr worktree; the maintainer talks to that session directly in its pane.
-That session opens the PR; the dev session merges it after review on GitHub and
-then closes the worktree out.
+Use this skill when a coordinating agent session (a *coordinator*, running in
+the primary checkout of the integration branch, the *dev checkout*) claims,
+starts, merges or retires the work of one Issue. Each Issue is implemented by a
+separate agent session in its own Herdr worktree; the maintainer talks to that
+session directly in its pane. That session opens the PR; the coordinator that
+claimed the Issue merges it after review on GitHub and then closes the worktree
+out.
 
-Run **start** when an Issue is ready to implement, **merge** when its PR is
-approved, and **close-out** right after a verified merge. The approval to merge
-covers the close-out, so do not wait or ask again (exceptions are listed under
-Close-out).
+Run **start** (which first claims the Issue) when an Issue is ready to
+implement, **merge** when its PR is approved, and **close-out** right after a
+verified merge. The approval to merge covers the close-out, so do not wait or ask
+again (exceptions are listed under Close-out).
+
+## Several coordinators
+
+The dev checkout may host several coordinators at once, each in its own Herdr
+pane; their number is not limited. Each claims one Issue, with its sub-Issues,
+and runs it to the end: it dispatches the worktrees and sessions, follows their
+progress, reviews and merges the PRs and closes the worktrees out. Throughout
+this skill, *the coordinator* is the one that claimed the Issue at hand.
+
+- One claimant per Issue. A coordinator acts only on the worktrees, sessions,
+  PRs and branches of the Issue it claimed; another coordinator's are only read.
+- A sub-Issue belongs to the coordinator that claimed its parent.
+- An Issue another coordinator claimed is not touched. Taking it over, also
+  from a claimant whose pane is gone, is the maintainer's decision.
+- The dev checkout is common ground; see the shared dev checkout rules under
+  [Shared boundaries](#shared-boundaries).
+
+### Claim
+
+1. Have a name others can find in Herdr. If
+   `herdr agent get "$HERDR_PANE_ID" | jq -r .result.agent.name` prints `null`,
+   name your own pane's agent, unique on the Herdr server:
+   `herdr agent rename "$HERDR_PANE_ID" <AGENT_PREFIX>-coord-<N>`.
+2. Check that nobody holds the Issue: the Dispatch section of
+   `gh issue view <N> --repo <REPO> --json body --jq .body` has no
+   `- coordinator:` line, or the line names you. A sub-Issue is claimed only by
+   the parent's claimant. If someone else holds it, stop and tell the maintainer.
+3. Write `` - coordinator: `<name>` `` as the first line of the Issue's Dispatch
+   section, creating the section if needed (edit the body through a file, as in
+   [Dispatch by difficulty](#dispatch-by-difficulty)). Read the body again
+   before dispatching. There is no lock, so two claims can cross: whichever
+   coordinator finds another name on that line, now or later, stops and reports
+   to the maintainer.
+
+### See what the other coordinators are doing
+
+These commands only read:
+
+```bash
+# open Issues and their claimants
+gh issue list --repo <REPO> --state open --limit 100 --json number,title,body \
+  --jq '.[] | select(.body | test("(?m)^- coordinator:")) | "#\(.number) \(.body | capture("(?m)^- coordinator: (?<c>.*)$").c) \(.title)"'
+# one Issue: its Dispatch section (claimant, sessions, branches) and sub-Issues
+gh issue view <N> --repo <REPO>
+gh pr list --repo <REPO> --state open
+# coordinators and Issue sessions running now, and their state
+herdr agent list | jq -r '.result.agents[] | select((.name // "") | startswith("<AGENT_PREFIX>-")) | "\(.name) \(.agent_status) \(.pane_id)"'
+# this repository's worktrees, their branches and open workspaces
+herdr worktree list --workspace "$HERDR_WORKSPACE_ID" \
+  | jq -r '.result.worktrees[] | "\(.branch) \(.open_workspace_id // "-")"'
+```
+
+`herdr agent read <name> --source visible` shows a session's screen. Never
+prompt, send keys to, rename, focus or close another coordinator's agent or its
+Issue sessions.
 
 ## When this flow is not needed
 
@@ -23,7 +79,7 @@ Close-out).
 new feature, a cross-file or architectural change, isolation and credentials,
 public behavior, a long experiment that changes the product, a change that needs
 review) use this flow: an Issue, a Herdr worktree and a PR. A *small change*
-needs no Issue, worktree or PR; the dev session makes it directly in the dev
+needs no Issue, worktree or PR; a coordinator makes it directly in the dev
 checkout, on `<BASE>`. A change is small only when it is one of these:
 
 - documentation or comments;
@@ -41,8 +97,9 @@ A small change is not committed or pushed automatically either: only when the
 maintainer asks. Run the applicable checks and report the evidence, with the
 commands and their output. Before editing, run the dev live-run check (Shared
 boundaries): while a run is live, nothing the run executes is edited in place
-(`long-running-supervision`), so that change waits or becomes an Issue. The other
-shared boundaries concern Herdr worktrees and do not apply.
+(`long-running-supervision`), so that change waits or becomes an Issue. The
+shared dev checkout rules apply as well; the other shared boundaries concern
+Herdr worktrees and do not.
 
 ## Adaptation slots
 
@@ -115,7 +172,11 @@ with one sub-Issue per phase, so that progress is checked off phase by phase.
    parent with GitHub's sub-issue relation. It goes through [Start](#start),
    [Merge](#merge) and [Close-out](#close-out) like any Issue, and its PR says
    `Closes #<C>` and names the parent.
-3. Link a sub-Issue `<C>` to its parent `<P>`:
+3. The coordinator that claimed the parent claims every sub-Issue and dispatches
+   its worktree. Sub-Issues that do not depend on each other start together;
+   one that needs another's merged result starts after that PR merges, as in
+   [Independent Issues run in parallel](#independent-issues-run-in-parallel).
+4. Link a sub-Issue `<C>` to its parent `<P>`:
 
    ```bash
    parent=$(gh issue view <P> --repo <REPO> --json id --jq .id)
@@ -136,9 +197,9 @@ with one sub-Issue per phase, so that progress is checked off phase by phase.
   Herdr-managed pane: report the blocker and stop. Do not fall back to
   `git switch -c`, raw `git worktree add`, another worktree manager or a
   temporary directory.
-- Operate only on the workspace, worktree, pane and agent created for this
-  Issue. Never close or delete the dev checkout, another Issue's worktree or a
-  workspace the maintainer opened.
+- Operate only on the workspaces, worktrees, panes and agents created for the
+  Issue you claimed. Never close or delete the dev checkout, another Issue's
+  worktree or a workspace the maintainer opened.
 - Read IDs, paths and state from Herdr's JSON output, never from sidebar order or
   examples. Absolute local paths are used at runtime only; do not write them to
   Git, Issues, PRs or this file.
@@ -155,13 +216,29 @@ with one sub-Issue per phase, so that progress is checked off phase by phase.
   the maintainer's confirmation.
 - Initialize the dev checkout once with `bash .agents/scripts/setup-worktree.sh`
   so `.project/home` exists and diagnostics pass there.
+- The dev checkout is shared by every coordinator:
+  - `<BASE>` there moves only by `git pull --ff-only`. Never merge, rebase or
+    reset in it, and never leave half-done state there (an unfinished merge,
+    uncommitted conflict resolution); conflicts are resolved in the PR's
+    worktree ([Merge](#merge)).
+  - Uncommitted edits and local commits you did not make belong to another
+    coordinator or the maintainer: do not stage, stash, reset, check out or
+    commit them.
+  - When the maintainer asks to commit a small change, `git add` only the files
+    you changed (never `git add -A` or `git add .`), commit, and push at once, so
+    the shared `<BASE>` never carries an unpushed commit of yours. A push refused
+    because `origin/<BASE>` moved is reported, not forced.
+  - When `git pull --ff-only` fails because of someone else's local changes or
+    commits, report and wait.
+  - Close-out migrates state into `.project/migrations/<worktree-dir>-<UTC-timestamp>/`,
+    so close-outs by different coordinators do not overwrite each other.
 - The dev checkout may drive a long-running product run, which fails when a
-  pull or merge changes the code under it (see `long-running-supervision`).
-  Before every `git pull` or `git merge` in `<dev>` below, run the *dev live-run
-  check*: when `<MONITOR_CMD>` is defined, `(cd <dev> && <MONITOR_CMD>)`. A live
-  run it lists goes to the maintainer, and the pull or merge waits until the run
-  ends or the maintainer decides. Do not stop the run to make way for it.
-- Herdr syntax below was checked against herdr 0.9.4; the `worktree create`
+  pull changes the code under it (see `long-running-supervision`). Before every
+  `git pull` in `<dev>` below, run the *dev live-run check*: when
+  `<MONITOR_CMD>` is defined, `(cd <dev> && <MONITOR_CMD>)`. A live run it lists
+  goes to the maintainer, and the pull waits until the run ends or the
+  maintainer decides. Do not stop the run to make way for it.
+- Herdr syntax in this skill was checked against herdr 0.9.4; the `worktree create`
   result paths in Start step 3 were last checked against 0.9.1. Run
   `herdr worktree --help`, `herdr agent --help` and `herdr pane --help`; the
   installed CLI is authoritative.
@@ -172,8 +249,9 @@ with one sub-Issue per phase, so that progress is checked off phase by phase.
 Input: Issue number `<N>` and a branch `<branch>` named per `DEV.md`
 (`<type>/issue-<N>-<slug>`, with `<type>` one of `fix`, `feat`, `docs`, `chore`).
 
-1. Confirm the Issue has settled scope and acceptance: `gh issue view <N>`.
-   Locate the dev checkout `<dev>` (`.result.source.source_checkout_path`) with
+1. Claim the Issue ([Claim](#claim)) and confirm it has settled scope and
+   acceptance: `gh issue view <N>`. Locate the dev checkout `<dev>`
+   (`.result.source.source_checkout_path`) with
    `herdr worktree list --workspace "$HERDR_WORKSPACE_ID"`, confirm
    `git branch --list <branch>` is empty, then bring `<BASE>` up to date:
 
@@ -224,7 +302,7 @@ Input: Issue number `<N>` and a branch `<branch>` named per `DEV.md`
      dispatched model and effort. If either differs, do not deliver the prompt;
      report to the maintainer.
 5. The new pane is occupied by the agent, so initialize the worktree from the
-   dev session's own shell:
+   coordinator's own shell:
 
    ```bash
    (cd <worktree> && bash .agents/scripts/setup-worktree.sh)
@@ -253,12 +331,14 @@ Input: Issue number `<N>` and a branch `<branch>` named per `DEV.md`
 7. Add the session name and `<branch>` to the Issue's Dispatch section. Report
    `<ws>`, the agent name, `<branch>` and `<worktree>` to the maintainer, who
    switches to that workspace (or uses `herdr agent focus <name>` on request).
-   From here the dev session does not edit that worktree.
+   From here the coordinator does not edit that worktree, except to resolve a
+   conflict at [Merge](#merge) while the Issue session is idle.
 
 ### Independent Issues run in parallel
 
 Issues that do not depend on each other are started together, each through Start
-in its own worktree and session; do not queue them by arrival order. Only a real
+in its own worktree and session, whether by their own coordinators or, for the
+sub-Issues of one Issue, by its coordinator; do not queue them by arrival order. Only a real
 dependency waits, for example an Issue that needs another's merged result. This
 changes when sessions start, never the checks each one runs
 (`speed-and-parallelism-by-measurement`).
@@ -292,14 +372,16 @@ the model aliases and the effort levels `low`, `medium`, `high`, `xhigh` and
 
 A routine Issue then starts with `-- <AGENT_ARGS> --model sonnet --effort high`.
 
-Record the dispatch in the Issue body as the last section, in this form. A
-coordinating session that creates the Issue writes it then; otherwise Start step
-2 adds it. Session and branch are added in Start step 7. Never write a workspace
+Record the dispatch in the Issue body as the last section, in this form. The
+coordinator line is written when the Issue is claimed ([Claim](#claim)). A
+coordinator that creates the Issue writes the rest then; otherwise Start step 2
+adds it. Session and branch are added in Start step 7. Never write a workspace
 id or local path here.
 
 ```markdown
 ## Dispatch
 
+- coordinator: `<the claiming coordinator's Herdr agent name>`
 - agent: <agent and permission mode>
 - model: `<model>`; effort: `<effort>`
 - reason: <tier>: <the scope, risk or uncertainty that decided it>
@@ -310,8 +392,8 @@ Edit the body through a file rather than shell quoting:
 `gh issue view <N> --repo <REPO> --json body --jq .body > .project/state/issue-<N>-body.md`,
 edit that file, then `gh issue edit <N> --repo <REPO> --body-file .project/state/issue-<N>-body.md`.
 The Issue forms in `.github/ISSUE_TEMPLATE/` have no Dispatch field on purpose:
-whoever files the Issue cannot judge the dispatch, and the coordinating session
-writes the section.
+whoever files the Issue cannot judge the dispatch, and the coordinator writes
+the section.
 
 **Fallback.** Use `<FALLBACK_AGENT>` only when the primary agent is unavailable:
 out of quota, logged out or in an outage. Not for difficulty or preference. Keep
@@ -352,11 +434,12 @@ together.
   PR. That is part of the Issue, not an unrequested feature. Only an unrelated,
   larger problem is reported for a separate Issue.
 - **Other worktrees are not its concern.** Parallel worktrees are expected to
-  change the same files, and the dev checkout resolves conflicts at
-  [Merge](#merge). The session completes its Issue fully and does not narrow its
-  change to avoid conflicts.
+  change the same files. At [Merge](#merge) the coordinator resolves this PR's
+  conflicts with the current `<BASE>` in this worktree, itself or through this
+  session. The session completes its Issue fully and does not narrow its change
+  to avoid conflicts.
 - **Merge implies close-out.** The approval to merge the PR covers its
-  [Close-out](#close-out): right after the verified merge, the dev session
+  [Close-out](#close-out): right after the verified merge, the coordinator
   migrates `.project/` and removes the worktree without asking again. Results
   that cannot be rebuilt are archived before the merge.
 - **Write in the declared language.** When the registry declares
@@ -389,7 +472,7 @@ Constraints:
 ### Messages to a running Issue session
 
 The handoff prompt in Start step 6 goes to an agent whose input line is empty.
-Every later message from the dev session is different: the maintainer shares
+Every later message from the coordinator is different: the maintainer shares
 the pane with the agent and may have a draft typed in its input line.
 
 - **Look before sending.** `herdr agent prompt <name> "..."` appends to whatever
@@ -402,19 +485,22 @@ the pane with the agent and may have a draft typed in its input line.
   maintainer decision, write the outcome to reach and the constraints it must
   respect. Leave the commands to the project's skills, which know what each
   command can and cannot change. A command named in the relay may not do what
-  the dev session assumed.
+  the coordinator assumed.
 - **When the named way does not work,** the Issue session follows the path its
   project documentation gives, says where it deviated and why, and records that
   in the Issue.
 
 ## Merge
 
-The dev session merges PRs into `<BASE>`. Several PRs may be open at once and
-conflict, for example when each appends to the same index. Resolve those
-conflicts in the dev checkout. Do not ask the Issue sessions to rebase or merge
-`<BASE>` into their branches, and do not enter their worktrees.
+The coordinator merges the PRs of the Issue it claimed into `<BASE>`. PRs of
+several coordinators may be open at once and conflict, for example when each
+appends to the same index. Each coordinator resolves the conflicts between its
+own PR and the `<BASE>` of that moment, in that PR's own worktree; the dev
+checkout is only pulled.
 
-Handle one PR at a time and re-check the next one after each merge.
+Handle one PR at a time and re-check the next one after each merge. Another
+coordinator may merge in between: when `gh pr merge` refuses or `<BASE>` has
+moved, go back to step 2.
 
 1. Update the dev checkout (locate `<dev>` as in Close-out step 1). Run the dev
    live-run check first; with a live run, stop here and report, before pulling.
@@ -427,14 +513,14 @@ Handle one PR at a time and re-check the next one after each merge.
 
    `state` must be `OPEN` and the base `<BASE>`. Maintainer approval must be
    visible on the PR or the Issue; without it, do not merge and report. When `<CI>`
-   is `yes`, `gh pr checks <PR> --repo <REPO>` must be green.
+   is `yes`, `gh pr checks <PR> --repo <REPO>` must be green. `mergeable`
+   `UNKNOWN` means GitHub is still computing it; query again.
 3. Run the pre-merge gate when `<PRE_MERGE_GATE>` is defined. Locate `<worktree>`
    as in Close-out step 1, then `(cd <worktree> && <PRE_MERGE_GATE>)`.
    - Passing: continue.
-   - Failing: **do not merge.** Report the output. Fixing it is the Issue
-     session's work, since the dev session does not edit another worktree: ask the
-     maintainer to have that session fix it and push to the PR branch, then
-     re-check from step 2.
+   - Failing: **do not merge.** Report the output. Fixing it is implementation
+     work for the Issue session: ask the maintainer to have that session fix it
+     and push to the PR branch, then re-check from step 2.
    - Continue past a failing gate only on the maintainer's explicit decision. Record
      what was deferred; Close-out handles it.
    - A gate command that itself errors (missing tool, missing worktree) is a
@@ -443,26 +529,43 @@ Handle one PR at a time and re-check the next one after each merge.
    `gh pr merge <PR> --repo <REPO> <MERGE_METHOD>` without `--delete-branch`;
    Close-out deletes the branch. Then do step 5 and Close-out before the next PR.
 
-   When `mergeable` is `CONFLICTING`, resolve it in the dev checkout using the
-   PR's remote branch. Run the dev live-run check again first, since a run may
-   have started after step 1; with a live run, stop and report before merging.
+   When `mergeable` is `CONFLICTING`, merge the current `<BASE>` into the PR
+   branch in `<worktree>` (located as in Close-out step 1), never in the dev
+   checkout. The coordinator does it itself only while the Issue session is
+   `idle` or `done` (`herdr agent get <AGENT_PREFIX>-issue-<N>`); otherwise, or
+   by choice, it hands the work to the Issue session as described in
+   [Messages to a running Issue session](#messages-to-a-running-issue-session),
+   with the rules of this step as constraints. When `<MONITOR_CMD>` is defined,
+   run it in `<worktree>` first; a live run there goes to the maintainer and the
+   merge waits.
 
    ```bash
-   git -C <dev> fetch origin
-   git -C <dev> merge --no-ff origin/<branch>
+   git -C <worktree> status --porcelain
+   git -C <worktree> fetch origin
+   git -C <worktree> merge origin/<BASE>
    ```
 
-   Resolve per file, `git add`, then `git commit`; `git -C <dev> merge --abort`
-   backs out. Keep both sides of a mechanical conflict (both appended index
-   lines). For a semantic conflict, where the two sides decided the same thing
-   differently, do not choose: list both sides for the maintainer. Create the
-   merge commit and `git push origin <BASE>` only after the maintainer confirms.
-   Then `gh pr view <PR> --repo <REPO> --json state` must show `MERGED`; if not,
-   report and do not push again.
-5. Verify the merged `<BASE>`. When `<CI>` is `yes`, confirm the run for the merge
-   succeeded: `gh run list --repo <REPO> --branch <BASE> --limit 1`. When `no`, run
+   The first command must print nothing. Resolve per file, `git add`, then
+   `git commit`; `git -C <worktree> merge --abort` backs out. Keep both sides of
+   a mechanical conflict (both appended index lines). For a semantic conflict,
+   where the two sides decided the same thing differently, do not choose: list
+   both sides for the maintainer and resolve as they decide. When `<CI>` is
+   `no`, run `<POST_MERGE_CHECK>` in `<worktree>`. Commit the merge and
+   `git -C <worktree> push origin <branch>` only after the maintainer confirms,
+   then re-check from step 2: the new head needs its checks again before
+   `gh pr merge`.
+5. Verify the merged `<BASE>`. When `<CI>` is `yes`, confirm the run for this
+   PR's merge commit succeeded, not merely the latest run, which may be another
+   coordinator's:
+
+   ```bash
+   sha=$(gh pr view <PR> --repo <REPO> --json mergeCommit --jq .mergeCommit.oid)
+   gh run list --repo <REPO> --branch <BASE> --commit "$sha"
+   ```
+
+   When `no`, run the dev live-run check, `git -C <dev> pull --ff-only`, then
    `<POST_MERGE_CHECK>` in `<dev>`. On failure, report the output; do not patch
-   around it in the dev session.
+   around it in the dev checkout.
 6. Close out the PR's worktree (below) right away.
 
 ## Close-out
@@ -524,7 +627,8 @@ workspace, normally the dev checkout's.
 
    Stop and report if `<dev>` is not on `<BASE>`, local changes block the pull, or
    local `<BASE>` has diverged from `origin/<BASE>`. Do not merge, rebase or reset
-   to force it. Conflicts between PRs belong to Merge, not here.
+   to force it (see the shared dev checkout rules). Conflicts between a PR and
+   `<BASE>` belong to Merge, in the PR's worktree, not here.
 5. Confirm nothing is running. `herdr pane list --workspace <ws>` must show the
    agent as `idle` or `done`. When `<MONITOR_CMD>` is defined, run it in
    `<worktree>`; a live run goes to the maintainer, and is stopped only through
@@ -593,7 +697,8 @@ workspace, normally the dev checkout's.
      `<branch>`;
    - `git -C <dev> branch --list <branch>` and
      `git -C <dev> ls-remote --heads origin <branch>` print nothing;
-   - `git -C <dev> rev-list --count <BASE>..origin/<BASE>` is 0;
+   - `git -C <dev> rev-list --count <BASE>..origin/<BASE>` is 0 (when another
+     coordinator merged since step 4, repeat step 4 first);
    - `<dev>/.project/migrations/` holds this run's directory, and no unique copy of
      a result remains only in the retired worktree;
    - non-rebuildable results are archived and registered, or the gap is reported.
