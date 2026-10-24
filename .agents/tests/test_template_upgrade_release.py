@@ -158,8 +158,16 @@ class UpgradeFromAnOlderReleaseTests(unittest.TestCase):
         fresh = files_of(self.project(self.candidate, own=False))
         after = files_of(upgraded)
         owned = set(re.findall(r"^  (\S+): project-owned", result.stdout, re.M)) | set(OWN_FILES)
+        # A path that is new and optional is left out unless the project adopts it
+        # (template-adoption step 3): the command reports it as manual and writes
+        # nothing, so such a path differs from the fresh project without being a
+        # difference the upgrade is responsible for.
+        unadopted = set(re.findall(r"^  (\S+): new optional content in ", result.stdout, re.M))
         differing = {path for path in fresh.keys() | after.keys() if fresh.get(path) != after.get(path)}
-        self.assertEqual(differing - owned, set(), result.stdout)
+        self.assertEqual(differing - owned - unadopted, set(), result.stdout)
+        for path in unadopted:
+            self.assertIn(path, fresh)
+            self.assertNotIn(path, after)
         for path in owned:
             self.assertEqual(after.get(path), before.get(path), f"{path} is the project's own and must not change")
         self.assertEqual(after[REGISTRY], fresh[REGISTRY])
