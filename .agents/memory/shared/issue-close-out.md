@@ -1,7 +1,7 @@
 ---
 name: issue-close-out
 date: 2026-10-13
-source: Issue #18, harvested from downstream adopters of this template; Issues #34 and #40; Issue #87 (steps left to issue-workflow)
+source: Issue #18, harvested from downstream adopters of this template; Issues #34 and #40; Issue #87 (steps left to issue-workflow); Issue #89 (several coordinators)
 scope: shared
 applies_to: repositories that manage Issue worktrees with Herdr, develop from a dev integration branch and merge PRs back into it
 status: active
@@ -13,11 +13,14 @@ superseded_by: null
 
 ## Decision
 
-The coordinating session merges the PR from the dev checkout after the maintainer
-has approved it on GitHub, and resolves conflicts between open PRs there instead of
-asking each Issue session to do so. The maintainer's approval to merge covers the
-close-out: after the merge is verified, the coordinating session retires the
-worktree and its branches immediately and reports, without asking again.
+The coordinator that claimed the Issue merges its PR after the maintainer has
+approved it on GitHub. When the PR conflicts with the current `dev`, that
+coordinator resolves the conflict in the PR's own worktree, itself or through the
+Issue session, and pushes before merging; the shared dev checkout is only
+fast-forwarded with `git pull --ff-only`. Mechanical conflicts keep both sides;
+semantic ones go to the maintainer. The maintainer's approval to merge covers the
+close-out: after the merge is verified, the coordinator retires the worktree and
+its branches immediately and reports, without asking again.
 
 Results that cannot be rebuilt are archived before the merge rather than left in
 the migration directory. A live run in the dev checkout holds back a pull or
@@ -36,6 +39,11 @@ conflict markers in a module the run imported on its next restart, and the run
 failed; a worktree's own monitor command does not see a container that mounts the
 worktree, so removing it would remove data the container still refers to
 (Issue #40).
+
+The maintainer works with several coordinator sessions in the dev checkout at
+once, each claiming one Issue (Issue #89). Resolving conflicts in that shared
+checkout let one coordinator's half-done merge break another's pull, so each
+coordinator resolves its own PR's conflicts with `dev` in that PR's worktree.
 
 ## Apply
 

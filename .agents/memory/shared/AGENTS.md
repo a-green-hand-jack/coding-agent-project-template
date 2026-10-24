@@ -19,10 +19,12 @@ the record's own text never contains that heading line.
   running user; no `sudo` for project files; cleanup that meets foreign-owned
   files stops and reports.
 - [`issue-in-herdr-worktree.md`](issue-in-herdr-worktree.md) — implement each
-  Issue in its own Herdr worktree and agent session, which verifies to
-  completion, fixes related defects and leaves conflicts to the dev checkout.
+  Issue in its own Herdr worktree and agent session, dispatched by the
+  coordinator that claimed the Issue; the session verifies to completion, fixes
+  related defects and does not narrow its change to avoid conflicts.
 - [`issue-close-out.md`](issue-close-out.md) — close out an Issue's worktree
-  right after its PR merges; the merge approval covers the close-out, and live
+  right after its PR merges; the claiming coordinator resolves conflicts with
+  `dev` in the PR's worktree, the merge approval covers the close-out, and live
   runs in the dev checkout or containers mounting the worktree stop it.
 - [`issue-dispatch-by-difficulty.md`](issue-dispatch-by-difficulty.md) — dispatch
   each Issue agent with an explicit model and effort for its difficulty tier, and
