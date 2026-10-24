@@ -7,7 +7,8 @@
 # Every top-level entry of .project/ gets one line: its action, size and why it
 # may be left behind. The template's rules are in template_rule() below; a project
 # adds rules for its own entries in .agents/scripts/migrate-project.rules (format
-# below). An entry without a rule that holds something stops the migration
+# below; NAME may be a shell wildcard such as plan-*.md). An entry without a rule
+# that holds something stops the migration
 # (exit 3) until it gets a rule or is named with --also (copy it too) or --skip
 # (leave it, with the reason). Exit 1: a real copy of a login, an asset or link
 # mapping would be overwritten, or the copy does not match its source. Exit 2:
@@ -37,6 +38,20 @@ cd "$root"
 
 in_list() { printf '%s' "$2" | grep -qxF -- "$1"; }
 
+# The top-level entries of .project/ the template has rules for; keep in step with
+# template_rule() below. A project rule, wildcard or not, may not match any of them.
+template_names='state runs artifacts manifest assets.links home worktree.env credentials'
+is_glob() { [[ $1 == *[*?[]* ]]; }
+# Prints the first template entry name that the project rule NAME (a name or a
+# wildcard) matches.
+template_match() {
+  local t
+  for t in $template_names; do
+    # shellcheck disable=SC2053
+    if [[ $t == $1 ]]; then printf '%s\n' "$t"; return; fi
+  done
+}
+
 # The template's rule for each top-level entry of .project/ it creates. Do not edit
 # it in a project: template-upgrade replaces this script. Prints "<action>|<why>":
 # copy, merge, drop, login or unknown. A login is a link to the canonical
@@ -54,7 +69,12 @@ template_rule() {
 
 # The project's rules for the entries its own setup creates, one per line:
 #   NAME|ACTION|WHY
-# with ACTION copy, drop (WHY says why it may be left behind) or login. Blank lines
+# with ACTION copy, drop (WHY says why it may be left behind) or login. NAME is an
+# entry name or a shell wildcard (* ? [...]) for a class of entries, such as
+# plan-*.md; a wildcard cannot contain '/', cannot be a login and cannot match an
+# entry the template handles. An entry takes the first rule that fits: the
+# template's, then a project rule with its exact name, then the first wildcard
+# in the file that matches; the report names the wildcard that matched. Blank lines
 # and lines starting with '#' are ignored. The template never ships this file, so
 # template-upgrade keeps it; a rule for an entry the template already handles is
 # refused, so a new template rule shows up as a conflict instead of being hidden.
@@ -69,8 +89,14 @@ if [[ -f $rules_file ]]; then
     problem=
     if [[ -z $name || $name == */* || $name == . || $name == .. || $name == [[:space:]]* || $name == *[[:space:]] ]]; then
       problem="'$name' is not a plain entry name of .project/"
-    elif [[ $(template_rule "$name") != 'unknown|' ]]; then
-      problem="the template already has a rule for $name; remove this line"
+    elif is_glob "$name" && [[ $action == login ]]; then
+      problem="a wildcard cannot be a login: $name"
+    elif [[ -n $(template_match "$name") ]]; then
+      if is_glob "$name"; then
+        problem="the wildcard $name matches $(template_match "$name"), which the template already handles; make it narrower"
+      else
+        problem="the template already has a rule for $name; remove this line"
+      fi
     elif in_list "$name" "$(printf '%s' "$project_rules" | cut -d'|' -f1)"; then
       problem="a second rule for $name"
     else
@@ -86,10 +112,24 @@ if [[ -f $rules_file ]]; then
 fi
 
 classify() {
-  local rule
+  local rule pass name action why
   rule=$(template_rule "$1")
   [[ $rule == 'unknown|' ]] || { printf '%s\n' "$rule"; return; }
-  printf '%s' "$project_rules" | awk -F'|' -v n="$1" '$1 == n { sub(/^[^|]*[|]/, ""); print; found = 1; exit } END { if (!found) print "unknown|" }'
+  for pass in exact wildcard; do
+    while IFS='|' read -r name action why; do
+      [[ -n $name ]] || continue
+      if [[ $pass == exact ]]; then
+        is_glob "$name" || [[ $name != "$1" ]] || { printf '%s|%s\n' "$action" "$why"; return; }
+      else
+        is_glob "$name" || continue
+        # shellcheck disable=SC2053
+        [[ $1 == $name ]] || continue
+        printf '%s|rule %s%s\n' "$action" "$name" "${why:+: $why}"
+        return
+      fi
+    done <<<"$project_rules"
+  done
+  echo 'unknown|'
 }
 
 skip_reason() { printf '%s' "$skip_list" | awk -F= -v n="$1" '$1 == n { sub(/^[^=]*=/, ""); print; exit }'; }

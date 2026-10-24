@@ -477,6 +477,11 @@ together.
   [Close-out](#close-out): right after the verified merge, the coordinator
   migrates `.project/` and removes the worktree without asking again. Results
   that cannot be rebuilt are archived before the merge.
+- **Keep its own files in `.project/state/`.** The session's working files
+  (plans, PR body drafts, messages to the coordinator) go under
+  `.project/state/`, which Close-out always copies, not in the root of
+  `.project/`, where a file without a `migrate-project.rules` rule stops the
+  migration.
 - **Write in the declared language.** When the registry declares
   [writing conventions](#writing-conventions), the session writes Issues, PRs,
   comments and human documents in that language and starts Issue bodies with
@@ -689,7 +694,8 @@ workspace, normally the dev checkout's.
    The script prints `inspect-state.sh` output (and exits 3 without migrating
    when step 5's container check fails), then `migrate-assets.sh` copies
    `.project/state`, `runs`, `artifacts`, `manifest` and the entries
-   `.agents/scripts/migrate-project.rules` marks `copy` into
+   `.agents/scripts/migrate-project.rules` marks `copy` (by name or by a
+   wildcard such as `plan-*.md`) into
    `<dev>/.project/migrations/<worktree-dir>-<UTC-timestamp>/`, and copies
    untracked `assets/` entries (asset links) into `<dev>/assets/`. Tracked files
    arrive through Git, and it refuses to overwrite a different existing destination

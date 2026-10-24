@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **Issue session 的工作文件不再让 close-out 停下**（#92）：`new-agent-prompt.sh` 的交接规则和 `issue-workflow` 的 “Issue session rules” 新增一条：session 自己的工作文件（计划、PR 正文草稿、给协调者的消息）放在 `.project/state/`，不放 `.project/` 根目录；`state/` 本来就总是被复制。`migrate-project.rules` 的 `NAME` 现在可以是 shell 通配符（`*`、`?`、`[...]`），一行管一类文件，例如 `plan-*.md|copy|`。`migrate-assets.sh` 的匹配顺序：模板规则、项目的精确名字、项目的通配符（按文件里的先后，第一个匹配的生效）；报告的 WHY 列写出匹配到的规则（`rule plan-*.md`）。校验不过以 exit 2 退出并指出行号：通配符不能含 `/`，不能是 `login`，不能匹配模板自己处理的条目名（`state`、`runs`、`artifacts`、`manifest`、`assets.links`、`home`、`worktree.env`、`credentials`，所以 `st*` 或 `*` 会被拒绝）；`drop` 仍须写理由。没有规则对应的根目录文件仍然 exit 3，`--also`、`--skip` 照旧按单个文件名覆盖。`issue-workflow`、`template-adoption`、`DEV.md` 同步说明。新增回归测试 `.agents/tests/test_template_migrate.py`。
+  - 兼容：`NAME` 里含 `*`、`?`、`[` 的规则以前只匹配这个字面名字，现在按通配符匹配。这种规则不太可能存在；如果有，检查它是否仍然只匹配想要的文件，或者匹配到模板条目而被拒绝。`template-upgrade` 照旧保留项目的 `migrate-project.rules`。
 - **Issue 之间的依赖记在 GitHub 的 blocked-by 上**（#93）：`issue-workflow` 不再靠正文文字或协调者的记忆记“谁等谁”，按依赖决定并行还是等待，不新增脚本、状态文件或标签。
   - “Phased work” 第 3 步新增依赖表：并行（只挂父 Issue，同时派）、串行（`gh issue edit <B> --add-blocked-by <A>`，A 合并并 close-out 后从新的 `dev` 派 B）、同步（必须一起落地就不拆，一个 sub-issue、一个 PR）、异步（先把接口写定，写进父 Issue 或做成小的接口 sub-issue，A、B 都 blocked-by 它，之后并行）。每个 sub-issue 都从最新的 `dev` 开工，不叠在未合并的分支上。原第 3 步改为第 4 步（认领父 Issue 的协调者按依赖派出）；原第 4 步改为第 5 步，用 `gh issue create --parent` / `gh issue edit --parent` / `--add-sub-issue` 取代 GraphQL `addSubIssue`，blocked-by 的写法和读法写在旁边。
   - Start 第 1 步新增前提：用 `gh issue view <N> --json blockedBy` 确认没有还开着的 blocker，有就不派并报告在等哪个 Issue。Close-out 新增第 10 步：用 `--json blocking` 列出这个 Issue 阻塞过的 Issue，自己认领且已无开着 blocker 的按 Start 派出，别人认领的不动。
@@ -10,8 +12,9 @@
 
 ### Upgrading a project from v0.1.17
 
-1. 运行 `upgrade-template.sh`。它替换 `issue-workflow`、`speed-and-parallelism-by-measurement`、`issue-in-herdr-worktree` 在 `## In this repository` 段以上的文本；各项目的 `## In this repository` 段保持不变。
-2. `issue-workflow` 的 `## In this repository` 段如果有按 “Phased work” 第 3 步（原：互不依赖的同时派）或第 4 步（原：GraphQL `addSubIssue`）写的补充，改挂到新的第 4 步和第 5 步；Close-out 的补充在第 10 步之前不受影响。已有的 sub-issue 之间如果靠正文文字记了先后，用 `gh issue edit <B> --add-blocked-by <A>` 补记，并删去那句文字。
+1. 运行 `upgrade-template.sh`。它替换 `migrate-assets.sh`、`new-agent-prompt.sh`，以及 `issue-workflow`、`template-adoption`、`speed-and-parallelism-by-measurement`、`issue-in-herdr-worktree` 在 `## In this repository` 段以上的文本；各项目的 `## In this repository` 段和 `migrate-project.rules` 保持不变。
+2. 如果 `migrate-project.rules` 里有 `NAME` 含 `*`、`?`、`[` 的行，按上面 #92 的兼容说明检查一次。
+3. `issue-workflow` 的 `## In this repository` 段如果有按 “Phased work” 第 3 步（原：互不依赖的同时派）或第 4 步（原：GraphQL `addSubIssue`）写的补充，改挂到新的第 4 步和第 5 步；Close-out 的补充在第 10 步之前不受影响。已有的 sub-issue 之间如果靠正文文字记了先后，用 `gh issue edit <B> --add-blocked-by <A>` 补记，并删去那句文字。
 
 ## v0.1.17 — 2026-10-24
 
