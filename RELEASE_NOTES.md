@@ -4,9 +4,17 @@
 
 - **充分利用现有 coding agent**（#85）：新增共享 memory `serve-the-coding-agent`，登记为 `shared_with_adaptation`、`optional: true`。我们不自己从头造 agent：指导、工具、并行、轨迹、成本这五根支柱是给它搭的干活条件，它已经会做的事不重写、它的判断不代替；每项改动至少帮到一根，哪根都不帮的代码是删除候选，撑着某一根的东西不为省代码而删。记录写明：评审改动时问一句这次帮的是哪一根；改了检查规则就在同一个改动里改说明，改了验收标准要确保有检查或审核能判断；运行中逐次请求记账（未命中缓存的输入、命中缓存的输入、输出），花费从运行记录读而不是写报告时拼凑；轨迹和花费只整理一次，审核读命令整理出的固定格式摘要；加共享文件、全局锁或全局缓存前先确认它不会让本来能并行的运行变成排队。并行部分只链接 `speed-and-parallelism-by-measurement`，不重复其规则。
 
+- **memory 只放决定和理由**（#87）：步骤搬进 skill，会变的格式和脚本行为搬进 knowledge，规则的意思不变、也没有新增规则。
+  - `llm-credentials` 只留六条决定、理由和两个参数 `SHARED_CREDENTIAL_FILE`、`CREDENTIAL_DIR`（文件名和参数不变）。原 Apply 第 1–5 步、“探测确定事实后记进清单行”和 worktree 链接登录目录、teardown 不复制登录的规则搬进新的共享 skill `credential-setup`；`inventory.yaml`、`credentials.yaml` 的格式和 `probe-credentials.sh` 的检查与输出搬进新的共享 knowledge `credential-inventory`。两项都登记为 `optional: true`，跟 `llm-credentials` 一起采用或不采用；`template-adoption` 第 3 步把它们和 `llm-credentials` 一起映射。
+  - `resolve-real-paths-before-moving` 只留决定和那次丢数据的经过；六步检查、命令、要报告的证据以及脚本和 teardown 怎样遵守，搬进 `asset-lifecycle` 新的一节 “Before moving, replacing or deleting a directory”。
+  - `issue-in-herdr-worktree`、`issue-close-out`、`issue-dispatch-by-difficulty` 去掉复述 `issue-workflow` 的步骤，指向 Start、Dispatch by difficulty、Merge、Close-out。`issue-close-out` 里“合并的 PR 改了镜像或测试 fixture 时删掉只有该分支用的镜像 tag”补进 `issue-workflow` Close-out 第 8 步。
+  - 维护者侧：`template-harvest` 每次运行不再写一条 memory，细节只在运行报告、发布说明和 `adopters.yaml`；长期决定（被否掉的候选和原因）合进项目 memory `harvest-decisions`，原来 10 条 `harvest-*` 记录删除。交付副本（带模板标记、但是另一个下游的副本）不单独算一个下游，写进 skill 第 1 步。
+
 ### Upgrading a project from v0.1.16
 
-**Command only.** 运行 `upgrade-template.sh`。它新增一条可选共享 memory；没有采用它的项目保持不变，需要时按 `template-adoption` 第 3 步采用，并在该记录的 `## In this repository` 段填 `GUIDANCE`、`COMMANDS`、`ISOLATION`、`TRACE`、`ACCOUNTING` 五项。
+1. 运行 `upgrade-template.sh`。它替换 `llm-credentials`、`resolve-real-paths-before-moving`、三条 `issue-*` 记录以及 `asset-lifecycle`、`issue-workflow`、`template-adoption` 在 `## In this repository` 段以上的文本，并合并 registry；各项目的 `## In this repository` 段保持不变。
+2. 命令把三项新的可选内容列为手动项：`serve-the-coding-agent`（共享 memory）、`credential-setup`（共享 skill）和 `credential-inventory`（共享 knowledge）。采用了 `llm-credentials` 的项目按命令给出的 `git show` 采用后两项，否则 `llm-credentials` 指向的步骤和格式就不在仓库里；没有采用 `llm-credentials` 的项目把它们留在外面。`serve-the-coding-agent` 需要时按 `template-adoption` 第 3 步采用，并在该记录的 `## In this repository` 段填 `GUIDANCE`、`COMMANDS`、`ISOLATION`、`TRACE`、`ACCOUNTING` 五项。
+3. `llm-credentials` 的 `## In this repository` 段如果有按原 Apply 某一步写的补充，改写为对应 `credential-setup` 的步骤（原第 1–5 步就是新的第 1–5 步）；补充仍写在 `llm-credentials` 的这一段里。
 
 ## v0.1.16 — 2026-10-23
 

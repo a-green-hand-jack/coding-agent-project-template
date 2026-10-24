@@ -79,8 +79,10 @@ bash .agents/scripts/teardown-worktree.sh --migrate-to /path/to/canonical-projec
 的哪些行、工具用什么名字读取、给哪个沙箱或岗位、必需还是可选。setup 运行
 `bash .agents/scripts/probe-credentials.sh --check`，对缺行、空占位和未设置的
 必需凭据报错；diagnose 运行只读探测，逐个报告 `credential <name>: ok | failed |
-not-probed`。任何输出都不包含凭据值；格式和规则见
-`.agents/memory/shared/llm-credentials.md`。
+not-probed`。任何输出都不包含凭据值；格式和检查见
+`.agents/knowledge/shared/credential-inventory.md`，规则见
+`.agents/memory/shared/llm-credentials.md`，操作步骤见
+`.agents/skills/shared/credential-setup/`。
 
 大资产放在外部存储时，在仓库内的 `assets/` 登记稳定逻辑入口，并在
 `assets/MANIFEST.yaml` 登记：用途、来源、版本、checksum、可重建性和删除 worktree

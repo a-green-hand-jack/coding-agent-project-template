@@ -7,34 +7,9 @@ or superseded status.
 
 ## Index
 
-- [`harvest-2026-10-13.md`](harvest-2026-10-13.md) — the first downstream
-  harvest: adopter set, classified deltas, what became shared content in v0.1.7,
-  and the watch items.
-- [`harvest-2026-10-15.md`](harvest-2026-10-15.md) — the harvest before v0.1.8:
-  two candidates landed (#30, #31), one declined, the newly settled adopter's
-  drift.
-- [`harvest-2026-10-15-v0.1.9.md`](harvest-2026-10-15-v0.1.9.md) — the check
-  before v0.1.9: downstream feedback #37-#44 landed; other adopters unchanged or
-  project-local.
-- [`harvest-2026-10-16-v0.1.10.md`](harvest-2026-10-16-v0.1.10.md) — the check
-  before v0.1.10: downstream feedback #50 landed; no new shared candidate.
-- [`harvest-2026-10-18-v0.1.11.md`](harvest-2026-10-18-v0.1.11.md) — the check
-  before v0.1.11: downstream feedback #53 and #54 landed; no new shared candidate.
-- [`harvest-2026-10-19-v0.1.12.md`](harvest-2026-10-19-v0.1.12.md) — the check
-  before v0.1.12, read through GitHub only: three shared candidates and the
-  GitHub-only channel landed as #59.
-- [`harvest-2026-10-20-v0.1.13.md`](harvest-2026-10-20-v0.1.13.md) — the check
-  before v0.1.13: two adopters upgraded cleanly to v0.1.12, no shared candidate;
-  the paper template is a derived template awaiting its marker.
-- [`harvest-2026-10-22-v0.1.14.md`](harvest-2026-10-22-v0.1.14.md) — the check
-  before v0.1.14: #65–#69 landed through #70; one new adopter; one new candidate
-  (keep real runs small and sufficient) left for a later Issue.
-- [`harvest-2026-10-22-v0.1.15.md`](harvest-2026-10-22-v0.1.15.md) — the check
-  before v0.1.15: no adopter moved; the real-runs rule landed through #73;
-  upgrade requests target the latest release.
-- [`harvest-2026-10-23.md`](harvest-2026-10-23.md) — the check before v0.1.16:
-  three shared rules landed (#78–#80); #76 already upstream; drift and held
-  watch items recorded; requests to three adopters.
+- [`harvest-decisions.md`](harvest-decisions.md) — lasting decisions from
+  downstream harvests: the candidates declined and why; a run's own details stay
+  in its report, the release notes and `adopters.yaml`.
 - [`template-work-runs-on-pi-deepseek.md`](template-work-runs-on-pi-deepseek.md)
   — template maintenance is dispatched with Pi and DeepSeek; the Dispatch
   section still records agent, model and effort, and a hard Issue is

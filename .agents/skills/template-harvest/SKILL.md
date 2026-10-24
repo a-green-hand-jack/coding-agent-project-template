@@ -153,6 +153,10 @@ not a smaller adopter; read that repository's directories one by one instead.
      probed every run and reported; a listed name is not evidence.
    - **Another template's project.** A `template:` block that names another
      repository and has no such `upstream` is not an adopter here; skip it.
+   - **Delivery copy.** A repository that carries the marker but is a delivered
+     copy of another adopter's repository is one origin with that adopter
+     (step 2, ports). Record it in the report, but do not count it as a
+     separate adopter.
    - **Pre-marker adopter.** No `template:` block, or no registry. Do not skip
      it. Require a template reference in the fixed files
      `AGENTS.md DEV.md README.md USER.md .agents/AGENTS.md` (read each with
@@ -295,10 +299,15 @@ For each shared candidate:
 4. When the change ships, record in `adopters.yaml` `landing` which adopter takes
    it in which release; step 5 asks the adopter for the upgrade. An adopter whose
    copy diverged resolves it there as a local conflict.
-5. Record the result as one focused record under `.agents/memory/project/` using
-   `project-memory-governance`: counts, gate decisions, Issues opened and the
-   release, never the adopter list. Advance an adopter's `watermark` to its
-   `scanned_commit` only when every delta in range has a recorded class.
+5. Record the details of the run (counts, gate decisions, Issues opened and the
+   release) only in its report under `.project/runs/harvest-<date>/`, in the
+   release notes and in `adopters.yaml`; a run writes no memory record of its
+   own. Only when the run settles a lasting decision, such as a declined
+   candidate and its reason, update
+   `.agents/memory/project/harvest-decisions.md` using
+   `project-memory-governance`, with counts and generic wording, never the
+   adopter list. Advance an adopter's `watermark` to its `scanned_commit` only
+   when every delta in range has a recorded class.
 
 ## 5. Requests to adopters
 

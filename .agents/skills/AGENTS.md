@@ -10,6 +10,7 @@ Shared skills currently included:
 - `shared/issue-workflow/`
 - `shared/project-memory-governance/`
 - `shared/asset-lifecycle/`
+- `shared/credential-setup/`
 - `shared/cli-first-operations/`
 - `shared/long-running-supervision/`
 - `shared/template-feedback/`
