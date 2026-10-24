@@ -2,6 +2,8 @@ name: Template checks
 
 # Optional content: a project whose issue-workflow <CI> slot is `no` leaves this
 # file out (template-adoption step 3), and template-upgrade keeps it out.
+# Its result is only noted on the PR; the merge gate is issue-workflow's
+# <LOCAL_CHECK>, which runs the same steps locally.
 on:
   pull_request:
     branches: [dev, main]

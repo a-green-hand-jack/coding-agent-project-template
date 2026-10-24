@@ -188,7 +188,7 @@ entries:
   - path: .github/workflows/template-check.yml
     scope: shared_with_adaptation
     optional: true
-    note: Hosted CI for the template checks. Adopt it when the issue-workflow <CI> slot is yes; leave it out when it is no, and template-upgrade keeps it out.
+    note: Hosted CI for the template checks. Adopt it when the issue-workflow <CI> slot is yes; leave it out when it is no, and template-upgrade keeps it out. Its result is noted on the PR and never gates a merge; the gate is the issue-workflow <LOCAL_CHECK>, which runs the same steps locally.
   - path: .project/
     scope: project
     note: Worktree-local state is never copied into a new repository template.

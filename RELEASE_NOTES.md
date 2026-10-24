@@ -9,12 +9,18 @@
   - Start 第 1 步新增前提：用 `gh issue view <N> --json blockedBy` 确认没有还开着的 blocker，有就不派并报告在等哪个 Issue。Close-out 新增第 10 步：用 `--json blocking` 列出这个 Issue 阻塞过的 Issue，自己认领且已无开着 blocker 的按 Start 派出，别人认领的不动。
   - “Several coordinators” 补充跨协调者的依赖：用 blocked-by 记下并等它合并，不进它的 worktree、不催它的 session，要催找维护者。“Independent Issues run in parallel” 的“只有真实依赖才等”改为指向 blocked-by。
   - 共享 memory `speed-and-parallelism-by-measurement`、`issue-in-herdr-worktree` 各补一句：依赖记在 blocked-by 上。
+- **合并只看本地检查，CI 只在 PR 上标记**（#98）：GitHub Actions 因计费跑不起来时，job 一步没执行就被标成 failure，PR 永远不会变绿，协调者只能停下。现在 `issue-workflow` 里没有任何一步以 CI 的结果作为合并或继续的条件，不新增脚本或状态文件。
+  - 槽位：`<POST_MERGE_CHECK>` 改名为 `<LOCAL_CHECK>`，不论 `<CI>` 是什么都要填，内容是 `DEV.md` 的检查命令，和 CI workflow 跑的步骤一致。`<CI>` 只表示是否采用可选的 `.github/workflows/template-check.yml`。本仓库的值写在 `issue-workflow` 新增的 `## In this repository` 段，和 `template-check.yml` 的步骤一一对应。
+  - Merge 第 2 步：去掉以 `gh pr checks` 为合并门槛的要求。协调者在这个 PR 的 worktree 里、PR 最新的提交上跑 `<LOCAL_CHECK>`（`<PRE_MERGE_GATE>` 照旧在第 3 步），在 PR 上留一条评论：commit SHA、每条命令和结果、CI 状态（通过 / 失败 / 没运行，用 `gh pr checks` 读一次，不等）。`<LOCAL_CHECK>` 全部通过并有维护者批准即可合并，没通过就不合并，交 Issue session 修；CI 失败而本地通过时只在评论和报告里写明“CI 和本地结果不一致”，不挡合并，由维护者决定要不要开 Issue 查。第 4 步（解决冲突后）和第 5 步（合并后在 dev checkout `git pull --ff-only`）一律跑 `<LOCAL_CHECK>`；merge commit 上的 CI 只记在报告里。发布 PR（`dev` → `main`）同样按本地检查合并。
+  - Issue session 规则（`issue-workflow` 和 `new-agent-prompt.sh`）：session 跑本地检查并报告；推送后可以读 `gh pr checks` 并报告状态，但不等它，也不因为它没运行而停下。
+  - `template-adoption`、`content-registry.yaml` 里 `template-check.yml` 的 note、`DEV.md` 和 `template-check.yml` 的头注释同步说明；`template-check.yml` 跑的内容不变。
 
 ### Upgrading a project from v0.1.17
 
 1. 运行 `upgrade-template.sh`。它替换 `migrate-assets.sh`、`new-agent-prompt.sh`，以及 `issue-workflow`、`template-adoption`、`speed-and-parallelism-by-measurement`、`issue-in-herdr-worktree` 在 `## In this repository` 段以上的文本；各项目的 `## In this repository` 段和 `migrate-project.rules` 保持不变。
 2. 如果 `migrate-project.rules` 里有 `NAME` 含 `*`、`?`、`[` 的行，按上面 #92 的兼容说明检查一次。
 3. `issue-workflow` 的 `## In this repository` 段如果有按 “Phased work” 第 3 步（原：互不依赖的同时派）或第 4 步（原：GraphQL `addSubIssue`）写的补充，改挂到新的第 4 步和第 5 步；Close-out 的补充在第 10 步之前不受影响。已有的 sub-issue 之间如果靠正文文字记了先后，用 `gh issue edit <B> --add-blocked-by <A>` 补记，并删去那句文字。
+4. （#98）把 `issue-workflow` 的 `## In this repository` 段里的 `<POST_MERGE_CHECK>` 改名为 `<LOCAL_CHECK>`。原来 `<CI>` 为 `yes`、没填这一项的项目要补上：填 `DEV.md` 的检查命令，和自己的 CI workflow 跑的步骤一致；`<CI>` 为 `no` 的项目只改名。该段里如果写过以 `gh pr checks` 为合并门槛的要求或要求 CI 先通过，改成按 `<LOCAL_CHECK>` 合并、CI 只标记。`upgrade-template.sh` 同时替换 `new-agent-prompt.sh`、`template-adoption` 在 `## In this repository` 段以上的文本。
 
 ## v0.1.17 — 2026-10-24
 

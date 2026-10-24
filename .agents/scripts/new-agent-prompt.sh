@@ -35,8 +35,10 @@ human documentation planes separate, and preserve unrelated changes.
 
 Working rules for this session:
 - Verify to completion. Run every check the Issue's acceptance and the
-  project's CI call for, including real runs and, after a push, gh pr checks.
-  Report one definite result with the commands and their output. Name only a
+  project's local check (DEV.md) call for, including real runs. After a push you
+  may read gh pr checks and report its state (passed, failed or not run), but do
+  not wait for it and do not stop because CI did not run; the local result is
+  the evidence. Report one definite result with the commands and their output. Name only a
   step the maintainer alone can perform (an interactive login, a decision) as
   a blocker, saying what they must do. Do not add a "not verified" list, and
   never claim a check that was not run.

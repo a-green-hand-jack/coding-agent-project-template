@@ -44,7 +44,8 @@ example assets or project-specific memory and knowledge.
    Map the optional content the registry marks `optional: true` as adopted or
    rejected; a rejected path is left out, and `template-upgrade` keeps it out.
    Decide `.github/workflows/template-check.yml` with the `issue-workflow`
-   `<CI>` slot: adopted when it is `yes`, rejected when it is `no`.
+   `<CI>` slot: adopted when it is `yes`, rejected when it is `no`. Either way
+   fill `<LOCAL_CHECK>` with the `DEV.md` check commands; CI only marks the PR.
    Map the writing conventions (`issue-workflow`, "Writing conventions"): write
    the maintainer's working language and Issue opening sections in the
    registry's `writing:` block, or leave the block out when nothing is

@@ -128,9 +128,20 @@ bash .agents/scripts/inspect-state.sh
 python3 -m unittest discover -s .agents/tests -p 'test_template_*.py'
 ```
 
+合并和发布只看本地检查：`issue-workflow` 的 `<LOCAL_CHECK>`（本仓库的值写在
+该 skill 的 `## In this repository` 段）就是上面这些命令，也是
+`.github/workflows/template-check.yml` 的步骤：`bash -n .agents/scripts/*.sh`、
+`setup-worktree.sh`、`diagnose-environment.sh`，以及（只在模板里）
+`test_template_*.py`。协调者在 PR 的 worktree 里、PR 最新的提交上跑它，把提交
+SHA、每条命令的结果和 CI 状态（通过、失败、没运行）写成 PR 评论；发布 PR（`dev`
+→ `main`）也一样。本地检查全部通过并经维护者批准即可合并，CI 只在 PR 上标记，
+不等它，也不因它没运行（例如 Actions 因计费不能启动）而停下；CI 失败而本地通过
+时写进评论和报告，由维护者决定要不要查。
+
 `.github/workflows/template-check.yml` 只在指向 `dev`、`main` 的 PR 和推送到
 `dev`、`main` 时运行，同一 ref 的新运行取消旧运行，并有超时。它是可选内容：
-`issue-workflow` 的 `<CI>` 为 `no` 的项目不采用它，模板升级也不会把它加回来。
+`issue-workflow` 的 `<CI>` 为 `no` 的项目不采用它，模板升级也不会把它加回来；
+`<LOCAL_CHECK>` 不论 `<CI>` 是什么都要填。
 
 ## 产品构建与安装骨架
 
