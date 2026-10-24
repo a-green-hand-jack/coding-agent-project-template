@@ -1,5 +1,18 @@
 # Release notes
 
+## Unreleased
+
+- **Issue 之间的依赖记在 GitHub 的 blocked-by 上**（#93）：`issue-workflow` 不再靠正文文字或协调者的记忆记“谁等谁”，按依赖决定并行还是等待，不新增脚本、状态文件或标签。
+  - “Phased work” 第 3 步新增依赖表：并行（只挂父 Issue，同时派）、串行（`gh issue edit <B> --add-blocked-by <A>`，A 合并并 close-out 后从新的 `dev` 派 B）、同步（必须一起落地就不拆，一个 sub-issue、一个 PR）、异步（先把接口写定，写进父 Issue 或做成小的接口 sub-issue，A、B 都 blocked-by 它，之后并行）。每个 sub-issue 都从最新的 `dev` 开工，不叠在未合并的分支上。原第 3 步改为第 4 步（认领父 Issue 的协调者按依赖派出）；原第 4 步改为第 5 步，用 `gh issue create --parent` / `gh issue edit --parent` / `--add-sub-issue` 取代 GraphQL `addSubIssue`，blocked-by 的写法和读法写在旁边。
+  - Start 第 1 步新增前提：用 `gh issue view <N> --json blockedBy` 确认没有还开着的 blocker，有就不派并报告在等哪个 Issue。Close-out 新增第 10 步：用 `--json blocking` 列出这个 Issue 阻塞过的 Issue，自己认领且已无开着 blocker 的按 Start 派出，别人认领的不动。
+  - “Several coordinators” 补充跨协调者的依赖：用 blocked-by 记下并等它合并，不进它的 worktree、不催它的 session，要催找维护者。“Independent Issues run in parallel” 的“只有真实依赖才等”改为指向 blocked-by。
+  - 共享 memory `speed-and-parallelism-by-measurement`、`issue-in-herdr-worktree` 各补一句：依赖记在 blocked-by 上。
+
+### Upgrading a project from v0.1.17
+
+1. 运行 `upgrade-template.sh`。它替换 `issue-workflow`、`speed-and-parallelism-by-measurement`、`issue-in-herdr-worktree` 在 `## In this repository` 段以上的文本；各项目的 `## In this repository` 段保持不变。
+2. `issue-workflow` 的 `## In this repository` 段如果有按 “Phased work” 第 3 步（原：互不依赖的同时派）或第 4 步（原：GraphQL `addSubIssue`）写的补充，改挂到新的第 4 步和第 5 步；Close-out 的补充在第 10 步之前不受影响。已有的 sub-issue 之间如果靠正文文字记了先后，用 `gh issue edit <B> --add-blocked-by <A>` 补记，并删去那句文字。
+
 ## v0.1.17 — 2026-10-24
 
 收进下游反馈 #85，整理 `.agents/memory`（#87），并支持 dev checkout 里多个协调者并行（#89）。这一版有手动步骤，见升级段。
