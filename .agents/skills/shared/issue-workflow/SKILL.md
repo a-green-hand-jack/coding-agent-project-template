@@ -31,6 +31,11 @@ this skill, *the coordinator* is the one that claimed the Issue at hand.
 - A sub-Issue belongs to the coordinator that claimed its parent.
 - An Issue another coordinator claimed is not touched. Taking it over, also
   from a claimant whose pane is gone, is the maintainer's decision.
+- An Issue that depends on one another coordinator claimed is recorded with
+  blocked-by ([Phased work](#phased-work) step 5) and waits until that Issue is
+  merged. Do not enter its worktree and do not press its session; to hurry it,
+  ask the maintainer. Its coordinator starts what it blocked ([Close-out](#close-out)
+  step 10).
 - The dev checkout is common ground; see the shared dev checkout rules under
   [Shared boundaries](#shared-boundaries).
 
@@ -167,29 +172,50 @@ with one sub-Issue per phase, so that progress is checked off phase by phase.
 1. The parent Issue holds the goal, the phases and a checklist with one line
    per phase (`- [ ] #<C> <phase>`). Phasing does not change scope: every phase
    stays part of the parent's plan, and the parent closes when the last phase
-   merges.
+   merges. The checklist says what the phases are; what must wait for what is
+   recorded as blocked-by (step 3), never as a sentence in a body.
 2. Each phase is a sub-Issue with its own scope and acceptance, linked to the
    parent with GitHub's sub-issue relation. It goes through [Start](#start),
    [Merge](#merge) and [Close-out](#close-out) like any Issue, and its PR says
-   `Closes #<C>` and names the parent.
-3. The coordinator that claimed the parent claims every sub-Issue and dispatches
-   its worktree. Sub-Issues that do not depend on each other start together;
-   one that needs another's merged result starts after that PR merges, as in
-   [Independent Issues run in parallel](#independent-issues-run-in-parallel).
-4. Link a sub-Issue `<C>` to its parent `<P>`:
+   `Closes #<C>` and names the parent. A sub-Issue says who it belongs to
+   (sub-issue); blocked-by says what comes first.
+3. Before splitting, decide for every two sub-Issues which relation holds, and
+   record and dispatch it as the table says:
+
+   | Relation | Record | Dispatch |
+   | --- | --- | --- |
+   | Parallel: the two are unrelated. | Only the parent link. | Start together. |
+   | Serial: B needs the merged code of A. | `gh issue edit <B> --add-blocked-by <A>` | Start B from the new `<BASE>` after A is merged and closed out. |
+   | Synchronous: both must land together, because `<BASE>` breaks if either merges alone (an interface changed with all its callers). | Do not split: one sub-Issue, one PR, one worktree. | Start the one Issue. |
+   | Asynchronous: B needs only A's interface (a parameter, a file format, a command's output), not its implementation. | Fix the interface first, in the parent Issue or as a small interface sub-Issue. A and B are both blocked-by that interface sub-Issue; an interface written in the parent needs no blocked-by. | Start A and B together once the interface is fixed. |
+
+4. The coordinator that claimed the parent claims every sub-Issue and dispatches
+   its worktree. A sub-Issue starts when it has no open blocker
+   ([Start](#start) step 1); it does not wait in arrival order
+   ([Independent Issues run in parallel](#independent-issues-run-in-parallel)).
+   Every sub-Issue starts from the latest `<BASE>`, never from the branch of one
+   that has not merged: stacked branches save time only until the earlier PR
+   changes, and then cost repeated rebases and conflicts.
+5. Link and relate Issues with `gh` (`gh issue create --help`,
+   `gh issue edit --help`); the Issue number is the argument, a URL also works:
 
    ```bash
-   parent=$(gh issue view <P> --repo <REPO> --json id --jq .id)
-   child=$(gh issue view <C> --repo <REPO> --json id --jq .id)
-   gh api graphql -H 'GraphQL-Features: sub_issues' \
-     -f query='mutation($parent: ID!, $child: ID!) { addSubIssue(input: {issueId: $parent, subIssueId: $child}) { issue { number } subIssue { number } } }' \
-     -f parent="$parent" -f child="$child"
+   # a sub-Issue of <P>, at creation or afterwards
+   gh issue create --repo <REPO> --parent <P> --title ... --body-file ...
+   gh issue edit <C> --repo <REPO> --parent <P>          # or: gh issue edit <P> --add-sub-issue <C>
+   # <B> waits for <A>, at creation or afterwards
+   gh issue create --repo <REPO> --blocked-by <A> --title ... --body-file ...
+   gh issue edit <B> --repo <REPO> --add-blocked-by <A>  # or: gh issue edit <A> --add-blocking <B>
+   # read them
+   gh issue view <N> --repo <REPO> --json parent,subIssues,blockedBy,blocking
+   # count of blockers that are still open (0: ready to start)
+   gh issue view <N> --repo <REPO> --json blockedBy --jq '[.blockedBy.nodes[] | select(.state=="OPEN")] | length'
    ```
 
-   `removeSubIssue` with the same input removes the link, and
-   `gh issue view <P>` lists the sub-issues. Recent `gh` releases also offer
-   `gh issue create --parent <P>` and `gh issue edit <P> --add-sub-issue <C>`
-   (see `gh issue edit --help`).
+   `--remove-parent`, `--remove-sub-issue`, `--remove-blocked-by` and
+   `--remove-blocking` undo a link. Closing a blocker does not remove the link;
+   the reader counts only blockers whose `state` is `OPEN`. GraphQL's
+   `issueDependenciesSummary { blockedBy }` also gives that count.
 
 ## Shared boundaries
 
@@ -250,7 +276,15 @@ Input: Issue number `<N>` and a branch `<branch>` named per `DEV.md`
 (`<type>/issue-<N>-<slug>`, with `<type>` one of `fix`, `feat`, `docs`, `chore`).
 
 1. Claim the Issue ([Claim](#claim)) and confirm it has settled scope and
-   acceptance: `gh issue view <N>`. Locate the dev checkout `<dev>`
+   acceptance: `gh issue view <N>`. Confirm it has no open blocker; if it has,
+   do not start it, and report which Issue it waits for:
+
+   ```bash
+   gh issue view <N> --repo <REPO> --json blockedBy \
+     --jq '.blockedBy.nodes[] | select(.state=="OPEN") | "#\(.number) \(.title)"'
+   ```
+
+   It prints nothing when it may start. Locate the dev checkout `<dev>`
    (`.result.source.source_checkout_path`) with
    `herdr worktree list --workspace "$HERDR_WORKSPACE_ID"`, confirm
    `git branch --list <branch>` is empty, then bring `<BASE>` up to date:
@@ -336,10 +370,11 @@ Input: Issue number `<N>` and a branch `<branch>` named per `DEV.md`
 
 ### Independent Issues run in parallel
 
-Issues that do not depend on each other are started together, each through Start
-in its own worktree and session, whether by their own coordinators or, for the
-sub-Issues of one Issue, by its coordinator; do not queue them by arrival order. Only a real
-dependency waits, for example an Issue that needs another's merged result. This
+An Issue with no open blocker is started now, whether or not other Issues are
+running: each goes through Start in its own worktree and session, by its own
+coordinator or, for the sub-Issues of one Issue, by its coordinator. Do not queue
+Issues by arrival order. What waits is an Issue that has an open blocker (see
+[Phased work](#phased-work) for the relations and how they are recorded). This
 changes when sessions start, never the checks each one runs
 (`speed-and-parallelism-by-measurement`).
 
@@ -708,6 +743,28 @@ workspace, normally the dev checkout's.
    - `<dev>/.project/migrations/` holds this run's directory, and no unique copy of
      a result remains only in the retired worktree;
    - non-rebuildable results are archived and registered, or the gap is reported.
+10. List what this Issue was blocking and start what is now free:
+
+    ```bash
+    gh issue view <N> --repo <REPO> --json blocking \
+      --jq '.blocking.nodes[] | select(.state=="OPEN") | .number'
+    ```
+
+    For each `<M>` it prints, read its open blockers and claimant:
+
+    ```bash
+    gh issue view <M> --repo <REPO> --json number,blockedBy,parent,body \
+      --jq '"#\(.number) open-blockers=\([.blockedBy.nodes[] | select(.state=="OPEN")] | length) parent=\(.parent.number // "none") claimant=\(.body | capture("(?m)^- coordinator: `?(?<c>[^`\n]*)").c // "none")"'
+    ```
+
+    - Claimed by you (or a sub-Issue of an Issue you claimed) and
+      `open-blockers=0`: start it ([Start](#start)), from the `<BASE>` just
+      pulled.
+    - Still has open blockers: leave it; report which Issues it still waits for.
+    - Claimed by another coordinator: do not touch it; its coordinator starts it
+      ([Several coordinators](#several-coordinators)). Report it to the maintainer
+      only when that coordinator is gone.
+    - Unclaimed and not a sub-Issue of yours: report it to the maintainer.
 
 This skill provides process, not permission: it cannot override the project's
 permission configuration or `AGENTS.md`.
