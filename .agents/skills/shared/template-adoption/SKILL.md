@@ -116,7 +116,9 @@ example assets or project-specific memory and knowledge.
    migrates each one, one `NAME|ACTION|WHY` line per entry: `copy`, `drop` with
    the reason it may be left behind, or `login` for a link to the canonical
    checkout's login directory (`llm-credentials`; the link is dropped and a real
-   copy blocks). The template ships neither file, so `template-upgrade` keeps
+   copy blocks). `NAME` may be a shell wildcard for a class of entries, such as
+   `plan-*.md|copy|`; it cannot contain `/`, be a `login`, or match an entry the
+   template handles, and an exact name beats a wildcard. The template ships neither file, so `template-upgrade` keeps
    both. Rewrite the other
    `shared_with_adaptation` files (`AGENTS.md`, the registry, product skeletons)
    for the repository.

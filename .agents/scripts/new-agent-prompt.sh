@@ -60,6 +60,10 @@ Working rules for this session:
   after the verified merge the coordinator migrates .project/ and removes this
   worktree without asking again, so archive results that cannot be rebuilt
   before the merge.
+- Keep your own working files (plans, PR body drafts and messages to the
+  coordinator) in .project/state/, not in the root of .project/. Close-out
+  copies .project/state/ without further rules; a file in the root of
+  .project/ that no migration rule covers stops the migration.
 PROMPT
 if [[ -n "$language" ]]; then
   cat <<PROMPT

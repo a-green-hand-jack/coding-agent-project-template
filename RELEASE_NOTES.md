@@ -1,5 +1,14 @@
 # Release notes
 
+## Unreleased
+
+- **Issue session 的工作文件不再让 close-out 停下**（#92）：`new-agent-prompt.sh` 的交接规则和 `issue-workflow` 的 “Issue session rules” 新增一条：session 自己的工作文件（计划、PR 正文草稿、给协调者的消息）放在 `.project/state/`，不放 `.project/` 根目录；`state/` 本来就总是被复制。`migrate-project.rules` 的 `NAME` 现在可以是 shell 通配符（`*`、`?`、`[...]`），一行管一类文件，例如 `plan-*.md|copy|`。`migrate-assets.sh` 的匹配顺序：模板规则、项目的精确名字、项目的通配符（按文件里的先后，第一个匹配的生效）；报告的 WHY 列写出匹配到的规则（`rule plan-*.md`）。校验不过以 exit 2 退出并指出行号：通配符不能含 `/`，不能是 `login`，不能匹配模板自己处理的条目名（`state`、`runs`、`artifacts`、`manifest`、`assets.links`、`home`、`worktree.env`、`credentials`，所以 `st*` 或 `*` 会被拒绝）；`drop` 仍须写理由。没有规则对应的根目录文件仍然 exit 3，`--also`、`--skip` 照旧按单个文件名覆盖。`issue-workflow`、`template-adoption`、`DEV.md` 同步说明。新增回归测试 `.agents/tests/test_template_migrate.py`。
+  - 兼容：`NAME` 里含 `*`、`?`、`[` 的规则以前只匹配这个字面名字，现在按通配符匹配。这种规则不太可能存在；如果有，检查它是否仍然只匹配想要的文件，或者匹配到模板条目而被拒绝。`template-upgrade` 照旧保留项目的 `migrate-project.rules`。
+
+### Upgrading a project from v0.1.17
+
+**Command only.** 运行 `upgrade-template.sh`。项目的 `migrate-project.rules` 照旧保留；如果其中有 `NAME` 含 `*`、`?`、`[` 的行，按上面的兼容说明检查一次。
+
 ## v0.1.17 — 2026-10-24
 
 收进下游反馈 #85，整理 `.agents/memory`（#87），并支持 dev checkout 里多个协调者并行（#89）。这一版有手动步骤，见升级段。
