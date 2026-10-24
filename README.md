@@ -74,7 +74,8 @@ checkpoint 和其他不适合进入 Git 的资产可以放在外部存储；仓�
 `.project/assets.links`，说明来源、版本、checksum
 和可重建性。凭据不进入仓库：项目需要哪些凭据只按名字登记在 `credentials.yaml`，
 值只通过 `.project/credentials/` 中指向设备共享文件的链接或运行时环境注入，
-探测时只打印状态行（见 `.agents/memory/shared/llm-credentials.md`）。
+探测时只打印状态行（规则见 `.agents/memory/shared/llm-credentials.md`，格式见
+`.agents/knowledge/shared/credential-inventory.md`）。
 
 非代码产品树（例如论文的 `paper/`）同样自包含：不依赖 `.agents/`，构建输出和
 中间文件进入 `.project/`，不写回产品树或仓库根目录。

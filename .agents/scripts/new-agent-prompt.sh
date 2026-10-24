@@ -53,12 +53,13 @@ Working rules for this session:
   the Issue, not an unrequested feature. Only an unrelated, larger problem is
   reported for a separate Issue.
 - Other worktrees are not your concern. Parallel worktrees may change the same
-  files; the dev checkout resolves conflicts when it merges the PRs. Complete
-  the Issue fully and do not narrow the change to avoid conflicts.
+  files; at merge the coordinator that claimed this Issue resolves conflicts
+  with the current dev in this worktree, itself or through you. Complete the
+  Issue fully and do not narrow the change to avoid conflicts.
 - Merge implies close-out. Approval to merge the PR covers its close-out: right
-  after the verified merge the coordinating session migrates .project/ and
-  removes this worktree without asking again, so archive results that cannot
-  be rebuilt before the merge.
+  after the verified merge the coordinator migrates .project/ and removes this
+  worktree without asking again, so archive results that cannot be rebuilt
+  before the merge.
 PROMPT
 if [[ -n "$language" ]]; then
   cat <<PROMPT

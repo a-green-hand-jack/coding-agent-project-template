@@ -19,10 +19,12 @@ the record's own text never contains that heading line.
   running user; no `sudo` for project files; cleanup that meets foreign-owned
   files stops and reports.
 - [`issue-in-herdr-worktree.md`](issue-in-herdr-worktree.md) — implement each
-  Issue in its own Herdr worktree and agent session, which verifies to
-  completion, fixes related defects and leaves conflicts to the dev checkout.
+  Issue in its own Herdr worktree and agent session, dispatched by the
+  coordinator that claimed the Issue; the session verifies to completion, fixes
+  related defects and does not narrow its change to avoid conflicts.
 - [`issue-close-out.md`](issue-close-out.md) — close out an Issue's worktree
-  right after its PR merges; the merge approval covers the close-out, and live
+  right after its PR merges; the claiming coordinator resolves conflicts with
+  `dev` in the PR's worktree, the merge approval covers the close-out, and live
   runs in the dev checkout or containers mounting the worktree stop it.
 - [`issue-dispatch-by-difficulty.md`](issue-dispatch-by-difficulty.md) — dispatch
   each Issue agent with an explicit model and effort for its difficulty tier, and
@@ -36,14 +38,15 @@ the record's own text never contains that heading line.
   through one device file; log refreshing logins in once per canonical checkout,
   whose worktrees link to them; never pass a credential as a command-line
   argument; name every credential in a device inventory and the project's
-  `credentials.yaml`, and probe it without printing a value.
+  `credentials.yaml`. Steps in `credential-setup`, formats in
+  `credential-inventory`.
 - [`product-state-root.md`](product-state-root.md) — product commands resolve
   the worktree's state root from an argument, an environment variable, the
   nearest setup marker (stopping at the repository boundary), then a default.
 - [`resolve-real-paths-before-moving.md`](resolve-real-paths-before-moving.md)
-  — before moving, replacing or symlinking a directory, resolve both paths and
-  stop on overlap; verify two different data sets, confirm the delete frees
-  space, and let a person choose which copy to delete.
+  — before moving, replacing or symlinking a directory, prove source and
+  destination are two different places and data sets, and let a person choose
+  which copy to delete; the checks are in `asset-lifecycle`.
 - [`run-settings-from-config.md`](run-settings-from-config.md) — run parameters
   are settings loaded from configuration with a fixed override order, recorded
   at run start and reused on resume; never constants in code.
@@ -51,6 +54,10 @@ the record's own text never contains that heading line.
   boundary failure paths before a real run with one scriptable fake (scenarios
   as data, requests recorded with credentials masked by key name, upstream and
   agent-executor boundaries); it is a sieve, not acceptance.
+- [`serve-the-coding-agent.md`](serve-the-coding-agent.md) — use the existing
+  coding agent and write what serves it: guidance, tools, parallelism, trace
+  and cost are the five pillars a change must help at least one of, and each
+  project names where they live.
 - [`speed-and-parallelism-by-measurement.md`](speed-and-parallelism-by-measurement.md)
   — speed is a quality: independent work runs in parallel and only a real
   dependency queues; concurrency is set from measured resources and provider

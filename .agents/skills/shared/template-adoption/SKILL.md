@@ -33,11 +33,11 @@ example assets or project-specific memory and knowledge.
    each record has a destination and front matter.
    If the repository calls LLM providers, from its own code, agent CLIs or
    third-party tools it runs, map the shared `llm-credentials` and
-   `third-party-llm-compat-patches` memory records and the
-   `gpt5-strict-backend-requests` knowledge record together: adapt the
-   credential parameters, locate any local edits to third-party tools and move
-   them into the repository as patches, and keep the knowledge record's date and
-   refresh condition. Map the credentials the project uses into a
+   `third-party-llm-compat-patches` memory records, the `credential-setup`
+   skill and the `credential-inventory` and `gpt5-strict-backend-requests`
+   knowledge records together: adapt the credential parameters, locate any
+   local edits to third-party tools and move them into the repository as
+   patches, and keep the knowledge records' dates and refresh conditions. Map the credentials the project uses into a
    `credentials.yaml` (names only; a first draft can list the variable names in
    `.env.example`) and the device's inventory rows they need. Skip them when
    the project calls no LLM.
