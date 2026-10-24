@@ -1,5 +1,13 @@
 # Release notes
 
+## Unreleased
+
+- **充分利用现有 coding agent**（#85）：新增共享 memory `serve-the-coding-agent`，登记为 `shared_with_adaptation`、`optional: true`。我们不自己从头造 agent：指导、工具、并行、轨迹、成本这五根支柱是给它搭的干活条件，它已经会做的事不重写、它的判断不代替；每项改动至少帮到一根，哪根都不帮的代码是删除候选，撑着某一根的东西不为省代码而删。记录写明：评审改动时问一句这次帮的是哪一根；改了检查规则就在同一个改动里改说明，改了验收标准要确保有检查或审核能判断；运行中逐次请求记账（未命中缓存的输入、命中缓存的输入、输出），花费从运行记录读而不是写报告时拼凑；轨迹和花费只整理一次，审核读命令整理出的固定格式摘要；加共享文件、全局锁或全局缓存前先确认它不会让本来能并行的运行变成排队。并行部分只链接 `speed-and-parallelism-by-measurement`，不重复其规则。
+
+### Upgrading a project from v0.1.16
+
+**Command only.** 运行 `upgrade-template.sh`。它新增一条可选共享 memory；没有采用它的项目保持不变，需要时按 `template-adoption` 第 3 步采用，并在该记录的 `## In this repository` 段填 `GUIDANCE`、`COMMANDS`、`ISOLATION`、`TRACE`、`ACCOUNTING` 五项。
+
 ## v0.1.16 — 2026-10-23
 
 收进下游反馈 #76 与 2026-10-23 这轮 harvest 的三条共享规则（#78–#80）。

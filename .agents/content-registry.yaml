@@ -123,6 +123,10 @@ entries:
   - path: .agents/memory/shared/screen-with-scriptable-fakes.md
     scope: shared
     note: Screen boundary failure paths with one scriptable fake (scenarios as data, requests recorded with credentials masked by key name) before a real run; it is a sieve, not acceptance, and stays out of the product tree and image.
+  - path: .agents/memory/shared/serve-the-coding-agent.md
+    scope: shared_with_adaptation
+    optional: true
+    note: Fill GUIDANCE, COMMANDS, ISOLATION, TRACE and ACCOUNTING for where the project's instructions and acceptance criteria live, which commands the coding agent calls, what keeps each run apart, where the run records are read, and where usage is recorded and the budget stops a run; the five pillars (guidance, tools, parallelism, trace, cost) are a review lens, not a feature list, and the parallelism part links speed-and-parallelism-by-measurement instead of repeating it; unnecessary for a project not built on a coding agent.
   - path: .agents/memory/shared/speed-and-parallelism-by-measurement.md
     scope: shared
     note: Independent work runs in parallel and only a real dependency queues; concurrency is set from measured resources and provider health and reported apart from wall clock and cost; remove repeated work, never a check or a spending limit.

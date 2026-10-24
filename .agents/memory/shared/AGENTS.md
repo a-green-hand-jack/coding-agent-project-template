@@ -51,6 +51,10 @@ the record's own text never contains that heading line.
   boundary failure paths before a real run with one scriptable fake (scenarios
   as data, requests recorded with credentials masked by key name, upstream and
   agent-executor boundaries); it is a sieve, not acceptance.
+- [`serve-the-coding-agent.md`](serve-the-coding-agent.md) — use the existing
+  coding agent and write what serves it: guidance, tools, parallelism, trace
+  and cost are the five pillars a change must help at least one of, and each
+  project names where they live.
 - [`speed-and-parallelism-by-measurement.md`](speed-and-parallelism-by-measurement.md)
   — speed is a quality: independent work runs in parallel and only a real
   dependency queues; concurrency is set from measured resources and provider
