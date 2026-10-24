@@ -1,7 +1,7 @@
 ---
 name: issue-dispatch-by-difficulty
 date: 2026-10-15
-source: Issue #26, harvested from a downstream adopter of this template
+source: Issue #26, harvested from a downstream adopter of this template; Issue #87 (steps left to issue-workflow)
 scope: shared
 applies_to: repositories that start Issue agents with the issue-workflow skill
 status: active
@@ -13,12 +13,10 @@ superseded_by: null
 
 ## Decision
 
-Before Start, the coordinating session judges the Issue's difficulty by scope,
-risk and uncertainty, picks one of four tiers (mechanical, routine, hard,
-hardest), and starts the agent with that tier's model and reasoning effort passed
-explicitly. The dispatch is recorded in a Dispatch section of the Issue body. A
-fallback agent is used only when the primary one is unavailable, and every
-re-dispatch is recorded with its reason.
+Each Issue agent is started with a model and reasoning effort chosen for the
+Issue's difficulty and passed explicitly, never the CLI's default, and the
+choice is recorded in the Issue. A fallback agent stands in only when the
+primary one is unavailable, and every re-dispatch is recorded with its reason.
 
 ## Why
 
@@ -30,7 +28,7 @@ Issue record makes the choice reviewable when its outcome is judged.
 
 ## Apply
 
-Follow Start and Dispatch by difficulty in `.agents/skills/shared/issue-workflow/`,
-after filling its tier, effort and fallback slots. When unsure, or when a mistake
-is costly, go one tier up. Do not switch to the fallback agent for difficulty or
-preference.
+Follow Start and Dispatch by difficulty in
+[`../../skills/shared/issue-workflow/SKILL.md`](../../skills/shared/issue-workflow/SKILL.md),
+after filling its tier, effort and fallback slots: the four tiers, when to go a
+tier up, the Dispatch section and the fallback and re-dispatch lines.

@@ -36,14 +36,15 @@ the record's own text never contains that heading line.
   through one device file; log refreshing logins in once per canonical checkout,
   whose worktrees link to them; never pass a credential as a command-line
   argument; name every credential in a device inventory and the project's
-  `credentials.yaml`, and probe it without printing a value.
+  `credentials.yaml`. Steps in `credential-setup`, formats in
+  `credential-inventory`.
 - [`product-state-root.md`](product-state-root.md) — product commands resolve
   the worktree's state root from an argument, an environment variable, the
   nearest setup marker (stopping at the repository boundary), then a default.
 - [`resolve-real-paths-before-moving.md`](resolve-real-paths-before-moving.md)
-  — before moving, replacing or symlinking a directory, resolve both paths and
-  stop on overlap; verify two different data sets, confirm the delete frees
-  space, and let a person choose which copy to delete.
+  — before moving, replacing or symlinking a directory, prove source and
+  destination are two different places and data sets, and let a person choose
+  which copy to delete; the checks are in `asset-lifecycle`.
 - [`run-settings-from-config.md`](run-settings-from-config.md) — run parameters
   are settings loaded from configuration with a fixed override order, recorded
   at run start and reused on resume; never constants in code.

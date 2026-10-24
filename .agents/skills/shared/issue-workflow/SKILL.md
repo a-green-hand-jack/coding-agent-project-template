@@ -584,6 +584,10 @@ workspace, normally the dev checkout's.
 
    If `-d` is refused, report the reason and do not use `-D`. Skip the second
    command when the remote branch is already gone.
+
+   When the project follows `docker-objects-prefixed-and-removed` and the merged
+   PR changed an image or a test fixture, also remove the image tags that only
+   this branch used, under that record's rules.
 9. Verify and report each step's output as evidence:
    - `herdr worktree list --workspace "$HERDR_WORKSPACE_ID"` no longer lists
      `<branch>`;
