@@ -89,5 +89,4 @@ Then:
 5. Before adding a shared file, a global lock or a global cache, confirm that it
    does not turn runs that could run together into a queue.
 
-A project whose product is not built on a coding agent needs nothing from this
-record.
+A project not built on a coding agent needs nothing from this record.
