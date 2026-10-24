@@ -8,7 +8,8 @@ In the template repository, the `test_template_*.py` files are the template's
 own tests of its scripts (`scope: template`; a project does not copy them):
 `upgrade-template.sh` against a fixture template with three tags and from an
 older real release to the release candidate, `probe-credentials.sh` with setup
-and diagnostics against fixture credential files, and the branch-model checks
+and diagnostics against fixture credential files, `migrate-assets.sh` rules and
+`new-agent-prompt.sh` against fixture repositories, and the branch-model checks
 of `diagnose-environment.sh`. They write only to temporary directories, and
 CI runs them:
 

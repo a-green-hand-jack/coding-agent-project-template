@@ -1,5 +1,29 @@
 # Release notes
 
+## v0.1.18 — 2026-10-24
+
+Issue session 的工作文件不再让 close-out 停下（#92），Issue 之间的依赖记在 GitHub 的 blocked-by 上（#93），合并只看本地检查、CI 只做标记（#98）。这一版有手动步骤，见升级段。
+
+- **Issue session 的工作文件不再让 close-out 停下**（#92）：`new-agent-prompt.sh` 的交接规则和 `issue-workflow` 的 “Issue session rules” 新增一条：session 自己的工作文件（计划、PR 正文草稿、给协调者的消息）放在 `.project/state/`，不放 `.project/` 根目录；`state/` 本来就总是被复制。`migrate-project.rules` 的 `NAME` 现在可以是 shell 通配符（`*`、`?`、`[...]`），一行管一类文件，例如 `plan-*.md|copy|`。`migrate-assets.sh` 的匹配顺序：模板规则、项目的精确名字、项目的通配符（按文件里的先后，第一个匹配的生效）；报告的 WHY 列写出匹配到的规则（`rule plan-*.md`）。校验不过以 exit 2 退出并指出行号：通配符不能含 `/`，不能是 `login`，不能匹配模板自己处理的条目名（`state`、`runs`、`artifacts`、`manifest`、`assets.links`、`home`、`worktree.env`、`credentials`，所以 `st*` 或 `*` 会被拒绝）；`drop` 仍须写理由。没有规则对应的根目录文件仍然 exit 3，`--also`、`--skip` 照旧按单个文件名覆盖。`issue-workflow`、`template-adoption`、`DEV.md` 同步说明。新增回归测试 `.agents/tests/test_template_migrate.py`。
+  - 兼容：`NAME` 里含 `*`、`?`、`[` 的规则以前只匹配这个字面名字，现在按通配符匹配。这种规则不太可能存在；如果有，检查它是否仍然只匹配想要的文件，或者匹配到模板条目而被拒绝。`template-upgrade` 照旧保留项目的 `migrate-project.rules`。
+- **Issue 之间的依赖记在 GitHub 的 blocked-by 上**（#93）：`issue-workflow` 不再靠正文文字或协调者的记忆记“谁等谁”，按依赖决定并行还是等待，不新增脚本、状态文件或标签。
+  - “Phased work” 第 3 步新增依赖表：并行（只挂父 Issue，同时派）、串行（`gh issue edit <B> --add-blocked-by <A>`，A 合并并 close-out 后从新的 `dev` 派 B）、同步（必须一起落地就不拆，一个 sub-issue、一个 PR）、异步（先把接口写定，写进父 Issue 或做成小的接口 sub-issue，A、B 都 blocked-by 它，之后并行）。每个 sub-issue 都从最新的 `dev` 开工，不叠在未合并的分支上。原第 3 步改为第 4 步（认领父 Issue 的协调者按依赖派出）；原第 4 步改为第 5 步，用 `gh issue create --parent` / `gh issue edit --parent` / `--add-sub-issue` 取代 GraphQL `addSubIssue`，blocked-by 的写法和读法写在旁边。
+  - Start 第 1 步新增前提：用 `gh issue view <N> --json blockedBy` 确认没有还开着的 blocker，有就不派并报告在等哪个 Issue。Close-out 新增第 10 步：用 `--json blocking` 列出这个 Issue 阻塞过的 Issue，自己认领且已无开着 blocker 的按 Start 派出，别人认领的不动。
+  - “Several coordinators” 补充跨协调者的依赖：用 blocked-by 记下并等它合并，不进它的 worktree、不催它的 session，要催找维护者。“Independent Issues run in parallel” 的“只有真实依赖才等”改为指向 blocked-by。
+  - 共享 memory `speed-and-parallelism-by-measurement`、`issue-in-herdr-worktree` 各补一句：依赖记在 blocked-by 上。
+- **合并只看本地检查，CI 只在 PR 上标记**（#98）：GitHub Actions 因计费跑不起来时，job 一步没执行就被标成 failure，PR 永远不会变绿，协调者只能停下。现在 `issue-workflow` 里没有任何一步以 CI 的结果作为合并或继续的条件，不新增脚本或状态文件。
+  - 槽位：`<POST_MERGE_CHECK>` 改名为 `<LOCAL_CHECK>`，不论 `<CI>` 是什么都要填，内容是 `DEV.md` 的检查命令，和 CI workflow 跑的步骤一致。`<CI>` 只表示是否采用可选的 `.github/workflows/template-check.yml`。槽位默认值就是 `DEV.md` 的验证策略；本仓库的 `<LOCAL_CHECK>` 即 `DEV.md` 里的命令，和 `template-check.yml` 的步骤一一对应。
+  - Merge 第 2 步：去掉以 `gh pr checks` 为合并门槛的要求。协调者在这个 PR 的 worktree 里、PR 最新的提交上跑 `<LOCAL_CHECK>`（`<PRE_MERGE_GATE>` 照旧在第 3 步），在 PR 上留一条评论：commit SHA、每条命令和结果、CI 状态（通过 / 失败 / 没运行，用 `gh pr checks` 读一次，不等）。`<LOCAL_CHECK>` 全部通过并有维护者批准即可合并，没通过就不合并，交 Issue session 修；CI 失败而本地通过时只在评论和报告里写明“CI 和本地结果不一致”，不挡合并，由维护者决定要不要开 Issue 查。第 4 步（解决冲突后）和第 5 步（合并后在 dev checkout `git pull --ff-only`）一律跑 `<LOCAL_CHECK>`；merge commit 上的 CI 只记在报告里。发布 PR（`dev` → `main`）同样按本地检查合并。
+  - Issue session 规则（`issue-workflow` 和 `new-agent-prompt.sh`）：session 跑本地检查并报告；推送后可以读 `gh pr checks` 并报告状态，但不等它，也不因为它没运行而停下。
+  - `template-adoption`、`content-registry.yaml` 里 `template-check.yml` 的 note、`DEV.md` 和 `template-check.yml` 的头注释同步说明；`template-check.yml` 跑的内容不变。
+
+### Upgrading a project from v0.1.17
+
+1. 运行 `upgrade-template.sh`。它替换 `migrate-assets.sh`、`new-agent-prompt.sh`，以及 `issue-workflow`、`template-adoption`、`speed-and-parallelism-by-measurement`、`issue-in-herdr-worktree` 在 `## In this repository` 段以上的文本；各项目的 `## In this repository` 段和 `migrate-project.rules` 保持不变。
+2. 如果 `migrate-project.rules` 里有 `NAME` 含 `*`、`?`、`[` 的行，按上面 #92 的兼容说明检查一次。
+3. `issue-workflow` 的 `## In this repository` 段如果有按 “Phased work” 第 3 步（原：互不依赖的同时派）或第 4 步（原：GraphQL `addSubIssue`）写的补充，改挂到新的第 4 步和第 5 步；Close-out 的补充在第 10 步之前不受影响。已有的 sub-issue 之间如果靠正文文字记了先后，用 `gh issue edit <B> --add-blocked-by <A>` 补记，并删去那句文字。
+4. （#98）把 `issue-workflow` 的 `## In this repository` 段里的 `<POST_MERGE_CHECK>` 改名为 `<LOCAL_CHECK>`。原来 `<CI>` 为 `yes`、没填这一项的项目要补上：填 `DEV.md` 的检查命令，和自己的 CI workflow 跑的步骤一致；`<CI>` 为 `no` 的项目只改名。该段里如果写过以 `gh pr checks` 为合并门槛的要求或要求 CI 先通过，改成按 `<LOCAL_CHECK>` 合并、CI 只标记。`upgrade-template.sh` 同时替换 `new-agent-prompt.sh`、`template-adoption` 在 `## In this repository` 段以上的文本。
+
 ## v0.1.17 — 2026-10-24
 
 收进下游反馈 #85，整理 `.agents/memory`（#87），并支持 dev checkout 里多个协调者并行（#89）。这一版有手动步骤，见升级段。

@@ -31,6 +31,11 @@ this skill, *the coordinator* is the one that claimed the Issue at hand.
 - A sub-Issue belongs to the coordinator that claimed its parent.
 - An Issue another coordinator claimed is not touched. Taking it over, also
   from a claimant whose pane is gone, is the maintainer's decision.
+- An Issue that depends on one another coordinator claimed is recorded with
+  blocked-by ([Phased work](#phased-work) step 5) and waits until that Issue is
+  merged. Do not enter its worktree and do not press its session; to hurry it,
+  ask the maintainer. Its coordinator starts what it blocked ([Close-out](#close-out)
+  step 10).
 - The dev checkout is common ground; see the shared dev checkout rules under
   [Shared boundaries](#shared-boundaries).
 
@@ -124,8 +129,8 @@ project-neutral.
 | `<AGENT_PREFIX>` | Short project prefix. The agent name is `<AGENT_PREFIX>-issue-<N>` and must be unique across the whole Herdr server. | project choice |
 | `<WORKSPACE_PREFIX>` | Prefix of the Herdr workspace label, so that a server holding worktrees of several repositories shows which repository an Issue workspace belongs to. Herdr accepts upper-case letters in labels but not in agent names, so a project may prefer an upper-case prefix here. | `<AGENT_PREFIX>` |
 | `<MERGE_METHOD>` | `gh pr merge` method flag. Close-out's ancestry check assumes a merge commit. | `--merge` |
-| `<CI>` | Whether CI covers the project's checks. `yes`: rely on PR checks and the base-branch run; the template's optional `.github/workflows/template-check.yml` is adopted. `no`: run `<POST_MERGE_CHECK>` in the dev checkout; that workflow is left out (`template-adoption` step 3). | project fact |
-| `<POST_MERGE_CHECK>` | Verification commands from `DEV.md`, used when `<CI>` is `no`. | `DEV.md` verification strategy |
+| `<CI>` | Whether the project adopts the template's optional `.github/workflows/template-check.yml`. `yes`: adopted; its result is read and noted on the PR, never waited for and never a condition (see Merge). `no`: that workflow is left out (`template-adoption` step 3). | project fact |
+| `<LOCAL_CHECK>` | The verification commands from `DEV.md`, always filled whatever `<CI>` is. They are the merge gate, run locally; when `<CI>` is `yes` they are the same steps the workflow runs. | `DEV.md` verification strategy |
 | `<PRE_MERGE_GATE>` | Optional read-only product command that must pass before merging, for example `<cmd> archive --check`. | none |
 | `<ARCHIVE_CMD>` | Product command that archives and registers non-rebuildable results before a worktree is retired. | none |
 | `<MONITOR_CMD>`, `<STOP_CMD>` | Product commands that list live runs in a checkout (the dev checkout or a worktree) and stop one. | none |
@@ -167,29 +172,50 @@ with one sub-Issue per phase, so that progress is checked off phase by phase.
 1. The parent Issue holds the goal, the phases and a checklist with one line
    per phase (`- [ ] #<C> <phase>`). Phasing does not change scope: every phase
    stays part of the parent's plan, and the parent closes when the last phase
-   merges.
+   merges. The checklist says what the phases are; what must wait for what is
+   recorded as blocked-by (step 3), never as a sentence in a body.
 2. Each phase is a sub-Issue with its own scope and acceptance, linked to the
    parent with GitHub's sub-issue relation. It goes through [Start](#start),
    [Merge](#merge) and [Close-out](#close-out) like any Issue, and its PR says
-   `Closes #<C>` and names the parent.
-3. The coordinator that claimed the parent claims every sub-Issue and dispatches
-   its worktree. Sub-Issues that do not depend on each other start together;
-   one that needs another's merged result starts after that PR merges, as in
-   [Independent Issues run in parallel](#independent-issues-run-in-parallel).
-4. Link a sub-Issue `<C>` to its parent `<P>`:
+   `Closes #<C>` and names the parent. A sub-Issue says who it belongs to
+   (sub-issue); blocked-by says what comes first.
+3. Before splitting, decide for every two sub-Issues which relation holds, and
+   record and dispatch it as the table says:
+
+   | Relation | Record | Dispatch |
+   | --- | --- | --- |
+   | Parallel: the two are unrelated. | Only the parent link. | Start together. |
+   | Serial: B needs the merged code of A. | `gh issue edit <B> --add-blocked-by <A>` | Start B from the new `<BASE>` after A is merged and closed out. |
+   | Synchronous: both must land together, because `<BASE>` breaks if either merges alone (an interface changed with all its callers). | Do not split: one sub-Issue, one PR, one worktree. | Start the one Issue. |
+   | Asynchronous: B needs only A's interface (a parameter, a file format, a command's output), not its implementation. | Fix the interface first, in the parent Issue or as a small interface sub-Issue. A and B are both blocked-by that interface sub-Issue; an interface written in the parent needs no blocked-by. | Start A and B together once the interface is fixed. |
+
+4. The coordinator that claimed the parent claims every sub-Issue and dispatches
+   its worktree. A sub-Issue starts when it has no open blocker
+   ([Start](#start) step 1); it does not wait in arrival order
+   ([Independent Issues run in parallel](#independent-issues-run-in-parallel)).
+   Every sub-Issue starts from the latest `<BASE>`, never from the branch of one
+   that has not merged: stacked branches save time only until the earlier PR
+   changes, and then cost repeated rebases and conflicts.
+5. Link and relate Issues with `gh` (`gh issue create --help`,
+   `gh issue edit --help`); the Issue number is the argument, a URL also works:
 
    ```bash
-   parent=$(gh issue view <P> --repo <REPO> --json id --jq .id)
-   child=$(gh issue view <C> --repo <REPO> --json id --jq .id)
-   gh api graphql -H 'GraphQL-Features: sub_issues' \
-     -f query='mutation($parent: ID!, $child: ID!) { addSubIssue(input: {issueId: $parent, subIssueId: $child}) { issue { number } subIssue { number } } }' \
-     -f parent="$parent" -f child="$child"
+   # a sub-Issue of <P>, at creation or afterwards
+   gh issue create --repo <REPO> --parent <P> --title ... --body-file ...
+   gh issue edit <C> --repo <REPO> --parent <P>          # or: gh issue edit <P> --add-sub-issue <C>
+   # <B> waits for <A>, at creation or afterwards
+   gh issue create --repo <REPO> --blocked-by <A> --title ... --body-file ...
+   gh issue edit <B> --repo <REPO> --add-blocked-by <A>  # or: gh issue edit <A> --add-blocking <B>
+   # read them
+   gh issue view <N> --repo <REPO> --json parent,subIssues,blockedBy,blocking
+   # count of blockers that are still open (0: ready to start)
+   gh issue view <N> --repo <REPO> --json blockedBy --jq '[.blockedBy.nodes[] | select(.state=="OPEN")] | length'
    ```
 
-   `removeSubIssue` with the same input removes the link, and
-   `gh issue view <P>` lists the sub-issues. Recent `gh` releases also offer
-   `gh issue create --parent <P>` and `gh issue edit <P> --add-sub-issue <C>`
-   (see `gh issue edit --help`).
+   `--remove-parent`, `--remove-sub-issue`, `--remove-blocked-by` and
+   `--remove-blocking` undo a link. Closing a blocker does not remove the link;
+   the reader counts only blockers whose `state` is `OPEN`. GraphQL's
+   `issueDependenciesSummary { blockedBy }` also gives that count.
 
 ## Shared boundaries
 
@@ -250,7 +276,15 @@ Input: Issue number `<N>` and a branch `<branch>` named per `DEV.md`
 (`<type>/issue-<N>-<slug>`, with `<type>` one of `fix`, `feat`, `docs`, `chore`).
 
 1. Claim the Issue ([Claim](#claim)) and confirm it has settled scope and
-   acceptance: `gh issue view <N>`. Locate the dev checkout `<dev>`
+   acceptance: `gh issue view <N>`. Confirm it has no open blocker; if it has,
+   do not start it, and report which Issue it waits for:
+
+   ```bash
+   gh issue view <N> --repo <REPO> --json blockedBy \
+     --jq '.blockedBy.nodes[] | select(.state=="OPEN") | "#\(.number) \(.title)"'
+   ```
+
+   It prints nothing when it may start. Locate the dev checkout `<dev>`
    (`.result.source.source_checkout_path`) with
    `herdr worktree list --workspace "$HERDR_WORKSPACE_ID"`, confirm
    `git branch --list <branch>` is empty, then bring `<BASE>` up to date:
@@ -336,10 +370,11 @@ Input: Issue number `<N>` and a branch `<branch>` named per `DEV.md`
 
 ### Independent Issues run in parallel
 
-Issues that do not depend on each other are started together, each through Start
-in its own worktree and session, whether by their own coordinators or, for the
-sub-Issues of one Issue, by its coordinator; do not queue them by arrival order. Only a real
-dependency waits, for example an Issue that needs another's merged result. This
+An Issue with no open blocker is started now, whether or not other Issues are
+running: each goes through Start in its own worktree and session, by its own
+coordinator or, for the sub-Issues of one Issue, by its coordinator. Do not queue
+Issues by arrival order. What waits is an Issue that has an open blocker (see
+[Phased work](#phased-work) for the relations and how they are recorded). This
 changes when sessions start, never the checks each one runs
 (`speed-and-parallelism-by-measurement`).
 
@@ -414,9 +449,11 @@ line that keeps the history:
 together.
 
 - **Verify to completion.** The session runs every check the Issue's acceptance
-  and the project's CI call for, including real runs and, after a push,
-  `gh pr checks`, and reports one definite result with the commands and their
-  output. The acceptance bounds the checks: none is skipped, and none is added
+  and `<LOCAL_CHECK>` call for, including real runs, and reports one definite
+  result with the commands and their output. After a push it may read
+  `gh pr checks` and report the CI state (passed, failed or not run), but it
+  does not wait for it and does not stop because CI did not run (for example
+  for billing); the local result is the evidence. The acceptance bounds the checks: none is skipped, and none is added
   for its own sake. Only a step the maintainer alone can perform (an
   interactive login, a decision) is named, as a blocker that says what the
   maintainer must do. There is no routine "not verified" section, and a check
@@ -442,6 +479,11 @@ together.
   [Close-out](#close-out): right after the verified merge, the coordinator
   migrates `.project/` and removes the worktree without asking again. Results
   that cannot be rebuilt are archived before the merge.
+- **Keep its own files in `.project/state/`.** The session's working files
+  (plans, PR body drafts, messages to the coordinator) go under
+  `.project/state/`, which Close-out always copies, not in the root of
+  `.project/`, where a file without a `migrate-project.rules` rule stops the
+  migration.
 - **Write in the declared language.** When the registry declares
   [writing conventions](#writing-conventions), the session writes Issues, PRs,
   comments and human documents in that language and starts Issue bodies with
@@ -512,9 +554,28 @@ moved, go back to step 2.
    ```
 
    `state` must be `OPEN` and the base `<BASE>`. Maintainer approval must be
-   visible on the PR or the Issue; without it, do not merge and report. When `<CI>`
-   is `yes`, `gh pr checks <PR> --repo <REPO>` must be green. `mergeable`
-   `UNKNOWN` means GitHub is still computing it; query again.
+   visible on the PR or the Issue; without it, do not merge and report.
+   `mergeable` `UNKNOWN` means GitHub is still computing it; query again.
+
+   The gate is `<LOCAL_CHECK>`, not CI. Locate `<worktree>` as in Close-out
+   step 1, confirm it is at the PR's latest commit
+   (`git -C <worktree> fetch origin` and compare `git -C <worktree> rev-parse HEAD`
+   with `gh pr view <PR> --repo <REPO> --json headRefOid --jq .headRefOid`;
+   if they differ, `git -C <worktree> merge --ff-only origin/<branch>`), run
+   `<LOCAL_CHECK>` there, and leave one comment on the PR with:
+
+   - the commit SHA the checks ran on;
+   - each command and its result (pass, or fail with the failing output);
+   - the CI state read once with `gh pr checks <PR> --repo <REPO>`: passed,
+     failed or not run (for example because Actions could not start). Do not
+     wait for it to finish.
+
+   `<LOCAL_CHECK>` all passing and the maintainer's approval are enough to
+   merge; if it fails, do not merge, and the Issue session fixes it. A CI
+   failure with a passing `<LOCAL_CHECK>` does not block: say so in the PR
+   comment and in the report to the maintainer, who decides whether to open an
+   Issue to look into the difference. A new head after a push needs this step
+   again.
 3. Run the pre-merge gate when `<PRE_MERGE_GATE>` is defined. Locate `<worktree>`
    as in Close-out step 1, then `(cd <worktree> && <PRE_MERGE_GATE>)`.
    - Passing: continue.
@@ -549,23 +610,21 @@ moved, go back to step 2.
    `git commit`; `git -C <worktree> merge --abort` backs out. Keep both sides of
    a mechanical conflict (both appended index lines). For a semantic conflict,
    where the two sides decided the same thing differently, do not choose: list
-   both sides for the maintainer and resolve as they decide. When `<CI>` is
-   `no`, run `<POST_MERGE_CHECK>` in `<worktree>`. Commit the merge and
+   both sides for the maintainer and resolve as they decide. Run
+   `<LOCAL_CHECK>` in `<worktree>`. Commit the merge and
    `git -C <worktree> push origin <branch>` only after the maintainer confirms,
-   then re-check from step 2: the new head needs its checks again before
-   `gh pr merge`.
-5. Verify the merged `<BASE>`. When `<CI>` is `yes`, confirm the run for this
-   PR's merge commit succeeded, not merely the latest run, which may be another
-   coordinator's:
+   then re-check from step 2: the new head needs `<LOCAL_CHECK>` and its PR
+   comment again before `gh pr merge`.
+5. Verify the merged `<BASE>`: run the dev live-run check, `git -C <dev> pull --ff-only`,
+   then `<LOCAL_CHECK>` in `<dev>`. On failure, report the output; do not patch
+   around it in the dev checkout. The CI run on this PR's merge commit is only
+   noted in the report, not waited for:
 
    ```bash
    sha=$(gh pr view <PR> --repo <REPO> --json mergeCommit --jq .mergeCommit.oid)
    gh run list --repo <REPO> --branch <BASE> --commit "$sha"
    ```
 
-   When `no`, run the dev live-run check, `git -C <dev> pull --ff-only`, then
-   `<POST_MERGE_CHECK>` in `<dev>`. On failure, report the output; do not patch
-   around it in the dev checkout.
 6. Close out the PR's worktree (below) right away.
 
 ## Close-out
@@ -654,7 +713,8 @@ workspace, normally the dev checkout's.
    The script prints `inspect-state.sh` output (and exits 3 without migrating
    when step 5's container check fails), then `migrate-assets.sh` copies
    `.project/state`, `runs`, `artifacts`, `manifest` and the entries
-   `.agents/scripts/migrate-project.rules` marks `copy` into
+   `.agents/scripts/migrate-project.rules` marks `copy` (by name or by a
+   wildcard such as `plan-*.md`) into
    `<dev>/.project/migrations/<worktree-dir>-<UTC-timestamp>/`, and copies
    untracked `assets/` entries (asset links) into `<dev>/assets/`. Tracked files
    arrive through Git, and it refuses to overwrite a different existing destination
@@ -702,6 +762,28 @@ workspace, normally the dev checkout's.
    - `<dev>/.project/migrations/` holds this run's directory, and no unique copy of
      a result remains only in the retired worktree;
    - non-rebuildable results are archived and registered, or the gap is reported.
+10. List what this Issue was blocking and start what is now free:
+
+    ```bash
+    gh issue view <N> --repo <REPO> --json blocking \
+      --jq '.blocking.nodes[] | select(.state=="OPEN") | .number'
+    ```
+
+    For each `<M>` it prints, read its open blockers and claimant:
+
+    ```bash
+    gh issue view <M> --repo <REPO> --json number,blockedBy,parent,body \
+      --jq '"#\(.number) open-blockers=\([.blockedBy.nodes[] | select(.state=="OPEN")] | length) parent=\(.parent.number // "none") claimant=\(.body | capture("(?m)^- coordinator: `?(?<c>[^`\n]*)").c // "none")"'
+    ```
+
+    - Claimed by you (or a sub-Issue of an Issue you claimed) and
+      `open-blockers=0`: start it ([Start](#start)), from the `<BASE>` just
+      pulled.
+    - Still has open blockers: leave it; report which Issues it still waits for.
+    - Claimed by another coordinator: do not touch it; its coordinator starts it
+      ([Several coordinators](#several-coordinators)). Report it to the maintainer
+      only when that coordinator is gone.
+    - Unclaimed and not a sub-Issue of yours: report it to the maintainer.
 
 This skill provides process, not permission: it cannot override the project's
 permission configuration or `AGENTS.md`.

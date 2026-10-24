@@ -44,7 +44,10 @@ Downstream adopters each reached the same practice independently and kept it:
   other's output, and they do not write the same state, file or external
   resource. Independent units start together, each in its own worktree and
   session or its own worker. A unit that needs another's delivery starts when
-  that delivery lands, not before and not later.
+  that delivery lands, not before and not later. For Issues the dependency is
+  recorded on GitHub as blocked-by, not in prose or in a coordinator's memory,
+  so that every coordinator can read what is free to start
+  (`issue-workflow`, Phased work).
 - **Trigger downstream on delivery.** Start the dependent step (review, merge
   check, the next stage) from the upstream unit's receipt, not on a timer and not
   when the whole batch ends. Keep a rolling queue: when a slot frees, the next

@@ -69,7 +69,10 @@ bash .agents/scripts/teardown-worktree.sh --migrate-to /path/to/canonical-projec
 记录；它不会自动删除 worktree。`setup-project.sh` 在 `.project/` 下创建的条目，
 在 `.agents/scripts/migrate-project.rules` 里逐行写明迁移方式
 （`NAME|ACTION|WHY`，ACTION 为 `copy`、`drop` 或 `login`），否则 teardown 会
-停下来要求决定。确认资产已迁移、相关进程已停止、没有唯一副本
+停下来要求决定。`NAME` 可以是 shell 通配符，一行管一类文件，例如
+`plan-*.md|copy|`；通配符不能含 `/`、不能是 `login`、不能匹配模板自己处理的
+条目，同名的精确规则优先于通配符。Issue session 自己的工作文件放在
+`.project/state/`，teardown 总会复制它，不需要规则。确认资产已迁移、相关进程已停止、没有唯一副本
 留在旧目录后，再用 worktree 管理工具销毁 worktree 和 branch。
 
 ## 环境变量与资产
@@ -125,9 +128,20 @@ bash .agents/scripts/inspect-state.sh
 python3 -m unittest discover -s .agents/tests -p 'test_template_*.py'
 ```
 
+合并和发布只看本地检查：上面这些命令就是本仓库的 `issue-workflow`
+`<LOCAL_CHECK>`（槽位默认值就是本节的验证策略），也是
+`.github/workflows/template-check.yml` 的步骤：`bash -n .agents/scripts/*.sh`、
+`setup-worktree.sh`、`diagnose-environment.sh`，以及（只在模板里）
+`test_template_*.py`。协调者在 PR 的 worktree 里、PR 最新的提交上跑它，把提交
+SHA、每条命令的结果和 CI 状态（通过、失败、没运行）写成 PR 评论；发布 PR（`dev`
+→ `main`）也一样。本地检查全部通过并经维护者批准即可合并，CI 只在 PR 上标记，
+不等它，也不因它没运行（例如 Actions 因计费不能启动）而停下；CI 失败而本地通过
+时写进评论和报告，由维护者决定要不要查。
+
 `.github/workflows/template-check.yml` 只在指向 `dev`、`main` 的 PR 和推送到
 `dev`、`main` 时运行，同一 ref 的新运行取消旧运行，并有超时。它是可选内容：
-`issue-workflow` 的 `<CI>` 为 `no` 的项目不采用它，模板升级也不会把它加回来。
+`issue-workflow` 的 `<CI>` 为 `no` 的项目不采用它，模板升级也不会把它加回来；
+`<LOCAL_CHECK>` 不论 `<CI>` 是什么都要填。
 
 ## 产品构建与安装骨架
 

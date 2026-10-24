@@ -1,7 +1,7 @@
 ---
 name: issue-in-herdr-worktree
 date: 2026-10-13
-source: Issue #18, harvested from downstream adopters of this template; Issue #34; Issue #87 (steps left to issue-workflow); Issue #89 (several coordinators)
+source: Issue #18, harvested from downstream adopters of this template; Issue #34; Issue #87 (steps left to issue-workflow); Issue #89 (several coordinators); Issue #93 (dependencies)
 scope: shared
 applies_to: repositories that manage Issue worktrees with Herdr and develop from a dev integration branch
 status: active
@@ -20,7 +20,10 @@ Several coordinator sessions may share the dev checkout, each claiming one Issue
 with its sub-Issues in the Issue's Dispatch section and dispatching its
 worktrees; an Issue another coordinator claimed is left alone. A coordinator
 never implements an Issue by switching branches in its own window, and when
-Herdr is unavailable it reports the blocker instead of falling back.
+Herdr is unavailable it reports the blocker instead of falling back. An Issue
+starts only when it has no open blocker; what it waits for is recorded as
+GitHub's blocked-by, also across coordinators, and every Issue starts from the
+latest `dev`, never from another Issue's unmerged branch.
 
 The handoff gives the Issue session working rules that do not narrow: it
 verifies to completion, fixes the defects it meets that block or relate to the
