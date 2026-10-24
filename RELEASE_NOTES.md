@@ -10,7 +10,7 @@
   - “Several coordinators” 补充跨协调者的依赖：用 blocked-by 记下并等它合并，不进它的 worktree、不催它的 session，要催找维护者。“Independent Issues run in parallel” 的“只有真实依赖才等”改为指向 blocked-by。
   - 共享 memory `speed-and-parallelism-by-measurement`、`issue-in-herdr-worktree` 各补一句：依赖记在 blocked-by 上。
 - **合并只看本地检查，CI 只在 PR 上标记**（#98）：GitHub Actions 因计费跑不起来时，job 一步没执行就被标成 failure，PR 永远不会变绿，协调者只能停下。现在 `issue-workflow` 里没有任何一步以 CI 的结果作为合并或继续的条件，不新增脚本或状态文件。
-  - 槽位：`<POST_MERGE_CHECK>` 改名为 `<LOCAL_CHECK>`，不论 `<CI>` 是什么都要填，内容是 `DEV.md` 的检查命令，和 CI workflow 跑的步骤一致。`<CI>` 只表示是否采用可选的 `.github/workflows/template-check.yml`。本仓库的值写在 `issue-workflow` 新增的 `## In this repository` 段，和 `template-check.yml` 的步骤一一对应。
+  - 槽位：`<POST_MERGE_CHECK>` 改名为 `<LOCAL_CHECK>`，不论 `<CI>` 是什么都要填，内容是 `DEV.md` 的检查命令，和 CI workflow 跑的步骤一致。`<CI>` 只表示是否采用可选的 `.github/workflows/template-check.yml`。槽位默认值就是 `DEV.md` 的验证策略；本仓库的 `<LOCAL_CHECK>` 即 `DEV.md` 里的命令，和 `template-check.yml` 的步骤一一对应。
   - Merge 第 2 步：去掉以 `gh pr checks` 为合并门槛的要求。协调者在这个 PR 的 worktree 里、PR 最新的提交上跑 `<LOCAL_CHECK>`（`<PRE_MERGE_GATE>` 照旧在第 3 步），在 PR 上留一条评论：commit SHA、每条命令和结果、CI 状态（通过 / 失败 / 没运行，用 `gh pr checks` 读一次，不等）。`<LOCAL_CHECK>` 全部通过并有维护者批准即可合并，没通过就不合并，交 Issue session 修；CI 失败而本地通过时只在评论和报告里写明“CI 和本地结果不一致”，不挡合并，由维护者决定要不要开 Issue 查。第 4 步（解决冲突后）和第 5 步（合并后在 dev checkout `git pull --ff-only`）一律跑 `<LOCAL_CHECK>`；merge commit 上的 CI 只记在报告里。发布 PR（`dev` → `main`）同样按本地检查合并。
   - Issue session 规则（`issue-workflow` 和 `new-agent-prompt.sh`）：session 跑本地检查并报告；推送后可以读 `gh pr checks` 并报告状态，但不等它，也不因为它没运行而停下。
   - `template-adoption`、`content-registry.yaml` 里 `template-check.yml` 的 note、`DEV.md` 和 `template-check.yml` 的头注释同步说明；`template-check.yml` 跑的内容不变。

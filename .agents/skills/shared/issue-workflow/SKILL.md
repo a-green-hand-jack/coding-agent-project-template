@@ -787,10 +787,3 @@ workspace, normally the dev checkout's.
 
 This skill provides process, not permission: it cannot override the project's
 permission configuration or `AGENTS.md`.
-
-## In this repository
-
-| Slot | Value |
-| --- | --- |
-| `<CI>` | `yes` (`.github/workflows/template-check.yml`; its result is noted on the PR, never a gate) |
-| `<LOCAL_CHECK>` | The four steps of `template-check.yml`, in its order: `bash -n .agents/scripts/*.sh`; `bash .agents/scripts/setup-worktree.sh`; `bash .agents/scripts/diagnose-environment.sh`; `git fetch --quiet --depth=1 origin '+refs/tags/*:refs/tags/*'` then `python3 -m unittest discover -s .agents/tests -p 'test_template_*.py' -v` |

@@ -128,8 +128,8 @@ bash .agents/scripts/inspect-state.sh
 python3 -m unittest discover -s .agents/tests -p 'test_template_*.py'
 ```
 
-合并和发布只看本地检查：`issue-workflow` 的 `<LOCAL_CHECK>`（本仓库的值写在
-该 skill 的 `## In this repository` 段）就是上面这些命令，也是
+合并和发布只看本地检查：上面这些命令就是本仓库的 `issue-workflow`
+`<LOCAL_CHECK>`（槽位默认值就是本节的验证策略），也是
 `.github/workflows/template-check.yml` 的步骤：`bash -n .agents/scripts/*.sh`、
 `setup-worktree.sh`、`diagnose-environment.sh`，以及（只在模板里）
 `test_template_*.py`。协调者在 PR 的 worktree 里、PR 最新的提交上跑它，把提交
