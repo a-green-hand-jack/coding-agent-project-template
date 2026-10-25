@@ -44,6 +44,32 @@ agent, or preparing a merged branch for removal.
    resolve there, and that no unique asset or result remains only in the retiring
    worktree. Only then remove the worktree and branch with the worktree manager.
 
+## Recovery when the workspace is already closed
+
+The Git worktree record is authoritative for whether a worktree still exists;
+an absent Herdr workspace is not evidence that the worktree was removed. When
+`herdr worktree list --workspace "$HERDR_WORKSPACE_ID"` shows the Issue branch
+with an empty `open_workspace_id`, capture its path and branch, confirm the
+path's `git rev-parse --git-common-dir` belongs to this repository, then reopen
+that exact path without focusing it:
+
+```bash
+herdr worktree open --workspace "$HERDR_WORKSPACE_ID" --path <worktree> --no-focus
+herdr worktree list --workspace "$HERDR_WORKSPACE_ID"
+```
+
+Use the returned workspace id only after confirming it is for the Issue path
+and is not the canonical workspace. Then run the normal order: confirm the
+agent is idle/done, stop project runs, inspect recorded processes and mounted
+containers, migrate and verify `.project/state`, runs, artifacts, manifest and
+asset links, confirm no unique copy remains, and only then run
+`herdr worktree remove --workspace <reopened-workspace>`. Finally verify the Git
+worktree list, local branch, remote branch and canonical branch state. Never
+replace this recovery with `git worktree prune`, a raw `git worktree remove`,
+or a generic process killer. If reopening fails or the path no longer resolves,
+stop and preserve the exact Herdr/Git output for the maintainer; do not delete
+the Git record or guess that migration happened.
+
 This skill does not delete worktrees and does not grant permission to destroy
 data. It provides the procedure; the repository's lifecycle policy decides who
 may execute it.
