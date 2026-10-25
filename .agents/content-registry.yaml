@@ -4,7 +4,7 @@ purpose: >-
   which content belongs to one concrete project.
 template:
   repository: https://github.com/a-green-hand-jack/coding-agent-project-template
-  version: v0.1.18
+  version: v0.1.19
   # A derived template (a template built from another template) records itself
   # above and the template it follows here; nobody else writes this block, and a
   # project made from a derived template removes it (DEV.md, template relationship):
@@ -54,10 +54,13 @@ entries:
     note: Recreate as a relative symlink to AGENTS.md; never duplicate its content.
   - path: .agents/skills/shared/worktree-lifecycle/
     scope: shared_with_adaptation
-    note: Adapt Herdr workspace names, setup commands and repository state paths.
+    note: Adapt Herdr workspace names, setup commands, stop and monitor commands and repository state paths; retirement stops the worktree's own processes, migrates state and assets, verifies them, and only then removes the worktree.
   - path: .agents/skills/shared/issue-workflow/
     scope: shared_with_adaptation
-    note: Fill the adaptation slots for base branch, repository, agent kind and prefix, workspace label prefix, dispatch tier models, effort arguments and fallback agent, CI, and product gate, archive and run commands.
+    note: Fill the adaptation slots for base branch, repository, agent kinds and their model families, agent kind and prefix, provider and model arguments, model selection and fallback order, dispatch tier models, effort arguments, excluded models, fallback agent, workspace label prefix, CI, product gate, archive and run commands, and the monitor and stop commands close-out uses.
+  - path: .agents/skills/shared/agent-communication/
+    scope: shared
+    note: Route confirmed handoffs and follow-up messages through each agent's native transport; adapt only the destination's target resolution and state receipt paths.
   - path: .agents/skills/shared/project-memory-governance/
     scope: shared
     note: Generic classification, registration and cleanup procedure.
@@ -107,7 +110,7 @@ entries:
     note: Close out the worktree after the PR merges; keep the project's own archive and stop commands in the issue-workflow slots.
   - path: .agents/memory/shared/issue-dispatch-by-difficulty.md
     scope: shared
-    note: Dispatch each Issue agent with an explicit model and effort per difficulty tier and record it in the Issue; fill the tier models in the issue-workflow slots.
+    note: Dispatch each Issue agent with an explicit agent kind, provider, model and effort per difficulty tier and record it in the Issue; the cheapest source and model is the default, and every fallback or re-dispatch keeps its reason.
   - path: .agents/memory/shared/llm-credentials.md
     scope: shared_with_adaptation
     optional: true
@@ -118,6 +121,9 @@ entries:
   - path: .agents/memory/shared/product-state-root.md
     scope: shared_with_adaptation
     note: Fill STATE_MARKER, STATE_ENV and DEFAULT_ROOT; product commands resolve a worktree's state root from the setup marker, and the lookup stops at the repository boundary.
+  - path: .agents/memory/shared/provider-cost-routing.md
+    scope: shared
+    note: Ordinary tests and mechanical work use the cheapest token source and model that can judge them; a cheap run is still a real provider-backed run and never replaces a capability check; agent, provider, model and effort are explicit and recorded with what the run proves.
   - path: .agents/memory/shared/resolve-real-paths-before-moving.md
     scope: shared
     note: Before moving, replacing or symlinking a directory, prove source and destination are two different places and data sets, and let a person choose what to delete; the checks are in asset-lifecycle.

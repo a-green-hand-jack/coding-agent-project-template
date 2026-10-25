@@ -34,6 +34,15 @@ PR 描述应说明改了什么、为什么改、验收和 CI 要求的每项检�
 顺带修复的相关缺陷；只有维护者本人才能完成的步骤写成具体阻塞，说明维护者要做
 什么。真实运行、构建和发布证据放在 Issue 或 PR 中，不靠 agent 的自述代替。
 
+Issue 的 Dispatch 段记录派出这个 session 的 agent、provider、model 和 effort。
+普通测试、回归检查、文档和机械改动默认用最便宜的 token 来源和模型；只有改动
+直接涉及昂贵 provider 的请求格式、权限、模型能力或真实行为时才使用它。廉价
+运行仍然必须是真实 provider-backed 运行，不能替代验收需要的能力验证；计划
+和 PR 说明每次运行的 agent、provider、model 和 effort、证明了什么、为什么必须
+跑，换掉其中任何一项都按 re-dispatch 记录。规则见
+`.agents/memory/shared/provider-cost-routing.md`，派出步骤见
+`.agents/skills/shared/issue-workflow/` 的 “Dispatch by difficulty”。
+
 开始实现需要 Issue 的工作单元时，使用 Herdr 的原生 worktree 命令从 `dev` 创建
 Issue branch，并在新 pane 启动独立的 coding-agent session。不要在当前 agent 窗口
 直接 `git switch -c`。新 session 的第一步是运行 setup；父 session 可用下面的命令
@@ -59,21 +68,35 @@ setup 会写入 `.project/home` 和 `.project/worktree.env`，创建本地状态
 worktree 的 `.project/`。具体项目可以提供可执行的
 `.agents/scripts/setup-project.sh` hook；setup 会在基础初始化后调用它。
 
-合并 PR 后不要直接删除目录。先运行：
+合并 PR 后不要直接删除目录。回收顺序固定为“停进程 → 迁移状态和资产 → 确认
+没有唯一副本 → 移除 worktree 和 branch”：
 
-```bash
-bash .agents/scripts/teardown-worktree.sh --migrate-to /path/to/canonical-project
-```
+1. 确认该 worktree 的 agent session 已 `idle` 或 `done`。用项目自己的 monitor
+   命令列出这个 worktree 启动的运行，逐个通过项目自己的 stop 命令停止，直到
+   monitor 不再列出任何运行。不要用通用的 `pkill`、`killall` 或按名字匹配的
+   进程清理：只有项目自己的 stop 命令可以停止进程。本模板没有产品运行，所以
+   仓库里没有 stop 命令；有产品的项目在 `issue-workflow` 的 `<MONITOR_CMD>` /
+   `<STOP_CMD>` 槽位登记自己的命令。
+2. 再查 monitor 看不到的部分：`.project/runs/` 记录的进程身份是否都已消失，
+   以及 `.agents/scripts/inspect-state.sh` 列出的挂载这个 worktree 的容器（运行中
+   或已停止）。仍有运行、无法停止或无法确认时停下来报告，不继续回收。
+3. 确认没有运行后迁移。先运行：
 
-该命令会检查 ignored state、复制可保留的本地状态、保留资产软链接并写入迁移
-记录；它不会自动删除 worktree。`setup-project.sh` 在 `.project/` 下创建的条目，
-在 `.agents/scripts/migrate-project.rules` 里逐行写明迁移方式
-（`NAME|ACTION|WHY`，ACTION 为 `copy`、`drop` 或 `login`），否则 teardown 会
-停下来要求决定。`NAME` 可以是 shell 通配符，一行管一类文件，例如
-`plan-*.md|copy|`；通配符不能含 `/`、不能是 `login`、不能匹配模板自己处理的
-条目，同名的精确规则优先于通配符。Issue session 自己的工作文件放在
-`.project/state/`，teardown 总会复制它，不需要规则。确认资产已迁移、相关进程已停止、没有唯一副本
-留在旧目录后，再用 worktree 管理工具销毁 worktree 和 branch。
+   ```bash
+   bash .agents/scripts/teardown-worktree.sh --migrate-to /path/to/canonical-project
+   ```
+
+   该命令会检查 ignored state、复制 `.project/state`、`runs`、`artifacts`、
+   `manifest`、`migrate-project.rules` 标记 `copy` 的条目和资产软链接，逐项校验
+   并写入迁移记录；它不会自动删除 worktree。`setup-project.sh` 在 `.project/`
+   下创建的条目，在 `.agents/scripts/migrate-project.rules` 里逐行写明迁移方式
+   （`NAME|ACTION|WHY`，ACTION 为 `copy`、`drop` 或 `login`），否则 teardown 会
+   停下来要求决定。`NAME` 可以是 shell 通配符，一行管一类文件，例如
+   `plan-*.md|copy|`；通配符不能含 `/`、不能是 `login`、不能匹配模板自己处理的
+   条目，同名的精确规则优先于通配符。Issue session 自己的工作文件放在
+   `.project/state/`，teardown 总会复制它，不需要规则。确认迁移输出里的
+   `verified:` 覆盖上述条目和每个资产链接、资产软链接在 dev checkout 可解析、
+   没有唯一副本留在旧目录后，再用 worktree 管理工具销毁 worktree 和 branch。
 
 ## 环境变量与资产
 

@@ -18,7 +18,9 @@ the formats of `inventory.yaml` and `credentials.yaml` and what
 [`../../knowledge/shared/credential-inventory.md`](../../knowledge/shared/credential-inventory.md).
 
 Related: [`third-party-llm-compat-patches.md`](third-party-llm-compat-patches.md)
-(compatibility changes to third-party LLM tools) and
+(compatibility changes to third-party LLM tools),
+[`provider-cost-routing.md`](provider-cost-routing.md) (which source, provider
+and model a check uses) and
 [`../../knowledge/shared/gpt5-strict-backend-requests.md`](../../knowledge/shared/gpt5-strict-backend-requests.md)
 (request shapes strict backends reject). Read them together when a project
 calls an LLM provider or relay.

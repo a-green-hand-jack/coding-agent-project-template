@@ -11,6 +11,7 @@ or superseded status.
   downstream harvests: the candidates declined and why; a run's own details stay
   in its report, the release notes and `adopters.yaml`.
 - [`template-work-runs-on-pi-deepseek.md`](template-work-runs-on-pi-deepseek.md)
-  — template maintenance is dispatched with Pi and DeepSeek; the Dispatch
-  section still records agent, model and effort, and a hard Issue is
-  re-dispatched with the reason.
+  — template maintenance is dispatched with Pi on the newest usable
+  `deepseek-v4.1-flash` model; the Dispatch section records agent, provider,
+  model and effort, and a hard Issue or an unusable model is re-dispatched with
+  the reason.
