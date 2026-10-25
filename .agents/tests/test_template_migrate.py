@@ -4,7 +4,9 @@ and the handoff prompt's rule about where a session keeps its own files. They
 write only to temporary directories."""
 from __future__ import annotations
 
+import json
 import os
+import shlex
 import shutil
 import stat
 import subprocess
@@ -44,6 +46,45 @@ class MigrateRules(unittest.TestCase):
     def copied(self) -> Path:
         (migration,) = (self.destination / ".project/migrations").iterdir()
         return migration
+
+    def test_template_rules_migrate_state_assets_and_leave_no_unique_copy(self) -> None:
+        state = self.worktree / ".project/state/initial-prompt.md"
+        runs = self.worktree / ".project/runs/run-1"
+        artifacts = self.worktree / ".project/artifacts"
+        manifest = self.worktree / ".project/manifest"
+        for directory in (runs, artifacts, manifest):
+            directory.mkdir(parents=True)
+        (runs / "receipt.json").write_text('{"status":"done"}\n')
+        (artifacts / "report.md").write_text("result\n")
+        (manifest / "inputs.yaml").write_text("inputs: []\n")
+        self.project_file("assets.links", "data=/srv/data\n")
+        self.project_file("home", "marker\n")
+        self.project_file("worktree.env", "branch=test\n")
+        (self.worktree / "assets").mkdir()
+        (self.worktree / "assets/data").symlink_to("/srv/data")
+
+        result = self.migrate()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("verified: 6 item(s) identical", result.stdout)
+        self.assertIn("source was not deleted", result.stdout)
+        migration = self.copied()
+        # Every kept .project/ entry reached the migration copy byte for byte.
+        for source, copy in (
+            (state, migration / "state/initial-prompt.md"),
+            (runs / "receipt.json", migration / "runs/run-1/receipt.json"),
+            (artifacts / "report.md", migration / "artifacts/report.md"),
+            (manifest / "inputs.yaml", migration / "manifest/inputs.yaml"),
+        ):
+            self.assertEqual(copy.read_bytes(), source.read_bytes(), copy)
+        # The link mapping is merged, and the link itself lands in the destination.
+        self.assertEqual((self.destination / ".project/assets.links").read_text(),
+                         "data=/srv/data\n")
+        destination_link = self.destination / "assets/data"
+        self.assertTrue(destination_link.is_symlink())
+        self.assertEqual(os.readlink(destination_link), "/srv/data")
+        # Setup-owned entries are not carried as unique copies.
+        self.assertFalse((migration / "home").exists())
+        self.assertFalse((migration / "worktree.env").exists())
 
     def test_wildcard_copies_matching_files(self) -> None:
         self.project_file("plan-12.md", "plan\n")
@@ -148,23 +189,50 @@ class MigrateRules(unittest.TestCase):
 
 
 class HandoffPrompt(unittest.TestCase):
-    def test_prompt_tells_the_session_where_its_files_go(self) -> None:
+    def prompt(self, body: str) -> str:
         with tempfile.TemporaryDirectory(prefix="prompt-test-") as temp:
+            payload = Path(temp) / "issue.json"
+            payload.write_text(json.dumps({
+                "number": 7, "title": "A title", "body": body,
+                "url": "https://example.test/7",
+            }), encoding="utf-8")
             gh = Path(temp) / "gh"
-            gh.write_text(
-                "#!/usr/bin/env bash\n"
-                "echo '{\"number\":7,\"title\":\"A title\",\"body\":\"\",\"url\":\"https://example.test/7\"}'\n"
-            )
+            gh.write_text(f"#!/usr/bin/env bash\ncat {shlex.quote(str(payload))}\n")
             gh.chmod(gh.stat().st_mode | stat.S_IXUSR)
             env = {**os.environ, "PATH": f"{temp}:{os.environ['PATH']}"}
             result = subprocess.run(
                 ["bash", str(PROMPT), "7"], cwd=REPOSITORY, env=env, text=True, capture_output=True,
             )
         self.assertEqual(result.returncode, 0, result.stderr)
-        flat = " ".join(result.stdout.split())
+        return result.stdout
+
+    def test_prompt_tells_the_session_where_its_files_go(self) -> None:
+        flat = " ".join(self.prompt("").split())
         self.assertIn("plans, PR body drafts and messages to the coordinator", flat)
         self.assertIn(".project/state/", flat)
         self.assertIn("not in the root of .project/", flat)
+
+    def test_prompt_carries_the_cost_and_dispatch_rules(self) -> None:
+        flat = " ".join(self.prompt("").split())
+        self.assertIn("cheapest token source", flat)
+        self.assertIn("agent, provider, model and effort", flat)
+        self.assertIn("re-dispatched", flat)
+        self.assertIn("no Dispatch section yet", flat)
+
+    def test_prompt_carries_the_issues_dispatch_record(self) -> None:
+        body = (
+            "## 最终目标\n\n做点事。\n\n## Dispatch\n\n"
+            "- coordinator: `tpl-coord-1`\n"
+            "- agent: Pi coding agent\n"
+            "- provider: `cheap-relay`; model: `deepseek-v4.1-flash-1017`; effort: `high`\n"
+            "- reason: hard: several planes\n"
+            "- session: `tpl-issue-7`, branch `feat/issue-7-x`\n\n## 验收\n\n通过。\n"
+        )
+        flat = " ".join(self.prompt(body).split())
+        self.assertIn(
+            "- provider: `cheap-relay`; model: `deepseek-v4.1-flash-1017`; effort: `high`", flat)
+        self.assertNotIn("no Dispatch section yet", flat)
+        self.assertNotIn("## 验收", flat)
 
 
 if __name__ == "__main__":

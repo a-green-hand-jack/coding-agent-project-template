@@ -120,12 +120,15 @@ project-neutral.
 | --- | --- | --- |
 | `<BASE>` | Integration branch that worktrees start from and PRs target. | `dev` |
 | `<REPO>` | `owner/name` that owns the Issues and PRs. Pass `--repo <REPO>` to every `gh` call when the clone has no unambiguous default repository. | this repository |
-| `<AGENT_KIND>` | Herdr agent kind for the Issue session (`herdr agent start --help` lists them). | project choice |
-| `<AGENT_ARGS>` | Arguments after `--` for the agent CLI other than model and effort, such as its permission mode. Take them from that CLI's own `--help` and use only what the maintainer authorized. | none |
+| `<AGENT_KINDS>` | Herdr agent kinds this project dispatches, in preference order, and the model family each may use: Codex its OpenAI/Codex family, Claude Code its Anthropic family, Pi the family of the provider configured for it. The first usable one is `<AGENT_KIND>`. `herdr agent start --help` lists the installed kinds. | `codex`, `claude`, `pi` |
+| `<AGENT_KIND>` | Herdr agent kind for the Issue session: the first usable kind in `<AGENT_KINDS>`. | project choice |
+| `<AGENT_ARGS>` | Arguments after `--` for the agent CLI other than provider, model and effort, such as its permission mode. Take them from that CLI's own `--help` and use only what the maintainer authorized. | none |
+| `<PROVIDER_ARGS>` | The agent CLI's arguments that select the provider, written with `{provider}`; empty when the provider follows from the model. | none |
 | `<MODEL_ARGS>` | The agent CLI's arguments that set the model and reasoning effort, written with `{model}` and `{effort}`. Map the tier efforts onto the values the CLI accepts; where it has no higher level, use its highest. | project choice |
-| `<MODEL_LOW>`, `<MODEL_MID>`, `<MODEL_HIGH>` | Models for the dispatch tiers (see Dispatch by difficulty), as the agent CLI names them. | project choice |
-| `<EXCLUDED_MODELS>` | Models never dispatched unless the maintainer asks for one by name. | none |
-| `<FALLBACK_AGENT>` | Agent kind used only when the primary agent is unavailable, with its own `<AGENT_ARGS>`, `<MODEL_ARGS>` and tier models. | none |
+| `<MODEL_SELECTION>` | How a tier's model slot resolves to a concrete model for the chosen agent kind at dispatch time: the series and its version order, how the CLI lists what the account may currently use, what makes a candidate unusable, and the fallback order (see Dispatch by difficulty). | the tier slot's value as written |
+| `<MODEL_LOW>`, `<MODEL_MID>`, `<MODEL_HIGH>` | Models for the dispatch tiers (see Dispatch by difficulty), as the agent CLI names them: a model name, an alias, or a series whose newest usable member is resolved at dispatch time. | project choice |
+| `<EXCLUDED_MODELS>` | Models and providers never dispatched unless the maintainer asks for one by name. | none |
+| `<FALLBACK_AGENT>` | Agent kind used only when the primary agent or its provider is unavailable, with its own `<AGENT_ARGS>`, `<PROVIDER_ARGS>`, `<MODEL_ARGS>` and tier models. | none |
 | `<AGENT_PREFIX>` | Short project prefix. The agent name is `<AGENT_PREFIX>-issue-<N>` and must be unique across the whole Herdr server. | project choice |
 | `<WORKSPACE_PREFIX>` | Prefix of the Herdr workspace label, so that a server holding worktrees of several repositories shows which repository an Issue workspace belongs to. Herdr accepts upper-case letters in labels but not in agent names, so a project may prefer an upper-case prefix here. | `<AGENT_PREFIX>` |
 | `<MERGE_METHOD>` | `gh pr merge` method flag. Close-out's ancestry check assumes a merge commit. | `--merge` |
@@ -133,7 +136,7 @@ project-neutral.
 | `<LOCAL_CHECK>` | The verification commands from `DEV.md`, always filled whatever `<CI>` is. They are the merge gate, run locally; when `<CI>` is `yes` they are the same steps the workflow runs. | `DEV.md` verification strategy |
 | `<PRE_MERGE_GATE>` | Optional read-only product command that must pass before merging, for example `<cmd> archive --check`. | none |
 | `<ARCHIVE_CMD>` | Product command that archives and registers non-rebuildable results before a worktree is retired. | none |
-| `<MONITOR_CMD>`, `<STOP_CMD>` | Product commands that list live runs in a checkout (the dev checkout or a worktree) and stop one. | none |
+| `<MONITOR_CMD>`, `<STOP_CMD>` | Product commands that list live runs started in a checkout (the dev checkout or a worktree) and stop one. Close-out stops every run the worktree started through `<STOP_CMD>`, and never through a generic process killer. | none |
 
 ## Writing conventions
 
@@ -296,9 +299,10 @@ Input: Issue number `<N>` and a branch `<branch>` named per `DEV.md`
 
    If the count is not 0, run the dev live-run check, then
    `git -C <dev> pull --ff-only`.
-2. Choose the tier, model and effort as described in
-   [Dispatch by difficulty](#dispatch-by-difficulty) and make sure the Issue body
-   has a matching Dispatch section; write or correct it now if it does not.
+2. Choose the tier and then the agent kind, provider, model and effort in the
+   order [Dispatch by difficulty](#dispatch-by-difficulty) gives, and make sure
+   the Issue body has a matching Dispatch section; write or correct it now if it
+   does not.
 3. Create the worktree with Herdr's native command. Omit `--path` and keep the
    default location:
 
@@ -316,12 +320,13 @@ Input: Issue number `<N>` and a branch `<branch>` named per `DEV.md`
    From the returned JSON record the worktree path `<worktree>`, the workspace
    id `<ws>` and the root pane id `<pane>` (herdr 0.9.1: `.result.worktree.path`,
    `.result.workspace.workspace_id`, `.result.root_pane.pane_id`).
-4. Start the agent in the new pane, passing the chosen model and effort
-   explicitly through `<MODEL_ARGS>`; never rely on the CLI's default:
+4. Start the agent in the new pane, passing the chosen agent kind, provider,
+   model and effort explicitly through the slots; never rely on the CLI's
+   default:
 
    ```bash
    herdr agent start <AGENT_PREFIX>-issue-<N> --kind <AGENT_KIND> --pane <pane> \
-     --timeout 60000 -- <AGENT_ARGS> <MODEL_ARGS>
+     --timeout 60000 -- <AGENT_ARGS> <PROVIDER_ARGS> <MODEL_ARGS>
    ```
 
    - `agent_not_ready` means a dialog blocked startup. Look with
@@ -331,10 +336,13 @@ Input: Issue number `<N>` and a branch `<branch>` named per `DEV.md`
      `herdr agent send-keys <name> enter`, then
      `herdr agent wait <name> --timeout 60000` until `idle`. Never answer any
      other dialog; hand it to the maintainer.
-   - Read the agent's screen to confirm it runs in the intended mode, and that
-     its status line (or the CLI's own model or status command) shows the
-     dispatched model and effort. If either differs, do not deliver the prompt;
-     report to the maintainer.
+   - Confirm the dispatch that actually runs, not the intended one.
+     `herdr agent get <name>` gives the agent kind, pane and status; the agent's
+     screen, or its own model and status command, shows the provider, model and
+     effort it runs. Herdr does not report the model itself, so that output is
+     the evidence for it. If kind, provider, model or effort differs from the
+     Issue's Dispatch section, do not deliver the prompt: re-dispatch and record
+     it, or report to the maintainer.
 5. The new pane is occupied by the agent, so initialize the worktree from the
    coordinator's own shell:
 
@@ -392,11 +400,50 @@ state), go one tier up.
 | hard | Needs design or judgment: isolation and credentials, processes and concurrency, cross-module change, a new workflow, real runs. | `<MODEL_HIGH>` | high or xhigh |
 | hardest | Hard, plus large uncertainty or results that are hard to verify. | `<MODEL_HIGH>` | max |
 
-Do not dispatch a model in `<EXCLUDED_MODELS>` unless the maintainer asks for it.
+Mechanical and routine work take the cheapest token source and model that can
+judge it; they are still real provider-backed runs. An expensive provider or
+model is used only when the change concerns it: its request format,
+authentication or permissions, model capability, quota and error behavior, or
+other real behavior only it exercises. The `reason` line then says so (see
+`provider-cost-routing`).
+
+### Agent, provider, model and effort
+
+Choose in this order, and pass every value explicitly in Start step 4:
+
+1. **Agent kind.** `<AGENT_KINDS>` lists the kinds this project dispatches, in
+   preference order, and the model family each may use; the first usable one is
+   `<AGENT_KIND>`. An agent runs only the family its own CLI and configuration
+   allow — Codex its OpenAI/Codex models, Claude Code its Anthropic models, Pi
+   the models of the provider configured for it. Never tell one CLI to run
+   another's model.
+2. **Provider and model.** Resolve the tier's model at dispatch time (below),
+   then take the provider the account may use for it, passed through
+   `<PROVIDER_ARGS>` and `<MODEL_ARGS>`. Do not dispatch a model or provider in
+   `<EXCLUDED_MODELS>`, or one the account cannot use, unless the maintainer
+   asks for it by name.
+3. **Effort.** Take the tier's effort and map it onto the values the CLI
+   accepts; where it has no higher level, use its highest.
+
+A tier slot (`<MODEL_LOW>`, `<MODEL_MID>`, `<MODEL_HIGH>`) holds a model name, an
+alias or a series. Resolve it before starting the agent, following
+`<MODEL_SELECTION>`:
+
+- list the models the agent CLI and the account currently offer (the CLI's own
+  `--help`, model or status command);
+- discard every candidate that is unusable now: retired, not entitled or out of
+  quota for this account, unable to do what the Issue needs, or excluded;
+- take the newest member of the tier's series among what remains;
+- when the series has no usable member, take the next entry `<MODEL_SELECTION>`
+  documents; if none is left, use `<FALLBACK_AGENT>`.
+
+Record the resolved string in the Dispatch section, not the series, and never
+leave an old resolved string bound in a slot or in this skill. A substitution is
+a re-dispatch and keeps its line.
 
 Worked example for Claude Code (`<AGENT_KIND>` `claude`), whose `--help` lists
 the model aliases and the effort levels `low`, `medium`, `high`, `xhigh` and
-`max`:
+`max`; the provider follows from the alias, so `<PROVIDER_ARGS>` is empty:
 
 ```text
 <MODEL_ARGS>  --model {model} --effort {effort}
@@ -407,19 +454,29 @@ the model aliases and the effort levels `low`, `medium`, `high`, `xhigh` and
 
 A routine Issue then starts with `-- <AGENT_ARGS> --model sonnet --effort high`.
 
+A project can keep a series in the tier slots instead of one model. With Pi
+(`<AGENT_KIND>` `pi`), which runs the models of the provider configured for it,
+`<PROVIDER_ARGS>` might be `--provider {provider}` and `<MODEL_ARGS>`
+`--model {model} --thinking {effort}`; a project whose `<MODEL_LOW>`,
+`<MODEL_MID>` and `<MODEL_HIGH>` hold the `deepseek-v4.1-flash` series dispatches
+the newest usable member of that series at that moment, records the resolved
+string, and falls back through `<MODEL_SELECTION>` when no member is usable.
+
 Record the dispatch in the Issue body as the last section, in this form. The
 coordinator line is written when the Issue is claimed ([Claim](#claim)). A
 coordinator that creates the Issue writes the rest then; otherwise Start step 2
 adds it. Session and branch are added in Start step 7. Never write a workspace
-id or local path here.
+id, a provider endpoint or local path here.
 
 ```markdown
 ## Dispatch
 
 - coordinator: `<the claiming coordinator's Herdr agent name>`
-- agent: <agent and permission mode>
-- model: `<model>`; effort: `<effort>`
-- reason: <tier>: <the scope, risk or uncertainty that decided it>
+- agent: <agent kind and permission mode>
+- provider: `<provider>`
+- model: `<resolved model>`; effort: `<effort>`
+- reason: <tier>: <the scope, risk or uncertainty that decided it>, and <why an
+  expensive provider or model was needed, when one was>
 - session: `<AGENT_PREFIX>-issue-<N>`, branch `<branch>`
 ```
 
@@ -430,17 +487,18 @@ The Issue forms in `.github/ISSUE_TEMPLATE/` have no Dispatch field on purpose:
 whoever files the Issue cannot judge the dispatch, and the coordinator writes
 the section.
 
-**Fallback.** Use `<FALLBACK_AGENT>` only when the primary agent is unavailable:
-out of quota, logged out or in an outage. Not for difficulty or preference. Keep
-the tier and take the fallback's model for it. If `<FALLBACK_AGENT>` is not
+**Fallback.** Use `<FALLBACK_AGENT>` only when the primary agent or its provider
+is unavailable: out of quota, logged out, in an outage, or with no usable model
+left in the tier's series. Not for difficulty or preference. Keep the tier and
+take the fallback's provider and model for it. If `<FALLBACK_AGENT>` is not
 defined, report the blocker to the maintainer.
 
-**Re-dispatch.** Any later change of agent, model or effort, including a
-fallback, updates the agent, model, effort and session lines and appends one
-line that keeps the history:
+**Re-dispatch.** Any later change of agent, provider, model or effort, including
+a fallback, updates the agent, provider, model, effort and session lines and
+appends one line that keeps the history:
 
 ```markdown
-- re-dispatched: <previous agent, model, effort> → <new ones>: <reason>
+- re-dispatched: <previous agent, provider, model, effort> → <new ones>: <reason>
 ```
 
 ### Issue session rules
@@ -464,8 +522,16 @@ together.
   the smallest task, the fewest components and a small budget to prove this
   change, reuses evidence that already answers the question, and avoids the
   most expensive providers unless the change concerns them. The plan and the PR
-  state what each run proves and why it must run. This does not relax "Verify to
-  completion": every check the acceptance calls for still runs.
+  name each run's agent, provider, model and effort, what it proves and why it
+  must run. This does not relax "Verify to completion": every check the
+  acceptance calls for still runs.
+- **Route cost first.** Ordinary tests, regression checks, documentation and
+  mechanical work use the cheapest token source and model that can judge them;
+  an expensive provider or model is used only when the change concerns its
+  request format, permissions, capability or real behavior, and the plan says
+  why. A cheap run is still a real provider-backed run and never stands in for
+  the capability the acceptance must prove. A change of agent, provider, model
+  or effort is recorded as a re-dispatch ([Dispatch by difficulty](#dispatch-by-difficulty)).
 - **Fix what you meet.** A defect met while solving the Issue that blocks it or
   is related to it is fixed in the same worktree, verified, and listed in the
   PR. That is part of the Issue, not an unrequested feature. Only an unrelated,
@@ -639,8 +705,9 @@ report to the maintainer instead, when:
   open, because the work continues;
 - the maintainer said to keep the worktree;
 - a precondition in step 3, 4 or 5 fails: uncommitted changes, unpushed commits,
-  a live run in the dev checkout, an agent still working or a live task in the
-  worktree (a live run or a container mounting it).
+  a live run in the dev checkout, an agent still working or blocked, a run that
+  `<STOP_CMD>` could not stop, a container that mounts the worktree, or state
+  that cannot be confirmed.
 
 Removing a worktree closes its workspace panes, so run these steps from another
 workspace, normally the dev checkout's.
@@ -688,11 +755,31 @@ workspace, normally the dev checkout's.
    local `<BASE>` has diverged from `origin/<BASE>`. Do not merge, rebase or reset
    to force it (see the shared dev checkout rules). Conflicts between a PR and
    `<BASE>` belong to Merge, in the PR's worktree, not here.
-5. Confirm nothing is running. `herdr pane list --workspace <ws>` must show the
-   agent as `idle` or `done`. When `<MONITOR_CMD>` is defined, run it in
-   `<worktree>`; a live run goes to the maintainer, and is stopped only through
-   `<STOP_CMD>`. Then list the containers that mount the worktree, which
-   `<MONITOR_CMD>` does not see (a stopped run kept for resume, a background job):
+5. Stop what this worktree started, before anything is migrated or removed.
+   This step's order is fixed: processes stopped, then state and assets
+   migrated, then the worktree removed.
+
+   ```bash
+   herdr pane list --workspace <ws>
+   ```
+
+   The agent must be `idle` or `done`; a `working` or `blocked` agent stops the
+   close-out and goes to the maintainer. When `<MONITOR_CMD>` and `<STOP_CMD>`
+   are defined, run `<MONITOR_CMD>` in `<worktree>` and stop every run it lists
+   through `<STOP_CMD>`, one at a time, then run `<MONITOR_CMD>` again until it
+   lists none. Stopping is the default; only a run `<STOP_CMD>` cannot stop, or
+   one the maintainer asked to keep, goes to the maintainer. Never use `pkill`,
+   `killall`, `fuser -k` or a name pattern: only the project's own `<STOP_CMD>`
+   may stop a process, so that a process this worktree did not start is never
+   touched.
+
+   Then check what `<MONITOR_CMD>` does not see: host processes, background jobs
+   and containers. The run records under `.project/runs/` name each process
+   identity; confirm each recorded one is gone (`ps -p <pid>` on the recorded pid,
+   never a name pattern). A recorded process that still runs and that
+   `<STOP_CMD>` did not stop blocks the close-out. List the containers that mount
+   the worktree, running or stopped (a stopped run kept for resume, a background
+   job):
 
    ```bash
    (cd <worktree> && bash .agents/scripts/inspect-state.sh)
@@ -700,10 +787,12 @@ workspace, normally the dev checkout's.
 
    Its `## containers mounting this worktree` section names every container,
    running or stopped, with a mount whose source is inside `<worktree>`. Exit 3
-   means it found one, or an installed runtime could not be queried; each is a
-   live task that goes to the maintainer. Do not stop or remove the container.
+   means it found one, or an installed runtime could not be queried; each blocks
+   the close-out and goes to the maintainer. Do not stop or remove the container.
    With no container runtime installed the section prints `skip` and the check
-   passes.
+   passes. Continue only when the agent is idle or done, `<MONITOR_CMD>` lists
+   nothing, every recorded process identity is gone and no container mounts the
+   worktree; otherwise stop here, keep the worktree and report.
 6. Migrate local state and asset links to the dev checkout:
 
    ```bash
@@ -723,6 +812,12 @@ workspace, normally the dev checkout's.
    `migration=` path. On a non-zero exit, stop, keep the worktree and report the
    full output.
 
+   Confirm from the output that the `verified:` count covers `.project/state`,
+   `runs`, `artifacts`, `manifest` and every `migrate-project.rules` entry marked
+   `copy`, and that the `assets/` section shows each asset link as `copy` or
+   `same`. A `CONFLICT`, a `DIFFERS` line or a non-zero exit stops the close-out.
+   This verified copy is what step 7 relies on before it removes the worktree.
+
    The script does not copy ignored files outside `.project/`. Read the
    `git status --short --ignored` section of its output and decide each such file
    with the maintainer.
@@ -736,9 +831,12 @@ workspace, normally the dev checkout's.
    leave the dev checkout dirty. If no command covers a result, do not write glue
    scripts (see `cli-first-operations`): report the gap and where the data lives so
    an Issue can add the command.
-7. Remove the worktree with `herdr worktree remove --workspace <ws>`. Confirm the
-   returned path is `<worktree>`. Do not add `--force`; if it is refused, report
-   the reason.
+7. Confirm no unique copy is left, then remove the worktree. Every result the
+   project must keep is in the step 6 migration directory or archived, the asset
+   links resolve in `<dev>`, and no file under `.project/` or `assets/` in
+   `<worktree>` is its only copy. Then run
+   `herdr worktree remove --workspace <ws>`. Confirm the returned path is
+   `<worktree>`. Do not add `--force`; if it is refused, report the reason.
 8. Delete the branches:
 
    ```bash
@@ -759,8 +857,10 @@ workspace, normally the dev checkout's.
      `git -C <dev> ls-remote --heads origin <branch>` print nothing;
    - `git -C <dev> rev-list --count <BASE>..origin/<BASE>` is 0 (when another
      coordinator merged since step 4, repeat step 4 first);
-   - `<dev>/.project/migrations/` holds this run's directory, and no unique copy of
-     a result remains only in the retired worktree;
+   - `<dev>/.project/migrations/` holds this run's directory, its `verified:`
+     line covered `.project/state`, `runs`, `artifacts`, `manifest`, the `copy`
+     rules and every asset link, and no unique copy of a result remains only in
+     the retired worktree;
    - non-rebuildable results are archived and registered, or the gap is reported.
 10. List what this Issue was blocking and start what is now free:
 
