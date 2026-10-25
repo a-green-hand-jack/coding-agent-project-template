@@ -11,7 +11,7 @@
   - `issue-workflow` 新增 “Agent, provider, model and effort” 小节和槽位：`<AGENT_KINDS>`（按优先顺序的 agent kind 及各自可用的模型族：Codex 的 OpenAI/Codex、Claude Code 的 Anthropic、Pi 配置的 provider）、`<PROVIDER_ARGS>`（`{provider}`）和 `<MODEL_SELECTION>`（tier 的 series 如何解析、如何列出当前可用、哪些不可用、fallback 顺序）；`<MODEL_ARGS>` 可带 `{model}` 和 `{effort}`。选择顺序固定为 agent → provider/model → effort；tier 槽位可以写 series，派出前解析成当前可用 series 里最新的一员，并记录解析后的字符串，不把某个模型字符串永久绑在槽位里。Pi 的示例写明 `deepseek-v4.1-flash` series 最新优先和 fallback。Dispatch 段新增 `- provider:` 行，`re-dispatched:` 行保留 agent、provider、model、effort 的旧值。
   - Start 第 4 步把 provider 一起显式传入，启动后用 `herdr agent get` 和 agent 自己的 model/status 输出核对实际 kind、provider、model、effort（Herdr 本身不报 model），不一致就不发 prompt，按 re-dispatch 记录或报告。mechanical/routine 默认最便宜的来源和模型，四个难度档不变。
   - Close-out 第 5 步改为默认停进程：agent 必须 `idle`/`done`，用 `<MONITOR_CMD>` 列出这个 worktree 的运行、逐个用 `<STOP_CMD>` 停到不再列出；再查 `.project/runs/` 记录的进程身份和 `inspect-state.sh` 列出的挂载容器。停止失败、仍有进程、容器挂载或状态无法确认时停止回收并报告。明确禁止 `pkill`、`killall`、`fuser -k` 或按名字匹配的清理。第 6、7 步确认迁移输出里的 `verified:` 覆盖 `.project/state`、`runs`、`artifacts`、`manifest`、`copy` 规则和资产链接，确认没有唯一副本后才移除 worktree。`worktree-lifecycle` 按同样顺序改写。
-  - `new-agent-prompt.sh` 生成的交接新增 “Route cost first” 规则和 Issue 的 Dispatch 段内容（没有时给出补写提示），和 skill 的 session 规则保持一致。项目 memory `template-work-runs-on-pi-deepseek` 改为在派出时解析 `deepseek-v4.1-flash` series 的最新可用模型，不再固定写一个模型字符串；本模板的 provider 名称只留在 Issue 的 Dispatch 段，不进入 tracked memory。`DEV.md` 同步。新增回归测试 `.agents/tests/test_template_dispatch.py`（三个 dispatch fixture 覆盖 mechanical/routine/hard 和 Pi/Claude Code/Codex，校验记录格式、模型族和 re-dispatch 历史），`test_template_migrate.py` 增加交接 prompt 的 dispatch 规则和 `.project/` 状态加资产链接迁移的 fixture。
+  - `new-agent-prompt.sh` 生成的交接新增 “Route cost first” 规则和 Issue 的 Dispatch 段内容（没有时给出补写提示），和 skill 的 session 规则保持一致。项目 memory `template-work-runs-on-codex` 记录 Codex 第一默认，并在派出时解析当前可用模型，不固定写一个模型字符串；本模板的 provider 名称只留在 Issue 的 Dispatch 段，不进入 tracked memory。`DEV.md` 同步。新增回归测试 `.agents/tests/test_template_dispatch.py`（三个 dispatch fixture 覆盖 mechanical/routine/hard 和 Pi/Claude Code/Codex，校验记录格式、模型族和 re-dispatch 历史），`test_template_migrate.py` 增加交接 prompt 的 dispatch 规则和 `.project/` 状态加资产链接迁移的 fixture。
 
 - **Codex、Claude Code、Pi 的可确认 session 通信**（#103）：新增共享 `agent-communication` skill，区分 pane、agent session 和 conversation/thread；Codex 优先使用 native queue，其他 agent 使用 Herdr prompt，并要求记录目标、状态、transport 和确认回执。
 - **hook 审查、交付验收与 worktree 回收治理**（#105）：hook 按项检查并拒绝 blanket approve/reject；实现完成与交付完成分开验收；workspace 已关闭时通过 Herdr 原生 reopen/remove 恢复和回收 worktree。
@@ -83,7 +83,7 @@ Issue session 的工作文件不再让 close-out 停下（#92），Issue 之间�
 - **速度、并行与效率优化**（#78）：新增共享 memory `speed-and-parallelism-by-measurement`；`long-running-supervision` 新增第 8 步“调度与并发”：独立工作单元并发、交付即触发下游、滚动队列、按实测资源和 provider 健康决定并发、并发度与墙钟和成本分开报告、先消除重复工作。不放宽验证、凭据/安全边界，也不突破明确的花费上限。
 - **host 文件归运行用户**（#79）：新增共享 memory `host-files-owned-by-running-user`。项目、agent 和容器留在 host 上的文件、日志、缓存和挂载输出归运行用户；不用 sudo 创建或修改项目文件；清理遇到不属于自己的文件停下来报告；发布和归档前确认归属。
 - **可编排的假外部边界**（#80）：新增共享 memory `screen-with-scriptable-fakes`；`long-running-supervision` 第 4 步写明：对 fake 的通过只是真实运行前的便宜筛子，不是完成证据。
-- 维护者侧：`template-harvest` 允许一个反馈 Issue 把它来自哪个 adopter 写为来源（`scope: template`，不随升级下发）；模板维护的 Issue 默认用 Pi + DeepSeek 派出（项目 memory，不下发）。
+- 维护者侧：`template-harvest` 允许一个反馈 Issue 把它来自哪个 adopter 写为来源（`scope: template`，不随升级下发）；早期版本曾把模板维护的 Issue 默认派到 Pi + DeepSeek；现由项目 memory 记录 Codex 第一默认（项目 memory，不下发）。
 
 ### Upgrading a project from v0.1.15
 

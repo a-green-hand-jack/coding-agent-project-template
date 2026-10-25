@@ -10,8 +10,8 @@ or superseded status.
 - [`harvest-decisions.md`](harvest-decisions.md) — lasting decisions from
   downstream harvests: the candidates declined and why; a run's own details stay
   in its report, the release notes and `adopters.yaml`.
-- [`template-work-runs-on-pi-deepseek.md`](template-work-runs-on-pi-deepseek.md)
-  — template maintenance is dispatched with Pi on the newest usable
-  `deepseek-v4.1-flash` model; the Dispatch section records agent, provider,
-  model and effort, and a hard Issue or an unusable model is re-dispatched with
-  the reason.
+- [`template-work-runs-on-codex.md`](template-work-runs-on-codex.md)
+  — template maintenance dispatches Codex first; Claude Code and Pi remain
+  fallbacks, while the Dispatch section records the resolved agent, provider,
+  model and effort and the shared cost, tier and re-dispatch rules remain in
+  force.
