@@ -43,6 +43,11 @@ the record's own text never contains that heading line.
 - [`product-state-root.md`](product-state-root.md) — product commands resolve
   the worktree's state root from an argument, an environment variable, the
   nearest setup marker (stopping at the repository boundary), then a default.
+- [`provider-cost-routing.md`](provider-cost-routing.md) — ordinary tests and
+  mechanical work use the cheapest token source and model that can judge them;
+  a cheap run is still a real provider-backed run and never replaces a
+  capability check; choose agent, provider, model and effort explicitly and
+  record them with what the run proves.
 - [`resolve-real-paths-before-moving.md`](resolve-real-paths-before-moving.md)
   — before moving, replacing or symlinking a directory, prove source and
   destination are two different places and data sets, and let a person choose
