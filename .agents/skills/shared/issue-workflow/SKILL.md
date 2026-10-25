@@ -13,6 +13,12 @@ session directly in its pane. That session opens the PR; the coordinator that
 claimed the Issue merges it after review on GitHub and then closes the worktree
 out.
 
+Before sending an Issue handoff or follow-up, read the shared
+[`agent-communication`](../agent-communication/SKILL.md) skill. It separates
+the pane, agent session and conversation/thread, selects Codex's native queue
+when its thread is known, and defines the confirmation and stalled-send
+evidence required by this workflow.
+
 Run **start** (which first claims the Issue) when an Issue is ready to
 implement, **merge** when its PR is approved, and **close-out** right after a
 verified merge. The approval to merge covers the close-out, so do not wait or ask
@@ -589,6 +595,17 @@ the pane with the agent and may have a draft typed in its input line.
   `herdr agent read <name> --source visible` and look at the input line. If it
   is not empty, do not send. Put the message in an Issue comment, or ask the
   maintainer to include it in their own message.
+- **Use the communication protocol.** For each follow-up, record the target
+  agent session, conversation/thread (when available), selected transport and
+  confirmation result. Codex follow-ups use `codex queue --thread <THREAD>
+  --message <TEXT>` when the native thread is resolved; Claude Code and Pi use
+  `herdr agent prompt`. If Codex's thread cannot be resolved, record the reason
+  and the fallback before sending the Herdr prompt. A successful write is not
+  proof of receipt: inspect the resulting agent state or native acknowledgement.
+- **Do not blind-retry a stall.** After `agent_prompt_stalled`, inspect the
+  target with `herdr agent get` and `herdr agent read --source visible`, preserve
+  the exact failure and state in `.project/state/` or the Issue, and retry only
+  after the input and status preconditions have changed safely.
 - **Relay the result and the constraints, not the commands.** When passing on a
   maintainer decision, write the outcome to reach and the constraints it must
   respect. Leave the commands to the project's skills, which know what each

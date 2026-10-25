@@ -58,6 +58,9 @@ entries:
   - path: .agents/skills/shared/issue-workflow/
     scope: shared_with_adaptation
     note: Fill the adaptation slots for base branch, repository, agent kinds and their model families, agent kind and prefix, provider and model arguments, model selection and fallback order, dispatch tier models, effort arguments, excluded models, fallback agent, workspace label prefix, CI, product gate, archive and run commands, and the monitor and stop commands close-out uses.
+  - path: .agents/skills/shared/agent-communication/
+    scope: shared
+    note: Route confirmed handoffs and follow-up messages through each agent's native transport; adapt only the destination's target resolution and state receipt paths.
   - path: .agents/skills/shared/project-memory-governance/
     scope: shared
     note: Generic classification, registration and cleanup procedure.
