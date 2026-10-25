@@ -279,6 +279,23 @@ with one sub-Issue per phase, so that progress is checked off phase by phase.
   installed CLI is authoritative.
   General Herdr control rules: `herdr --skill`.
 
+### Hook review before a session runs
+
+Before starting an agent or accepting a lifecycle command that runs an agent
+hook, inspect the hooks that Herdr will actually invoke (including
+`SessionStart`) and record the review in `.project/state/`. Review each hook by
+name, source, purpose, inputs and requested side effects. Approve only a hook
+whose source and purpose are known, necessary for this Issue, and within the
+repository's scope. An unknown, newly changed, or broader-than-needed hook is a
+stop condition: do not select a blanket trust/all-approve option, do not guess
+that it is harmless, and hand the exact hook name and inspection evidence to
+the maintainer. A hook that cannot be inspected is also a stop condition.
+
+The review receipt records `hook`, `source`, `purpose`, `decision`, and the
+inspection command/output (with credentials and private paths removed). A
+successful prompt or pane write is not hook approval. Re-review when the hook
+set, source, or requested side effect changes.
+
 ## Start
 
 Input: Issue number `<N>` and a branch `<branch>` named per `DEV.md`
@@ -556,6 +573,16 @@ together.
   `.project/state/`, which Close-out always copies, not in the root of
   `.project/`, where a file without a `migrate-project.rules` rule stops the
   migration.
+- **Separate implementation from delivery.** Implementation complete means the
+  Issue's files are changed, the applicable checks and acceptance runs pass,
+  artifacts or receipts were inspected, and the worktree status and diff are
+  reported. Delivery complete is a separate gate: a named commit exists, the
+  commit is pushed and the remote head is recorded, the PR targets `<BASE>` and
+  contains the Issue and evidence, the PR head and checks are read, required
+  approval is present, the merge reaches `<BASE>`, and close-out verifies state
+  migration, Herdr worktree removal, local/remote branch cleanup, and a clean
+  canonical checkout. An agent's self-report, a local commit, or a passing test
+  alone never satisfies the delivery gate.
 - **Write in the declared language.** When the registry declares
   [writing conventions](#writing-conventions), the session writes Issues, PRs,
   comments and human documents in that language and starts Issue bodies with
@@ -616,6 +643,19 @@ the pane with the agent and may have a draft typed in its input line.
   in the Issue.
 
 ## Merge
+
+### PR readiness gate
+
+Before asking for approval or merge, the coordinator checks the delivery
+evidence in order: implementation result and local acceptance; `git status` and
+`git diff --stat`; commit SHA and parent; `git push` result plus the remote head;
+PR base/head, Issue closing reference and changed-file scope; local check
+results on that exact head; CI state read once; review approval; merge result;
+post-merge `<BASE>` pull and local checks; and close-out receipt. Record each
+item as `pass`, `fail` with its output, or `blocked` with the maintainer-only
+action. Do not label a PR ready from an agent report, a stale check, or a
+commit that was not pushed. A failed item stops the gate and sends the exact
+evidence back to the Issue session or maintainer.
 
 The coordinator merges the PRs of the Issue it claimed into `<BASE>`. PRs of
 several coordinators may be open at once and conflict, for example when each

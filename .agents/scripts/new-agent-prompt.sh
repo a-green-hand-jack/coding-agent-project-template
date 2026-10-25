@@ -44,6 +44,11 @@ receiving a handoff. Keep product, development and human documentation planes
 separate, and preserve unrelated changes.
 
 Working rules for this session:
+- Before the first agent run, inspect every Herdr hook that will run (including
+  SessionStart) and record a per-hook receipt under .project/state/. Approve
+  only known, necessary hooks; stop on an unknown, changed, or uninspectable
+  hook and report its exact name and evidence. Never blanket-approve or
+  blanket-reject hooks.
 - Verify to completion. Run every check the Issue's acceptance and the
   project's local check (DEV.md) call for, including real runs. After a push you
   may read gh pr checks and report its state (passed, failed or not run), but do
