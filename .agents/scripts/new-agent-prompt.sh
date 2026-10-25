@@ -38,8 +38,10 @@ Start in the new worktree and run:
   bash .agents/scripts/setup-worktree.sh
 
 Read AGENTS.md, .agents/AGENTS.md, the Issue, and the directly relevant
-.agents memory/knowledge/skills before editing. Keep product, development and
-human documentation planes separate, and preserve unrelated changes.
+.agents memory/knowledge/skills before editing. Read
+.agents/skills/shared/agent-communication/SKILL.md before sending or
+receiving a handoff. Keep product, development and human documentation planes
+separate, and preserve unrelated changes.
 
 Working rules for this session:
 - Verify to completion. Run every check the Issue's acceptance and the
@@ -83,6 +85,11 @@ Working rules for this session:
   coordinator) in .project/state/, not in the root of .project/. Close-out
   copies .project/state/ without further rules; a file in the root of
   .project/ that no migration rule covers stops the migration.
+- For every handoff or follow-up, preflight the target session and input line,
+  choose the native transport from .agents/skills/shared/agent-communication/SKILL.md,
+  and record the transport, target session/thread and confirmation result. A
+  successful pane write alone is not receipt confirmation; after a stall,
+  inspect status and preserve the exact evidence before retrying.
 PROMPT
 if [[ -n "$language" ]]; then
   cat <<PROMPT
