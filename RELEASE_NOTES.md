@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+暂无。
+
+## v0.1.19 — 2026-10-25
+
 - **provider 成本策略、agent/model router 和 worktree 回收顺序**（#101）：模板把“普通检查用便宜的 token 来源和模型、昂贵 provider 只在改动直接涉及它时使用”写成共享决定，`issue-workflow` 的派出从“选 tier、model、effort”扩展为“选 agent、provider、model、effort”，close-out 固定为“停进程 → 迁移状态和资产 → 确认没有唯一副本 → 移除 worktree”。
   - 新增共享 memory `provider-cost-routing`（`scope: shared`，已登记索引和 registry）：普通测试、回归检查、文档和机械改动用最便宜的 token 来源和模型；廉价运行仍是真实 provider-backed 运行，不能替代验收需要的能力验证；昂贵 provider/model 只在改动涉及它的请求格式、权限、模型能力、额度或真实行为时使用，计划里写明原因。每次运行在计划和 PR 中记录 agent、provider、model、effort、证明了什么、为什么必须跑；provider 的 endpoint、scope、能力、额度和探测日期留在 inventory/knowledge，按名字引用，值不进入仓库、日志、Issue、PR 或命令行。`issue-dispatch-by-difficulty` 和 `llm-credentials` 补了入口。
   - `issue-workflow` 新增 “Agent, provider, model and effort” 小节和槽位：`<AGENT_KINDS>`（按优先顺序的 agent kind 及各自可用的模型族：Codex 的 OpenAI/Codex、Claude Code 的 Anthropic、Pi 配置的 provider）、`<PROVIDER_ARGS>`（`{provider}`）和 `<MODEL_SELECTION>`（tier 的 series 如何解析、如何列出当前可用、哪些不可用、fallback 顺序）；`<MODEL_ARGS>` 可带 `{model}` 和 `{effort}`。选择顺序固定为 agent → provider/model → effort；tier 槽位可以写 series，派出前解析成当前可用 series 里最新的一员，并记录解析后的字符串，不把某个模型字符串永久绑在槽位里。Pi 的示例写明 `deepseek-v4.1-flash` series 最新优先和 fallback。Dispatch 段新增 `- provider:` 行，`re-dispatched:` 行保留 agent、provider、model、effort 的旧值。
@@ -9,13 +13,15 @@
   - Close-out 第 5 步改为默认停进程：agent 必须 `idle`/`done`，用 `<MONITOR_CMD>` 列出这个 worktree 的运行、逐个用 `<STOP_CMD>` 停到不再列出；再查 `.project/runs/` 记录的进程身份和 `inspect-state.sh` 列出的挂载容器。停止失败、仍有进程、容器挂载或状态无法确认时停止回收并报告。明确禁止 `pkill`、`killall`、`fuser -k` 或按名字匹配的清理。第 6、7 步确认迁移输出里的 `verified:` 覆盖 `.project/state`、`runs`、`artifacts`、`manifest`、`copy` 规则和资产链接，确认没有唯一副本后才移除 worktree。`worktree-lifecycle` 按同样顺序改写。
   - `new-agent-prompt.sh` 生成的交接新增 “Route cost first” 规则和 Issue 的 Dispatch 段内容（没有时给出补写提示），和 skill 的 session 规则保持一致。项目 memory `template-work-runs-on-pi-deepseek` 改为在派出时解析 `deepseek-v4.1-flash` series 的最新可用模型，不再固定写一个模型字符串；本模板的 provider 名称只留在 Issue 的 Dispatch 段，不进入 tracked memory。`DEV.md` 同步。新增回归测试 `.agents/tests/test_template_dispatch.py`（三个 dispatch fixture 覆盖 mechanical/routine/hard 和 Pi/Claude Code/Codex，校验记录格式、模型族和 re-dispatch 历史），`test_template_migrate.py` 增加交接 prompt 的 dispatch 规则和 `.project/` 状态加资产链接迁移的 fixture。
 
+- **Codex、Claude Code、Pi 的可确认 session 通信**（#103）：新增共享 `agent-communication` skill，区分 pane、agent session 和 conversation/thread；Codex 优先使用 native queue，其他 agent 使用 Herdr prompt，并要求记录目标、状态、transport 和确认回执。
+- **hook 审查、交付验收与 worktree 回收治理**（#105）：hook 按项检查并拒绝 blanket approve/reject；实现完成与交付完成分开验收；workspace 已关闭时通过 Herdr 原生 reopen/remove 恢复和回收 worktree。
+- **下游 harvest**：本次检查了 13 个已识别的下游仓库；变化分类为已上游、适配说明、项目本地内容或版本漂移，没有新增通用候选。
+
 ### Upgrading a project from v0.1.18
 
-1. 运行 `upgrade-template.sh`。它新增共享 memory `provider-cost-routing`，替换 `issue-workflow`、`worktree-lifecycle`、`issue-dispatch-by-difficulty`、`llm-credentials` 在 `## In this repository` 段以上的文本，并替换整个 `new-agent-prompt.sh`；各项目的 `## In this repository` 段和 `migrate-project.rules` 不变。
-2. 在 `issue-workflow` 的 `## In this repository` 段补三个新槽位：`<AGENT_KINDS>`（本项目派哪些 agent kind、各自允许的模型族）、`<PROVIDER_ARGS>`（选 provider 的参数，写 `{provider}`；provider 由模型决定时留空）和 `<MODEL_SELECTION>`（tier 的 series、如何查当前可用、哪些不可用、fallback 顺序）。已经在 `<MODEL_ARGS>` 里写死 `{model}`、`{effort}` 的项目照旧；CLI 另有 provider 参数的项目加上 `{provider}`。
-3. 项目自己的 Dispatch 模板/表单补 `- provider:` 行，`re-dispatched:` 行补上旧和新 provider；如果某个 Issue 的 Dispatch 只写了 agent/model/effort，按新格式补一次再派出。
-4. 有产品运行的项目在 `issue-workflow` 的 `## In this repository` 段填 `<MONITOR_CMD>` 和 `<STOP_CMD>`：close-out 现在自己停这个 worktree 启动的运行，停不下来、还有 `.project/runs/` 记录的进程或容器挂载这个 worktree 就停止回收。没有产品运行的项目不用填，这两步自动跳过。
-5. 检查 `## In this repository` 段里按 “Start step 4” 或 “Close-out step 5” 编号写的补充：第 5 步仍是 close-out 的停进程步骤，但内容变了；如果原来写了“运行中的 run 交给维护者”，改成按 `<STOP_CMD>` 先停。
+1. 运行 `upgrade-template.sh`。它新增共享 `agent-communication` skill，更新 `issue-workflow`、`worktree-lifecycle` 和 `new-agent-prompt.sh`，并加入治理回归测试。
+2. 在项目的 `issue-workflow` 适配段确认 agent 启动前的 hook 审查规则、实现/交付双门和 PR readiness gate 没有被本地补充覆盖。
+3. 检查项目自己的 worktree close-out 补充：workspace 已关闭但 Git worktree 仍存在时，按 Herdr 原生 reopen/remove 路径恢复；不要用 raw Git worktree 命令或通用进程清理器代替。
 
 ## v0.1.18 — 2026-10-24
 
