@@ -12,7 +12,8 @@ WORKFLOW = (REPOSITORY / ".agents/skills/shared/issue-workflow/SKILL.md").read_t
 
 def decision(agent: str, status: str, input_line: str, thread: str | None) -> tuple[str, str]:
     """Pure fixture model; no Herdr, provider or credential is called."""
-    if input_line:
+    is_dim_suggestion = input_line.startswith("\x1b[2m") and input_line.endswith("\x1b[0m")
+    if input_line and not is_dim_suggestion:
         return "stop", "draft-input"
     if status == "blocked":
         return "stop", "blocked"
@@ -32,12 +33,21 @@ class AgentCommunicationFixtures(unittest.TestCase):
         self.assertEqual(decision("claude", "blocked", "", None), ("stop", "blocked"))
         self.assertEqual(decision("claude", "working", "", None), ("stop", "working-without-queue"))
 
+    def test_dim_suggestion_is_sendable_but_bright_draft_is_not(self) -> None:
+        self.assertEqual(
+            decision("claude", "idle", "\x1b[2mA suggested reply\x1b[0m", None),
+            ("herdr-agent-prompt", "native-herdr"),
+        )
+        self.assertEqual(decision("claude", "idle", "A human draft", None), ("stop", "draft-input"))
+
     def test_codex_queue_shape_and_fallback(self) -> None:
         self.assertEqual(decision("codex", "working", "", "thread-123")[0], "codex-queue")
         self.assertEqual(decision("codex", "idle", "", None), ("herdr-agent-prompt", "fallback-no-codex-thread"))
         self.assertRegex(SKILL, r"codex queue --thread <THREAD> --message <TEXT>")
         self.assertIn("--thread", SKILL)
         self.assertIn("--message", SKILL)
+        self.assertIn("--format ansi", SKILL)
+        self.assertIn("ESC[2m", SKILL)
 
     def test_stalled_send_requires_inspection_and_persistence(self) -> None:
         self.assertIn("do not resend blindly", SKILL)
