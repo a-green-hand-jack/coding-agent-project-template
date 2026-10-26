@@ -4,7 +4,7 @@ purpose: >-
   which content belongs to one concrete project.
 template:
   repository: https://github.com/a-green-hand-jack/coding-agent-project-template
-  version: v0.1.19
+  version: v0.1.20
   # A derived template (a template built from another template) records itself
   # above and the template it follows here; nobody else writes this block, and a
   # project made from a derived template removes it (DEV.md, template relationship):
