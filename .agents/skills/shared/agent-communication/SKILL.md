@@ -18,11 +18,16 @@ the agent received or started the message.
    get <target>` and record the target name, pane, worktree and current state.
    For Codex also resolve the native conversation/thread id or exact session
    name before choosing `codex queue`.
-2. Inspect the target before sending. Read the visible pane and stop if the
-   input line contains a draft or if the agent is `blocked`. An empty input
-   line is a precondition for a Herdr prompt. A Codex queue may be used while
-   the agent is `working` only when its thread was resolved and the queue
-   command itself succeeds.
+2. Inspect the target before sending. Read the visible pane with styles
+   preserved: `herdr agent read <TARGET> --source visible --format ansi`.
+   Text wrapped in `ESC[2m` (and its closing SGR sequence) is the CLI's dim
+   prompt suggestion, not a human draft; it may be sent and typing would
+   replace it. Only normal-brightness text is a draft. Suggestions are never
+   answers: do not act on one, repeat it, or record it as a decision. Stop if
+   a real draft is present or if the agent is `blocked`. An empty input line
+   after ignoring dim suggestions is a precondition for a Herdr prompt. A
+   Codex queue may be used while its agent is `working` only when its thread
+   was resolved and the queue command itself succeeds.
 3. Select one transport and write it into the handoff or receipt:
 
    | Agent | Primary transport | Fallback |
@@ -50,11 +55,14 @@ the agent received or started the message.
 ## Follow-up messages
 
 Follow-ups use the same preflight and confirmation protocol. Before
-`herdr agent prompt`, read the visible pane because it appends to the current
-input line. If a draft is present, do not append to it; put the message in the
-Issue or ask the maintainer to send it. Include the transport, target session
-and confirmation result in the state receipt. A follow-up can refer to an
-earlier handoff only when that handoff is recorded durably.
+`herdr agent prompt`, read the visible pane with `--format ansi` because it
+appends to the current input line. A dim CLI suggestion may be replaced by the
+message; it is not a reply or decision. If a real draft is present, do not
+append to it: write the message in the corresponding Issue or PR comment and
+explain the blocked send in the sender's own pane. Do not leave it only in a
+local log. Include the transport, target session and confirmation result in the
+state receipt. A follow-up can refer to an earlier handoff only when that
+handoff is recorded durably.
 
 ## Fixtures
 
@@ -64,4 +72,5 @@ permits only a resolved Codex queue; `blocked` refuses it; a stalled send
 inspects and records before any retry; the Codex command has the exact
 `--thread` and `--message` arguments; and a missing Codex thread records the
 fallback to `herdr agent prompt`. Fixtures model Herdr responses and never
-invoke a provider or include credentials.
+invoke a provider or include credentials. They include a dim ANSI suggestion
+that permits sending and a normal-brightness draft that refuses it.
