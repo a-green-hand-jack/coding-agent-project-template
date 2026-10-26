@@ -4,6 +4,15 @@
 
 暂无。
 
+## v0.1.20 — 2026-10-26
+
+- **区分 CLI 暗色输入建议与真实草稿**（#110）：`agent-communication` 现在要求使用 `herdr agent read <target> --source visible --format ansi` 检查输入行；被 `ESC[2m` 包裹的暗色内容是 CLI 建议，可以被发送消息替换，不是人的回答或决定，只有正常亮度文字会阻塞发送。真实草稿阻塞时，消息必须写入对应 Issue 或 PR 评论，并在发送方 pane 说明，不能只留在本地日志。
+- Fixtures 新增暗色建议允许发送和正常亮度草稿拒绝发送两种覆盖。
+
+### Upgrading a project from v0.1.19
+
+**Command only.** 运行 `upgrade-template.sh`，它更新共享 `agent-communication` skill；下游项目若在自己的说明中重复了输入建议判断或草稿阻塞规则，升级后删除重复内容。
+
 ## v0.1.19 — 2026-10-25
 
 - **provider 成本策略、agent/model router 和 worktree 回收顺序**（#101）：模板把“普通检查用便宜的 token 来源和模型、昂贵 provider 只在改动直接涉及它时使用”写成共享决定，`issue-workflow` 的派出从“选 tier、model、effort”扩展为“选 agent、provider、model、effort”，close-out 固定为“停进程 → 迁移状态和资产 → 确认没有唯一副本 → 移除 worktree”。
