@@ -9,20 +9,34 @@ Use this skill when starting parallel work, handing an Issue to another coding
 agent, or preparing a merged branch for removal.
 
 1. Create the worktree through Herdr's native worktree command from the
-   integration branch and with the Issue branch name. Start a new pane there
-   and launch an independent coding-agent session; do not implement the Issue
+   Issue's declared target and with the Issue branch name: normally `dev`, or
+   the parent integration branch recorded by `issue-workflow`. Start a new pane
+   there and launch an independent coding-agent session; do not implement the Issue
    by switching branches in the parent session. If Herdr is unavailable, report
    the blocker instead of falling back to an in-place branch.
 2. Enter the returned worktree and run `.agents/scripts/setup-worktree.sh`.
    The parent session can generate the handoff with
-   `.agents/scripts/new-agent-prompt.sh ISSUE [BRANCH]`.
+   `.agents/scripts/new-agent-prompt.sh ISSUE [BRANCH] [TARGET_BASE]`.
 3. Confirm the `.project/home` marker, branch, state root, output directory and
    asset links all belong to this worktree. Do not reuse another worktree's state.
+   Verify the task-key/role/attempt mapping and actual workspace, tab, agent and
+   native session names/IDs from `issue-workflow`; keep the returned path rather
+   than moving the worktree to match a display name.
 4. Keep the coding agent session in the worktree that owns the Issue. The parent
    session does not edit that worktree after handing it off.
-5. Stop what the worktree started, before anything is migrated or removed.
-   Confirm the coding agent session is `idle` or `done`. When the project has a
-   monitor and a stop command, run the monitor in the worktree and stop every run
+5. Reconcile outstanding responsibilities before stopping or removing anything.
+   Check the Issue/PR commitments, `.project/state/` wait records, background
+   jobs and `.project/runs/`, even when the foreground agent is `idle` or `done`
+   or the PR is merged. A background acceptance run or pending audit retains
+   this worktree until fulfilled, or explicitly transferred under authorization
+   with a named owner, acknowledgement and accessible state/results. Do not
+   terminate it merely to retire the worktree. A child merge into a parent
+   integration branch does not finish the parent. Follow `issue-workflow` for
+   the delivery and obligation gate.
+   Once no outstanding duty depends on this session or its runs, stop what the
+   worktree started before migration. Confirm the coding agent session is
+   `idle` or `done`. When the project has a monitor and a stop command, run the
+   monitor in the worktree and stop every run
    it lists through the stop command, then run the monitor again until it lists
    none. Only the project's own stop command may stop a process: never `pkill`,
    `killall`, `fuser -k` or a name pattern, so a process this worktree did not
@@ -59,9 +73,10 @@ herdr worktree list --workspace "$HERDR_WORKSPACE_ID"
 ```
 
 Use the returned workspace id only after confirming it is for the Issue path
-and is not the canonical workspace. Then run the normal order: confirm the
-agent is idle/done, stop project runs, inspect recorded processes and mounted
-containers, migrate and verify `.project/state`, runs, artifacts, manifest and
+and is not the canonical workspace. Then run the normal order: reconcile
+outstanding obligations, confirm the agent is idle/done, stop eligible project
+runs, inspect recorded processes and mounted containers, migrate and verify
+`.project/state`, runs, artifacts, manifest and
 asset links, confirm no unique copy remains, and only then run
 `herdr worktree remove --workspace <reopened-workspace>`. Finally verify the Git
 worktree list, local branch, remote branch and canonical branch state. Never

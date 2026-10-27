@@ -13,7 +13,8 @@ superseded_by: null
 
 ## Decision
 
-Each Issue is implemented in its own worktree, created from `dev` with Herdr's
+Each Issue is implemented in its own worktree, created from its declared target
+(normally `dev`, optionally a parent's integration branch) with Herdr's
 native worktree command, by its own coding-agent session in that worktree's
 pane. The maintainer talks to that session there, and that session opens the PR.
 Several coordinator sessions may share the dev checkout, each claiming one Issue
@@ -21,9 +22,12 @@ with its sub-Issues in the Issue's Dispatch section and dispatching its
 worktrees; an Issue another coordinator claimed is left alone. A coordinator
 never implements an Issue by switching branches in its own window, and when
 Herdr is unavailable it reports the blocker instead of falling back. An Issue
-starts only when it has no open blocker; what it waits for is recorded as
-GitHub's blocked-by, also across coordinators, and every Issue starts from the
-latest `dev`, never from another Issue's unmerged branch.
+starts only when it has no open implementation blocker; real blockers are
+recorded as GitHub's blocked-by, also across coordinators. Fixed interfaces may
+allow independently scoped implementation while integrated acceptance waits;
+split mixed blocked scope rather than bypassing a blocked-by. Every Issue starts
+from its latest declared target, never an arbitrary sibling's unmerged branch.
+Child merges into integration do not deliver the parent's final goal to `dev`.
 
 The handoff gives the Issue session working rules that do not narrow: it
 verifies to completion, fixes the defects it meets that block or relate to the

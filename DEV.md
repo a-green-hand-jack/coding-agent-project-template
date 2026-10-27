@@ -12,6 +12,13 @@ tracked source，也不写到未知的全局目录。
 不读取 `.agents/` 中的任何文件；构建输出和中间文件写入 `.project/`（例如
 `.project/build/`），不写回产品树或仓库根目录。
 
+结构性变更和模板采用先明确项目服务谁、交付什么、核心概念和非目标，再给出
+现有路径到目标路径的逐项映射，区分产品、开发、human、运行状态和资产。读取
+源目录和目标目录的 `AGENTS.md` 指令链与 registry，按稳定产品概念组织路径，
+不按实验批次设计通用目录，也不强制迁移已有测试。README 负责定位，USER 负责
+使用，本文负责扩展和维护；memory 只保留决定和理由。契约冲突必须显式解决，
+不能靠 adaptation 段自行授权；步骤见 `template-adoption` 与 `issue-workflow`。
+
 ## Issue、branch 和 PR
 
 较大的工作单元先有 Issue，Issue 先收敛问题、范围、验收方式和风险，再开始实现。
@@ -22,13 +29,23 @@ tracked source，也不写到未知的全局目录。
 
 需要 Issue 的工作单元，从 `dev` 创建 `fix/issue-<N>-<slug>`、`feat/issue-<N>-<slug>`、
 `docs/issue-<N>-<slug>` 或 `chore/issue-<N>-<slug>` branch。实现和验证完成后
-提交 PR 回 `dev`；`main` 只承载已发布状态。
+提交 PR 回 `dev`；`main` 只承载已发布状态。复杂父任务可以显式采用父集成分支：
+在父 Issue 登记目标、负责人、子 PR base、最终 dev PR、联合验收与清理责任，
+仍通过 Herdr 创建隔离 worktree。子 PR 合入集成分支不等于父任务交付，简单 Issue
+仍直接目标 `dev`；完整流程见 `issue-workflow` 的 “Optional parent integration branch”。
 
 分阶段的工作开一个父 Issue，每个阶段一个子 Issue（GitHub sub-issue 关系，父 Issue
 列出阶段清单），每个阶段照常走 Issue、worktree 和 PR；做法和 `gh` 命令见
 `.agents/skills/shared/issue-workflow/` 的 “Phased work”。Issue、PR 和 human 文档的
 工作语言与 Issue 开头段落在 registry 的 `writing:` 声明（同一 skill 的 “Writing
 conventions”）；本仓库声明为中文。
+
+实现依赖与验收依赖分开记录。接口固定且可以独立推进的部分可以提前开发，
+但须在上游合并后同步目标分支并完成集成验收；真实 blocked-by 不得绕过，混合
+范围需要拆成依赖准确的子任务。执行者负责自己 worktree 的实现、冲突修复和
+证据回报；认领 Issue 的协调者负责交付后的依赖重评估、通知、审阅与复核。
+等待记录写明事件、责任人、关联 head/run、未完事项和后续动作。通信的提交、
+接收确认与任务完成分别记录，具体传输与权限边界见 `agent-communication`。
 
 PR 描述应说明改了什么、为什么改、验收和 CI 要求的每项检查的命令与结果，以及
 顺带修复的相关缺陷；只有维护者本人才能完成的步骤写成具体阻塞，说明维护者要做
@@ -43,14 +60,25 @@ Issue 的 Dispatch 段记录派出这个 session 的 agent、provider、model �
 `.agents/memory/shared/provider-cost-routing.md`，派出步骤见
 `.agents/skills/shared/issue-workflow/` 的 “Dispatch by difficulty”。
 
-开始实现需要 Issue 的工作单元时，使用 Herdr 的原生 worktree 命令从 `dev` 创建
-Issue branch，并在新 pane 启动独立的 coding-agent session。不要在当前 agent 窗口
+开始实现需要 Issue 的工作单元时，使用 Herdr 的原生 worktree 命令从声明目标
+（默认 `dev`，子任务可用已声明的父集成目标）创建 Issue branch，并在新 pane
+启动独立的 coding-agent session。不要在当前 agent 窗口
 直接 `git switch -c`。新 session 的第一步是运行 setup；父 session 可用下面的命令
 生成包含 Issue 链接、分支、读取范围和验收要求的初始 prompt：
 
 ```bash
 bash .agents/scripts/new-agent-prompt.sh 123 fix/issue-123-example
 ```
+
+第三个可选参数指定已声明的 PR 目标，省略时为 `dev`；该参数不授予创建、提交或
+合并权限。
+
+命名使用稳定任务键 `<project>-issue-<N>`：workspace label 追加简短主题，tab
+追加 implement / review / tests 等角色，Herdr agent 遵守长度、字符和 live 唯一性
+限制；原生 session 支持时采用相同任务键与角色，否则登记 thread ID 映射。重派
+保留任务键，记录新 ID 与 attempt，旧会话活着时使用唯一后缀。标识符只取自返回值，
+不从显示名推断，也不为改名移动 worktree；完整示例见 `issue-workflow` 的
+“Task names and identifiers”。只调整本 Issue 管理的会话。
 
 Herdr 不可用时应报告阻塞，不能改用当前窗口直接实现。
 
@@ -71,7 +99,11 @@ worktree 的 `.project/`。具体项目可以提供可执行的
 合并 PR 后不要直接删除目录。回收顺序固定为“停进程 → 迁移状态和资产 → 确认
 没有唯一副本 → 移除 worktree 和 branch”：
 
-1. 确认该 worktree 的 agent session 已 `idle` 或 `done`。用项目自己的 monitor
+1. 先核对 Issue/PR 承诺、`.project/state/` 等待记录和后台运行。`idle` / `done`
+   只描述前台会话，PR 已合并也不代表后台验收、审计或承诺已完成。仍承担这些职责
+   时保留 worktree，直到完成，或在授权下明确移交责任、状态和产物并得到接收确认。
+   不得为回收而默认终止承担验收的运行。职责结清后，确认 agent session 已
+   `idle` 或 `done`。用项目自己的 monitor
    命令列出这个 worktree 启动的运行，逐个通过项目自己的 stop 命令停止，直到
    monitor 不再列出任何运行。不要用通用的 `pkill`、`killall` 或按名字匹配的
    进程清理：只有项目自己的 stop 命令可以停止进程。本模板没有产品运行，所以

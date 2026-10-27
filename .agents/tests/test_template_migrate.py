@@ -189,7 +189,7 @@ class MigrateRules(unittest.TestCase):
 
 
 class HandoffPrompt(unittest.TestCase):
-    def prompt(self, body: str) -> str:
+    def prompt(self, body: str, *arguments: str) -> str:
         with tempfile.TemporaryDirectory(prefix="prompt-test-") as temp:
             payload = Path(temp) / "issue.json"
             payload.write_text(json.dumps({
@@ -201,10 +201,18 @@ class HandoffPrompt(unittest.TestCase):
             gh.chmod(gh.stat().st_mode | stat.S_IXUSR)
             env = {**os.environ, "PATH": f"{temp}:{os.environ['PATH']}"}
             result = subprocess.run(
-                ["bash", str(PROMPT), "7"], cwd=REPOSITORY, env=env, text=True, capture_output=True,
+                ["bash", str(PROMPT), "7", *arguments], cwd=REPOSITORY, env=env, text=True, capture_output=True,
             )
         self.assertEqual(result.returncode, 0, result.stderr)
         return result.stdout
+
+    def test_prompt_uses_declared_parent_target_without_changing_the_default(self) -> None:
+        default = self.prompt("")
+        self.assertIn("PR target: dev", default)
+        declared = self.prompt("", "feat/issue-7-child", "integration/issue-6")
+        self.assertIn("Branch: feat/issue-7-child (create it from integration/issue-6", declared)
+        self.assertIn("PR target: integration/issue-6", declared)
+        self.assertNotIn("create it from dev", declared)
 
     def test_prompt_tells_the_session_where_its_files_go(self) -> None:
         flat = " ".join(self.prompt("").split())
