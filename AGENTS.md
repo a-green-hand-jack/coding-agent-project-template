@@ -29,9 +29,12 @@
   走；小改动变大或出现设计问题时停下来开 Issue；
 - 直接在 `dev` 里做的小改动同样不自动提交或推送；运行适用的检查，并报告证据；
 - 开始实现 Issue 时不要在当前 agent 窗口直接切分支。通过 Herdr 的原生
-  worktree 能力从 `dev` 创建 Issue worktree，在新 pane 启动独立 agent session，
+  worktree 能力从声明的目标（默认 `dev`）创建 Issue worktree，在新 pane 启动独立
+  agent session，
   运行 `bash .agents/scripts/setup-worktree.sh`，再用
   `bash .agents/scripts/new-agent-prompt.sh <issue-number>` 生成交接 prompt。
+  简单 Issue 默认从 `dev` 开始并回到 `dev`；父任务需要联合验收时，可以按
+  `issue-workflow` 声明父集成分支、子 PR 目标和最终 dev PR，再从该目标创建子 worktree。
   Herdr 不可用时报告阻塞，不回退到当前窗口直接实现。
 - 先删掉不必要的规则，再考虑增加规则；
 - 不为特定角色、任务或 benchmark 写特例；

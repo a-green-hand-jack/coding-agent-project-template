@@ -19,9 +19,18 @@ example assets or project-specific memory and knowledge.
 
 1. Record the target repository, current branch, clean/dirty state, remotes,
    default entrypoints, runtime state locations and asset locations.
-2. Read the target repository's agent instructions and contributor docs. Compare
-   them with the template release requested by the user (for example `v0.1.1`).
+2. Establish who the project serves, what it delivers, its core concepts and
+   non-goals before choosing directories. Read the implementation and user and
+   contributor docs, not only the root README. Read the AGENTS.md chain and
+   registry entries for every affected directory, including paths being moved
+   and their destinations. Compare these contracts with the requested template
+   release. Follow the shared `project-positioning-before-layout` decision.
 3. Produce a migration map before editing:
+   - map each existing path to its proposed destination, purpose and owner:
+     product, development, human documentation, runtime state or assets;
+   - organize product paths by its stable concepts, not experiment batches;
+     retain existing tests and domain layout unless an approved change needs
+     them moved; this template prescribes no domain directory taxonomy;
    - adopt unchanged: neutral rules and shared skills;
    - adapt: paths, commands, product docs, environment and evidence;
    - preserve: existing product code, domain docs, tests and project memory;
@@ -67,13 +76,20 @@ example assets or project-specific memory and knowledge.
    Map the target's product tree: `src/` by default, or the tree the repository
    already has (for example `paper/`), declared in `AGENTS.md` and `README.md`.
    A product tree is self-contained, never reads `.agents/`, and builds into
-   `.project/`; list any build output it writes elsewhere as an adaptation.
+   `.project/`. Treat existing output elsewhere as a conflict to resolve in the
+   map, not as permission to keep a contradictory layout through adaptation.
+   Map README to positioning and navigation, USER to usage, DEV to extension
+   and maintenance, and memory to decisions and reasons. Link these authorities
+   instead of copying their content into memory or product code.
    If the repository already carries an earlier adoption whose registry has no
    `template:` block, read the adopted tag from its developer docs or git history
    and backfill the block first, following `template-upgrade`
    ("Backfill a missing template record").
 4. Show the map and wait for the user's approval when the repository's local
-   rules or public behavior would change. Do not silently overwrite files.
+   rules or public behavior would change. Identify conflicting contracts and
+   the authority that can resolve them; stop the affected change until resolved.
+   An adaptation section cannot grant an exception to a governing contract.
+   Do not silently overwrite files.
 5. On an Issue branch, add or adapt the three planes, `CLAUDE.md -> AGENTS.md`,
    uniform `.agents/**/AGENTS.md` guidance, content registry, worktree setup,
    visible `.project/` state, asset manifest and GitHub templates as applicable.
@@ -104,7 +120,9 @@ example assets or project-specific memory and knowledge.
      naming the step and its first words so that a renumbered step is noticed
      at upgrade, for example "Start step 4 (Start the agent): also pass ...".
      A local rule that has to replace a template step is keyed the same way,
-     says "instead", and is reported through `template-feedback`.
+     says "instead", cites the explicit contract resolution that authorizes it,
+     and is reported through `template-feedback`. Writing the section itself
+     never authorizes replacing a rule.
    - When nothing needs adapting, the section says so in one line.
    - A derived template adapts the files it inherits the same way. A project
      made from a derived template copies such a file with the derived

@@ -6,15 +6,17 @@ concrete project and must state their commands, evidence and failure boundaries.
 
 Shared skills currently included:
 
-- `shared/worktree-lifecycle/`
-- `shared/issue-workflow/`
+- `shared/worktree-lifecycle/` — reconcile responsibilities before retiring state.
+- `shared/issue-workflow/` — scope, dependencies, optional parent integration and delivery.
+- `shared/agent-communication/` — capability-based transport and distinct
+  submission, acknowledgement and completion receipts.
 - `shared/project-memory-governance/`
 - `shared/asset-lifecycle/`
 - `shared/credential-setup/`
 - `shared/cli-first-operations/`
 - `shared/long-running-supervision/`
 - `shared/template-feedback/`
-- `shared/template-adoption/`
+- `shared/template-adoption/` — positioning and path contracts before migration.
 - `shared/template-upgrade/`
 - `shared/release-doc-audit/`
 

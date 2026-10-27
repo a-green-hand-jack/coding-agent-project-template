@@ -9,7 +9,8 @@ own tests of its scripts (`scope: template`; a project does not copy them):
 `upgrade-template.sh` against a fixture template with three tags and from an
 older real release to the release candidate, `probe-credentials.sh` with setup
 and diagnostics against fixture credential files, `migrate-assets.sh` rules and
-`new-agent-prompt.sh` against fixture repositories, and the branch-model checks
+`new-agent-prompt.sh` against fixture repositories (including a declared parent
+integration target and the default dev target), and the branch-model checks
 of `diagnose-environment.sh`. They write only to temporary directories, and
 CI runs them:
 
