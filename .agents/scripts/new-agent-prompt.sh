@@ -108,6 +108,10 @@ Working rules for this session:
   and record the transport, target session/thread and confirmation result. A
   successful pane write alone is not receipt confirmation; after a stall,
   inspect status and preserve the exact evidence before retrying.
+- Use .agents/skills/shared/development-writing/SKILL.md for Issues, PRs,
+  comments and commit messages. Keep current bodies aligned with agreed scope
+  and final behavior; retain important decisions in comments and identify the
+  head/run behind evidence. Writing guidance never authorizes sending or committing.
 PROMPT
 if [[ -n "$language" ]]; then
   cat <<PROMPT
@@ -116,6 +120,7 @@ if [[ -n "$language" ]]; then
   repository" section or printed by its scripts, keeps its language.
 PROMPT
   [[ -z "$sections" ]] || printf '  An Issue body starts with: %s.\n' "$sections"
+  printf '  Commit messages use %s unless development-writing has a project-specific override.\n' "$language"
 fi
 if [[ -n "$dispatch" ]]; then
   cat <<PROMPT

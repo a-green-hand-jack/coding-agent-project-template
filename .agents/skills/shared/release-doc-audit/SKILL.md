@@ -11,6 +11,11 @@ of change; an Issue/PR list supplies provenance, not the explanation. Writing a
 draft or running this audit does not authorize a tag, publication or downstream
 upgrade. Keep drafts explicitly labelled until publication is authorized.
 
+Use [development-writing's common principles](../development-writing/SKILL.md#common-principles)
+for reader order, self-contained prose, traceable claims, historical evidence,
+proportional visuals and redaction. The steps below apply those principles to
+release claims and publication surfaces; they remain the release procedure.
+
 Run the consistency audit below read-only from the repository root before
 tagging. Pass the release being prepared as `TARGET_TAG`. Before a release
 heading exists, use `Unreleased` for the upgrade-section check in step 3 and
@@ -43,20 +48,17 @@ one (`v0.4.0`).
    what it does not. Select the relevant emphasis from
    [release types](references/release-types.md); small releases can use a few
    connected paragraphs and one useful visual rather than a large form.
-2. Write in the reader's order: the claim and necessary project background;
+2. Apply the common reader order to the release: the claim and necessary project
+   background;
    the prior situation; the most consequential changes with examples; evidence
    and what it establishes; how to use, upgrade or obtain the deliverable;
    limitations and next steps. Organize by user consequence, not commit order.
-   Explain terms and causal connections in prose; link labels alone do not
-   explain why a change matters.
+   Explain release-specific terms and causal connections in prose.
 3. Support each substantive claim with inspected artifacts or recorded checks.
    State commands/method, version or run identity, conditions, outcome and limits
    where relevant. Separate historical acceptance from checks of the final
    candidate; name remaining unverified scope and reuse/upgrade conditions.
-   A scenario review is not a live run, a diagram is not a screenshot, and
-   passing tests do not establish results they do not measure. Preserve the
-   project's existing real-run requirements; require model/data fields only
-   when they affect this release's claims.
+   Require model/data fields only when they affect this release's claims.
 4. Choose visuals that carry information: tables for before/after comparisons,
    flow diagrams for sequence or responsibility, plots for measured results,
    and real redacted screenshots/demos for observable behavior. Give each a
@@ -67,10 +69,9 @@ one (`v0.4.0`).
 5. Keep applicable Issue, PR, previous release, fixed commit/version code and
    full compare links in a short reference block at the beginning or end.
    Use immutable code links rather than only a moving development branch.
-   Temporarily hide these references and reread: the body must still explain
+   Apply the common link-hiding review: the body must still explain
    what this is, what changed, why it matters, what evidence supports, how to
-   use it and its limits. Restore the references before delivery. Public prose
-   and images must exclude local paths, secrets and private sources.
+   use it and its limits. Restore the references before delivery.
 
 ## Review the rendered page
 

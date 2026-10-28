@@ -196,6 +196,12 @@ mapping and duties until closed; changing a display name never transfers them.
 
 ## Writing conventions
 
+Use [development-writing](../development-writing/SKILL.md) for the common
+reader/evidence principles and the Issue, PR, comment and commit guidance.
+Its [examples](../development-writing/references/four-cases.md) illustrate
+ambiguous acceptance, conflicting records and head-specific evidence without
+changing this workflow's acceptance or authorization gates.
+
 A project declares how it writes in one place, the `writing:` block of
 `.agents/content-registry.yaml`:
 
@@ -208,6 +214,8 @@ writing:
 - `language`: the working language of Issues, PRs, review and Issue comments,
   the Issue-specific section of a handoff prompt, and the human documents
   (`README.md`, `USER.md`, `DEV.md` and the project's release notes).
+  Commit messages use it too unless the project's `development-writing`
+  adaptation explicitly chooses a different commit language or convention.
 - `issue_sections`: the sections an Issue body starts with, in order, for
   example the goal and the approach before the details. The project may use
   them as the fields of its own Issue forms; the template's forms in
@@ -725,6 +733,9 @@ together.
   comments and human documents in that language and starts Issue bodies with
   the declared sections; template text keeps its language. The generated
   handoff carries this rule only when a language is declared.
+  Commit language follows `development-writing` and its project adaptation.
+  Use that skill for reader-focused bodies and current evidence; a writing
+  prompt never authorizes sending or committing.
 
 ### Issue-specific section appended to the handoff prompt
 

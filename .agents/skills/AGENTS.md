@@ -8,6 +8,8 @@ Shared skills currently included:
 
 - `shared/worktree-lifecycle/` — reconcile responsibilities before retiring state.
 - `shared/issue-workflow/` — scope, dependencies, optional parent integration and delivery.
+- `shared/development-writing/` — reader decisions, current facts and evidence
+  for Issues, PRs, comments and commits; four neutral cases in references.
 - `shared/agent-communication/` — capability-based transport and distinct
   submission, acknowledgement and completion receipts.
 - `shared/project-memory-governance/`

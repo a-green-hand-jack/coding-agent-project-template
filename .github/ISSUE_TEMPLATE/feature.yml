@@ -1,6 +1,13 @@
 name: Feature
 description: Propose a bounded product or development change
 body:
+  - type: markdown
+    attributes:
+      value: >-
+        Follow the development writing guide at
+        `.agents/skills/shared/development-writing/SKILL.md` from this repository's root
+        and the project's declared language/sections. Keep the body understandable
+        without links; use links for evidence. Scale detail to the problem.
   - type: textarea
     id: problem
     attributes:
@@ -19,6 +26,6 @@ body:
     id: acceptance
     attributes:
       label: Acceptance evidence
-      description: What checks or real runs will establish completion?
+      description: Which entrypoint, conditions and expected evidence establish completion? Define when any conditional real run is required; do not silently remove an unresolved requirement.
     validations:
       required: true
