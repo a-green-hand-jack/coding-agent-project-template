@@ -56,6 +56,19 @@ Conventional Commits 前缀；下游可在该 skill 的末尾适配段声明自�
 等待记录写明事件、责任人、关联 head/run、未完事项和后续动作。通信的提交、
 接收确认与任务完成分别记录，具体传输与权限边界见 `agent-communication`。
 
+实现者在实现/验收完成、PR 创建、影响审阅的新 head、阻塞或验收失败，以及职责或
+关闭条件变化时，主动向交接中指定的协调者发送带事件 ID、确定版本、证据和未完义务
+的回报。发送成功、明确 ACK、实际完成分别记录；没有 ACK 就保留负责人、恢复入口
+和有界重试/下一检查条件，不能只在自己的最终回复中宣布交付。没有交付授权时报告
+ready-for-review 并等待，通知不授予提交、开 PR、合并或发布权限。
+协调者在恢复、接到结果或状态更新、准备等待/结束本轮、合并前及 head 变化后主动核对
+所属 Issue 与 GitHub PR/head。发现漏报的 PR 也要接收并核验证据；旧 head 验收不证明
+新 head 已完成。完整触发点见
+[`issue-workflow`](.agents/skills/shared/issue-workflow/SKILL.md#delivery-reporting-and-coordinator-reconciliation)，
+收据、去重、乱序和恢复规则见
+[`agent-communication`](.agents/skills/shared/agent-communication/SKILL.md#delivery-events-and-recovery)。
+会话未运行时不承诺持续感知；下次活动检查点恢复，不新增常驻轮询。
+
 PR 描述应说明改了什么、为什么改、验收和 CI 要求的每项检查的命令与结果，以及
 顺带修复的相关缺陷；只有维护者本人才能完成的步骤写成具体阻塞，说明维护者要做
 什么。真实运行、构建和发布证据放在 Issue 或 PR 中，不靠 agent 的自述代替。
@@ -81,6 +94,10 @@ bash .agents/scripts/new-agent-prompt.sh 123 fix/issue-123-example
 
 第三个可选参数指定已声明的 PR 目标，省略时为 `dev`；该参数不授予创建、提交或
 合并权限。
+第四个可选参数是 `.project/state/` 下的本地协调者交接文件：包含协调者名字、pane、
+原生 session/thread 或无法解析的原因、任务/角色/attempt、回报授权、恢复入口和
+下一检查条件。脚本原样附入生成结果；省略时会提示派出前补齐。发送前检查实际生成
+内容，私有地址不写入公开 Issue；接收者须先 ACK 范围与授权。
 
 命名使用稳定任务键 `<project>-issue-<N>`：workspace label 追加简短主题，tab
 追加 implement / review / tests 等角色，Herdr agent 遵守长度、字符和 live 唯一性
