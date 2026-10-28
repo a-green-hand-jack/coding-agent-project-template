@@ -85,11 +85,74 @@ Follow-ups use the same preflight and confirmation protocol. Before
 `herdr agent prompt`, read the visible pane with `--format ansi` because it
 appends to the current input line. A dim CLI suggestion may be replaced by the
 message; it is not a reply or decision. If a real draft is present, do not
-append to it: write the message in the corresponding Issue or PR comment and
-explain the blocked send in the sender's own pane. Do not leave it only in a
-local log. Include the transport, target session and confirmation result in the
-state receipt. A follow-up can refer to an earlier handoff only when that
-handoff is recorded durably.
+append to it. Use an authorized Issue or PR comment after checking visibility
+and redacting private details, or report the blocked send to the maintainer
+in the sender's own pane if external writing is not authorized. Keep a pending
+receipt with its owner and next check; a local log alone is not notification.
+Include the transport, target session and confirmation result in the receipt.
+A follow-up can refer to an earlier handoff only when recorded durably.
+
+## Delivery events and recovery
+
+`issue-workflow` defines when workers report and coordinators reconcile. Use
+this protocol for those events, without a separate sender, daemon or message
+store. A final reply in the worker's own pane is not a coordinator notification.
+
+Before sending, save the event and its receipt under the owning worktree's
+`.project/state/`. Plain Markdown or JSON is sufficient. Keep an event history
+and a current-state summary there; retries update the receipt, never erase the
+original event or a failed attempt. Record:
+
+| Field | Required meaning |
+| --- | --- |
+| Identity | Stable event ID, event kind, task key, role, dispatch attempt, scope revision and sender session/thread. Use the same event ID for a retry; a changed outcome/head is a new event. |
+| Target | Claiming coordinator, resolved pane/session/thread, and the handoff authorizing this contact. Keep private routing details local. |
+| Version | Issue URL, PR URL or explicitly none, exact head and run/evidence references. For uncommitted changes include base HEAD and a saved diff/checksum; a base SHA alone cannot identify them. |
+| Outcome | Completed work, checks and inspected artifacts, outstanding obligations with owners, and requested action (ACK, review, verification or a decision). |
+| Receipt | Transport, status-before/after, each submission's exit/output, submitted/acknowledged/completed state and explicit confirmation evidence. Track acceptance, review, merge and close-out separately. |
+| Recovery | Pending owner, local recovery file, last attempt, retry count/bound, next check condition, and escalation route permitted by the handoff. |
+
+The receiver explicitly ACKs the event ID and version, recording accepted,
+duplicate, superseded or needs-reconciliation disposition plus pending duties.
+An ACK confirms receipt even if acceptance failed; it never grants review,
+merge or release approval. `completed` requires the requested outcome's actual
+evidence on the current version. An idle notice or acceptance of an old head
+cannot establish current completion.
+
+Apply these rules when receiving or recovering:
+
+- Deduplicate by task, dispatch attempt and event ID, not by arrival time. A
+  duplicate gets the recorded disposition/ACK without repeating actions. If
+  the same ID carries different content, retain both and request correction;
+  do not silently overwrite either.
+- Retain delayed or superseded events and their receipts. Compare PR head and
+  state against GitHub, and scope/attempt against the current handoff; a SHA is
+  not an ordered version number. Old-head evidence never replaces current-head
+  acceptance. A delayed failure or obligation still needs reconciliation, not
+  deletion merely because its head is old.
+- Re-dispatch keeps the task key but changes attempt and session mapping.
+  Preserve the old attempt's obligations until the authorized successor ACKs
+  transfer. Messages from an old attempt cannot take ownership or reset the
+  new attempt's state. Do not contact unrelated or retired sessions by guess.
+- Missing ACK remains pending, even after exit 0 or a later idle state. On
+  resume, read the receipt and current target/GitHub state before another send;
+  first look for a matching ACK already received. Preserve exact queue errors
+  (including first-turn failures) before considering the conditional fallback.
+- Default bound: one initial submission and at most one retry after a changed
+  precondition or the next active lifecycle checkpoint, following fresh
+  preflight. Record that condition before waiting. A fallback submission counts
+  as a retry; do not loop on elapsed time or unchanged state. When the bound is
+  exhausted, report pending to the maintainer or another explicitly authorized
+  route; retain the owner and recovery entry. New authorization or a resolved
+  blocker may start a recorded new retry budget, never silently reset it.
+
+When the coordinator is working, only a verified native transport with a
+resolved address can submit; when that fails or is unavailable, Herdr still
+requires idle/done and empty input. A real draft or blocked target forbids a
+send. Preserve pending state and escalate through the authorized route rather
+than overwriting input. Neither session can promise ongoing awareness while
+not running; recovery occurs at its next active checkpoint, not in an implicit
+background monitor.
 
 ## Fixtures
 

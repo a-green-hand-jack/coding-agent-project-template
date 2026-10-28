@@ -189,7 +189,7 @@ class MigrateRules(unittest.TestCase):
 
 
 class HandoffPrompt(unittest.TestCase):
-    def prompt(self, body: str, *arguments: str) -> str:
+    def prompt(self, body: str, *arguments: str, coordinator: str | None = None) -> str:
         with tempfile.TemporaryDirectory(prefix="prompt-test-") as temp:
             payload = Path(temp) / "issue.json"
             payload.write_text(json.dumps({
@@ -200,11 +200,50 @@ class HandoffPrompt(unittest.TestCase):
             gh.write_text(f"#!/usr/bin/env bash\ncat {shlex.quote(str(payload))}\n")
             gh.chmod(gh.stat().st_mode | stat.S_IXUSR)
             env = {**os.environ, "PATH": f"{temp}:{os.environ['PATH']}"}
+            if coordinator is not None:
+                mapping = Path(temp) / "coordinator mapping.md"
+                mapping.write_text(coordinator, encoding="utf-8")
+                arguments = (*arguments, str(mapping))
             result = subprocess.run(
                 ["bash", str(PROMPT), "7", *arguments], cwd=REPOSITORY, env=env, text=True, capture_output=True,
             )
         self.assertEqual(result.returncode, 0, result.stderr)
         return result.stdout
+
+    def test_local_coordinator_mapping_is_literal_and_does_not_change_target(self) -> None:
+        mapping = (
+            "Coordinator: tpl-coord-1; pane fixture:p1; thread fixture-thread\n"
+            "Identity: tpl-issue-7 implement attempt 2\n"
+            "Reporting authorization: scoped events only; no commit/push/PR/merge/release\n"
+            "Recovery: .project/state/events.md; owner tpl-issue-7; next active checkpoint\n"
+            "Literal: $(exit 97) `exit 98`\n"
+        )
+        result = self.prompt("## Dispatch\n- coordinator: `tpl-coord-1`\n",
+                             "feat/issue-7", "integration/issue-6", coordinator=mapping)
+        self.assertIn(mapping, result)
+        self.assertIn("PR target: integration/issue-6", result)
+        self.assertNotIn("Before dispatch, append the local coordinator", result)
+        for event in ("PR-created", "head-updated", "acceptance failures", "close-out changes"):
+            self.assertIn(event, result)
+        self.assertIn("Missing ACK stays pending", result)
+        self.assertIn("ACK this handoff's scope", result)
+
+    def test_missing_mapping_is_visible_and_bad_explicit_file_fails(self) -> None:
+        result = self.prompt("")
+        self.assertIn("Before dispatch, append the local coordinator mapping", result)
+        self.assertIn("Do not infer cross-session authorization", result)
+        with tempfile.TemporaryDirectory(prefix="prompt-mapping-test-") as temp:
+            empty = Path(temp) / "empty.md"
+            empty.touch()
+            for path in (empty, Path(temp) / "missing.md", Path(temp)):
+                with self.subTest(path=path.name):
+                    failed = subprocess.run(
+                        ["bash", str(PROMPT), "7", "feat/issue-7", "dev", str(path)],
+                        cwd=REPOSITORY, text=True, capture_output=True,
+                    )
+                    self.assertEqual(failed.returncode, 2)
+                    self.assertEqual(failed.stdout, "")
+                    self.assertIn("readable, nonempty local file", failed.stderr)
 
     def test_prompt_uses_declared_parent_target_without_changing_the_default(self) -> None:
         default = self.prompt("")

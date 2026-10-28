@@ -21,6 +21,8 @@ def decision(agent: str, status: str, input_line: str, thread: str | None) -> tu
         return "codex-queue", "resolved-working-thread"
     if status == "working":
         return "stop", "working-without-queue"
+    if status not in ("idle", "done"):
+        return "stop", "unknown-state"
     if agent == "codex" and thread:
         return "codex-queue", "resolved-thread"
     return "herdr-agent-prompt", "fallback-no-codex-thread" if agent == "codex" else "native-herdr"
@@ -32,6 +34,7 @@ class AgentCommunicationFixtures(unittest.TestCase):
         self.assertEqual(decision("claude", "idle", "draft", None), ("stop", "draft-input"))
         self.assertEqual(decision("claude", "blocked", "", None), ("stop", "blocked"))
         self.assertEqual(decision("claude", "working", "", None), ("stop", "working-without-queue"))
+        self.assertEqual(decision("codex", "unknown", "", "thread-123"), ("stop", "unknown-state"))
 
     def test_dim_suggestion_is_sendable_but_bright_draft_is_not(self) -> None:
         self.assertEqual(

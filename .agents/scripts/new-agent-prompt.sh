@@ -1,10 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-[[ -n "${1:-}" ]] || { echo "usage: $0 ISSUE_NUMBER [BRANCH] [TARGET_BASE]" >&2; exit 2; }
+[[ -n "${1:-}" && $# -le 4 ]] || { echo "usage: $0 ISSUE_NUMBER [BRANCH] [TARGET_BASE] [COORDINATOR_HANDOFF]" >&2; exit 2; }
 issue=$1
 branch=${2:-}
 target_base=${3:-dev}
+coordinator_handoff=${4:-}
+if [[ -n "$coordinator_handoff" && ( ! -f "$coordinator_handoff" || ! -r "$coordinator_handoff" || ! -s "$coordinator_handoff" ) ]]; then
+  echo 'COORDINATOR_HANDOFF must be a readable, nonempty local file' >&2
+  exit 2
+fi
 if ! command -v gh >/dev/null 2>&1; then
   echo 'gh is required to load the Issue details' >&2
   exit 1
@@ -108,6 +113,19 @@ Working rules for this session:
   and record the transport, target session/thread and confirmation result. A
   successful pane write alone is not receipt confirmation; after a stall,
   inspect status and preserve the exact evidence before retrying.
+- ACK this handoff's scope and reporting authorization before implementation.
+  Proactively send implementation/acceptance results, PR-created, head-updated,
+  blockers or acceptance failures, and responsibility/close-out changes to the
+  claiming coordinator before ending the affected turn. Each event carries an
+  event ID, task/role/attempt, Issue/PR (or none), exact head/run (or base plus
+  saved diff for uncommitted work), evidence, pending duties/owners and requested
+  action. Follow issue-workflow's delivery reporting and agent-communication's
+  receipt/recovery rules; a local final reply or idle state is not receipt.
+  Record submitted and explicit ACK separately. Missing ACK stays pending with
+  an owner, recovery entry and bounded retry/next checkpoint. On resume check
+  prior receipts and current GitHub state; duplicates or old heads never replace
+  current acceptance. Without delivery authorization report ready-for-review
+  and wait; notifications grant no commit/push/PR/merge/release permission.
 - Use .agents/skills/shared/development-writing/SKILL.md for Issues, PRs,
   comments and commit messages. Keep current bodies aligned with agreed scope
   and final behavior; retain important decisions in comments and identify the
@@ -121,6 +139,22 @@ if [[ -n "$language" ]]; then
 PROMPT
   [[ -z "$sections" ]] || printf '  An Issue body starts with: %s.\n' "$sections"
   printf '  Commit messages use %s unless development-writing has a project-specific override.\n' "$language"
+fi
+if [[ -n "$coordinator_handoff" ]]; then
+  printf '\nLocal coordinator mapping and reporting boundary:\n\n'
+  cat -- "$coordinator_handoff"
+  printf '\n'
+else
+  cat <<'PROMPT'
+
+Before dispatch, append the local coordinator mapping and reporting boundary:
+claimant name from Dispatch; resolved pane and native session/thread (or the
+unresolved-address reason and conditional fallback); task/role/attempt;
+authorized contact/events and delivery constraints; pending owner, recovery
+entry, bounded retry/next checkpoint and permitted escalation route.
+Keep machine-private addresses in .project/state/, not public Issue/PR text.
+Do not infer cross-session authorization from discovering a coordinator name.
+PROMPT
 fi
 if [[ -n "$dispatch" ]]; then
   cat <<PROMPT
