@@ -54,7 +54,7 @@ Issue #120 的真实通信验收使用既有 PR #119，明确标记为协议测�
 
 写作规范的实现与模板入口已经人工审阅；未使用浏览器通道。发布图是静态责任示意，不是 UI 截图。重复、旧 head、恢复和不可安全制造的阻塞场景按 Issue 验收区分 fixture、场景审阅和真实通信证据，不把它们混写为端到端测试。
 
-最终候选的检查结果与发布前下游增量检查将在交付时记录于发布 PR；历史验收不替代最终候选验证。本次没有新增常驻调度器、消息总线或后台轮询，也没有宣称测得开发效率提升。
+最终候选的检查结果与发布前下游增量检查见[发布 PR #122](https://github.com/a-green-hand-jack/coding-agent-project-template/pull/122) 的确定提交验收记录；历史验收不替代最终候选验证。本次没有新增常驻调度器、消息总线或后台轮询，也没有宣称测得开发效率提升。
 
 ### Upgrading a project from v0.1.21
 
@@ -68,6 +68,7 @@ Issue #120 的真实通信验收使用既有 PR #119，明确标记为协议测�
 - 上一版：[v0.1.21](https://github.com/a-green-hand-jack/coding-agent-project-template/releases/tag/v0.1.21)；[完整变化](https://github.com/a-green-hand-jack/coding-agent-project-template/compare/v0.1.21...v0.1.22)。
 - 开发写作：[Issue #118](https://github.com/a-green-hand-jack/coding-agent-project-template/issues/118)、[PR #119](https://github.com/a-green-hand-jack/coding-agent-project-template/pull/119)、[中文真实案例](https://github.com/a-green-hand-jack/coding-agent-project-template/blob/v0.1.22/DEVELOPMENT_WRITING_EXAMPLE.md)。
 - 主动回报：[Issue #120](https://github.com/a-green-hand-jack/coding-agent-project-template/issues/120)、[PR #121](https://github.com/a-green-hand-jack/coding-agent-project-template/pull/121)、[固定版本通信规范](https://github.com/a-green-hand-jack/coding-agent-project-template/blob/v0.1.22/.agents/skills/shared/agent-communication/SKILL.md)。
+- 发布交付与最终候选证据：[PR #122](https://github.com/a-green-hand-jack/coding-agent-project-template/pull/122)。
 
 ## v0.1.21 — 2026-10-28
 
