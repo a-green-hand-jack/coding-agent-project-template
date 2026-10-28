@@ -54,6 +54,7 @@ Issue #123 的两个真实 Codex 会话完成了“执行者暂停 → 协调者
 - [上一版 v0.1.22](https://github.com/a-green-hand-jack/coding-agent-project-template/releases/tag/v0.1.22)；[完整变化](https://github.com/a-green-hand-jack/coding-agent-project-template/compare/v0.1.22...v0.1.23)。
 - 固定版本：[验收责任规范](https://github.com/a-green-hand-jack/coding-agent-project-template/blob/v0.1.23/.agents/skills/shared/issue-workflow/SKILL.md#acceptance-write-responsibility)、[通讯节奏](https://github.com/a-green-hand-jack/coding-agent-project-template/blob/v0.1.23/.agents/skills/shared/agent-communication/SKILL.md#message-cadence)。
 - [实现 PR #124](https://github.com/a-green-hand-jack/coding-agent-project-template/pull/124)、[实现提交与验证范围](https://github.com/a-green-hand-jack/coding-agent-project-template/commit/482cfa7b036ae26c51a6f876c446432fc67cfca4)。
+- [发布 PR #125](https://github.com/a-green-hand-jack/coding-agent-project-template/pull/125)：最终候选核验与发布记录。
 
 ## v0.1.22 — 2026-10-28
 
