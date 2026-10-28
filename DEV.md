@@ -40,6 +40,15 @@ tracked source，也不写到未知的全局目录。
 工作语言与 Issue 开头段落在 registry 的 `writing:` 声明（同一 skill 的 “Writing
 conventions”）；本仓库声明为中文。
 
+Issue、PR、评论与 commit 的阅读职责、正文维护和证据边界统一见
+[`development-writing`](.agents/skills/shared/development-writing/SKILL.md)，
+四类可迁移正反例在其 references。本仓库后续 commit 信息也使用中文，不强制
+Conventional Commits 前缀；下游可在该 skill 的末尾适配段声明自己的 commit 语言
+或格式，未声明语言时沿用已有语言，不改变共享英文文本。
+[真实中文对照](DEVELOPMENT_WRITING_EXAMPLE.md) 保留已认可案例的历史原文、建议
+改写和事实待核对状态，属于本模板示例，下游不复制。范围变更更新 Issue 正文，
+最终实现变更更新 PR 标题和正文，重要决定在评论中保留；写作不增加提交或发送授权。
+
 实现依赖与验收依赖分开记录。接口固定且可以独立推进的部分可以提前开发，
 但须在上游合并后同步目标分支并完成集成验收；真实 blocked-by 不得绕过，混合
 范围需要拆成依赖准确的子任务。执行者负责自己 worktree 的实现、冲突修复和

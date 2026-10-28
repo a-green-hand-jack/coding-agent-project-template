@@ -1,6 +1,13 @@
 name: Bug
 description: Report an observed defect with evidence
 body:
+  - type: markdown
+    attributes:
+      value: >-
+        Follow the development writing guide at
+        `.agents/skills/shared/development-writing/SKILL.md` from this repository's root
+        and the project's declared language/sections. Explain the trigger and
+        consequence before diagnostic details; scale detail to the defect.
   - type: textarea
     id: observed
     attributes:
@@ -18,6 +25,13 @@ body:
     id: evidence
     attributes:
       label: Evidence and environment
-      description: Include relevant versions, logs or artifacts; never include secrets.
+      description: Include the checked version/head, command, conditions, result and redacted artifacts. Keep historical results distinct from new checks; never include secrets or private machine paths.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance evidence
+      description: What observable result and check establish the fix? Define conditional real-run requirements rather than assuming they are optional.
     validations:
       required: true

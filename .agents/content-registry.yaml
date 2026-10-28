@@ -58,6 +58,9 @@ entries:
   - path: .agents/skills/shared/issue-workflow/
     scope: shared_with_adaptation
     note: Fill dispatch/lifecycle slots and align task-key, role and attempt names with returned IDs; the claimant owns dependency re-evaluation and delivery. Simple Issues target dev; a declared parent integration branch records child targets, final dev PR and acceptance obligations.
+  - path: .agents/skills/shared/development-writing/
+    scope: shared_with_adaptation
+    note: Common reader and evidence principles plus Issue, PR, comment and commit guidance; neutral examples in references. Uses writing.language by default for commits; any project-specific commit language or convention goes only in the trailing adaptation section. Historical project cases are not part of this shared package.
   - path: .agents/skills/shared/agent-communication/
     scope: shared
     note: Resolve native capabilities before choosing transport; distinguish submitted, acknowledged and completed. Herdr is a conditional fallback, never receipt proof by itself.
@@ -191,6 +194,9 @@ entries:
   - path: RELEASE_EXAMPLE.md
     scope: template
     note: Chinese project-specific draft for v0.1.20 through PR 114; a human-facing example, not release history or downstream shared guidance.
+  - path: DEVELOPMENT_WRITING_EXAMPLE.md
+    scope: template
+    note: Chinese historical Issue, PR, comment and commit excerpts and proposed rewrites from writing-cases-20261028; retains disputed provenance and historical evidence boundaries. Never copied downstream.
   - path: .github/release-examples/
     scope: template
     note: Small versioned diagram source and static image for RELEASE_EXAMPLE.md; human documentation assets, not product inputs or downstream payload.

@@ -8,6 +8,10 @@ adaptations only in a trailing `## In this repository` section (see
 exactly `## In this repository`, not even in an example.
 Update the content registry when adding, renaming or retiring a shared skill.
 
+`development-writing/` owns the common writing principles and four development
+record types; `references/four-cases.md` holds transferable weak/rewrite examples.
+Concrete historical cases stay outside shared packages.
+
 `release-doc-audit/` covers release writing, rendered visual review and the
 existing consistency audit; its `references/release-types.md` distinguishes
 product upgrades, results, milestones/archives and concise releases. Keep
