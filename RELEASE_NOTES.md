@@ -4,6 +4,72 @@
 
 暂无。
 
+## v0.1.22 — 2026-10-28
+
+**让交付被看见，也让记录读得懂。**
+
+Coding-Agent Project Template 是一套供项目采用的 coding agent 开发规则、skills、交接脚本与协作约定。v0.1.21 已把项目定位、会话身份和发布叙事连起来；v0.1.22 进一步解决交接中两个具体问题：工作完成后，负责接手的人有没有收到？收到之后，能否从记录中判断发生了什么、证据支持什么、下一步该做什么？
+
+### PR 开好了，协调者也应该知道
+
+这次改动来自一个真实遗漏：实现会话已经创建 PR #119，并在自己的窗口告知维护者，却没有主动把 PR 创建事件送达协调者；协调者也没有在后续检查点重新核对 GitHub。结果仍要由维护者转述“PR 已经开了”。
+
+现在，工作会话在实现或验收完成、创建 PR、更新影响审阅的 head、遇到阻塞，以及转移职责时，都要主动向该任务的协调者回报。事件带有确定的身份、版本、证据、未完成事项和期望动作。协调者在恢复任务、收到结果、准备等待或结束协调轮次、合并前及 head 变化后核对当前 GitHub 状态；发现遗漏的已开 PR，也要主动补齐接收与核对。
+
+![交付回报流程：实现会话主动报告确定版本的事件，协调者明确确认并核对 GitHub，再进行授权交付；未确认事件保留责任人并在活动检查点恢复。](https://github.com/a-green-hand-jack/coding-agent-project-template/releases/download/v0.1.22/delivery-flow.png)
+
+*图 1：交付责任流程示意，不是自动调度器或性能测量。发送成功、接收确认、审阅通过、合并与回收分别保留证据。没有运行的会话不会凭这套规则获得后台持续感知能力。*
+
+没有 ACK 时，事件保持 pending，保留责任人、恢复入口和重试条件。默认一次提交、最多一次满足条件的重试；不按时间无休止重发。重复事件不重复执行动作，旧 head 的通过记录不覆盖新 head 的待验收状态；迟到的失败或未完成职责也不能直接丢弃。通知本身不增加提交、合并或发布权限。
+
+### 开发文字从“留个记录”变成“支持判断”
+
+新的共享 `development-writing` 把 Issue、PR、评论和 commit 的阅读职责分开，同时集中维护正文自洽、证据可追溯、历史与当前结果分清的公共原则。Release 继续使用 `release-doc-audit` 的专用发布流程。
+
+| 内容 | 读者需要得到的答案 | 这次补齐的写法 |
+| --- | --- | --- |
+| Issue | 为什么做，怎样算完成？ | 解释触发场景、后果、范围和可执行验收；不把“适用的真实运行”留给执行者猜 |
+| PR | 最终改变什么，是否能合入？ | 先说明前后行为，再给实现理由和精确 head 的证据；矛盾记录显式待核对 |
+| 评论 | 新增什么，需要怎样行动？ | 结论、影响、固定比较基线与下一步；重要决定保留历史 |
+| Commit | 这一组改动为什么存在？ | 标题写实际变化，必要时解释动机和约束；不强制长报告或统一前缀 |
+
+例如，“clarify agent communication prompt suggestions”只说明主题；“区分 CLI 输入建议与真实草稿，避免误阻消息”则直接说明改变了什么规则。中文历史案例保留原文、优点、问题和建议改写；共享例子使用虚构场景，避免把本项目历史变成所有下游必须遵循的事实。
+
+写作入口已经接入 workflow、Issue/PR 模板、交接 prompt、DEV 和索引。模板中的指南使用明确的仓库根目录路径指引，避免相对链接进入 Issue/PR 页面后指错位置。commit 默认沿用项目工作语言；下游可在 skill 的项目适配段保留自己的语言和格式。
+
+### 从模板到会话：交接信息可以直接带上
+
+`new-agent-prompt.sh` 保留原来的三个参数，并增加可选第四参数：本地协调者交接文件。文件包含协调者地址、任务/角色/attempt、授权联系范围和恢复责任，原样进入生成的 prompt；省略时会明确提示派出前补齐，不能从发现一个会话名称推断通信授权。
+
+```bash
+bash .agents/scripts/new-agent-prompt.sh <ISSUE> <BRANCH> dev \
+  .project/state/coordinator-handoff.md
+```
+
+协调者地址与机器私有信息留在本地 `.project/state/`，不进入公开 Issue、PR 或源码。该文件传递已有授权，不创造新权限。
+
+### 证据和适用边界
+
+Issue #120 的真实通信验收使用既有 PR #119，明确标记为协议测试，没有伪造新建 PR。实现会话通过 Codex 原生队列发出 `protocol-120-v1`；协调者在活动状态收到后，独立读取 GitHub，核对 head `4040cd42d912f3fdd3bcfaaff9be78bee2497608`、目标 dev、MERGED 状态及合并提交 `7343acc8a9b1d2e6f63550e9e4109d3a91fa3cda`，再回传带事件 ID 和精确 head 的 ACK。发送方保留确认记录。它证明这次配置下的事件回报和独立核对闭环，不证明所有客户端版本或所有异常场景均通过真实运行。
+
+写作规范的实现与模板入口已经人工审阅；未使用浏览器通道。发布图是静态责任示意，不是 UI 截图。重复、旧 head、恢复和不可安全制造的阻塞场景按 Issue 验收区分 fixture、场景审阅和真实通信证据，不把它们混写为端到端测试。
+
+最终候选的检查结果与发布前下游增量检查见[发布 PR #122](https://github.com/a-green-hand-jack/coding-agent-project-template/pull/122) 的确定提交验收记录；历史验收不替代最终候选验证。本次没有新增常驻调度器、消息总线或后台轮询，也没有宣称测得开发效率提升。
+
+### Upgrading a project from v0.1.21
+
+1. 在目标项目运行 `bash .agents/scripts/upgrade-template.sh --check v0.1.22`，按 `template-upgrade` 检查逐路径差异，再执行已审阅的升级；保留项目自己的 writing 声明与适配段。
+2. 纳入 `development-writing` 及其索引/registry，并接入项目实际使用的 Issue/PR 模板。模板专属 `DEVELOPMENT_WRITING_EXAMPLE.md` 不复制为下游共享规则。
+3. 升级 `issue-workflow`、`agent-communication` 和交接脚本；为新派出的会话填写协调者身份、允许回报的事件及 pending 恢复责任。既有三个参数调用仍可用，但派出前必须补齐本地身份映射。
+4. 按本项目真实会话工具验证一次主动回报与明确 ACK，记录当前 head 和权限边界；不要把模板升级解释为自动授权提交、合并或发布。
+
+### 参考资料
+
+- 上一版：[v0.1.21](https://github.com/a-green-hand-jack/coding-agent-project-template/releases/tag/v0.1.21)；[完整变化](https://github.com/a-green-hand-jack/coding-agent-project-template/compare/v0.1.21...v0.1.22)。
+- 开发写作：[Issue #118](https://github.com/a-green-hand-jack/coding-agent-project-template/issues/118)、[PR #119](https://github.com/a-green-hand-jack/coding-agent-project-template/pull/119)、[中文真实案例](https://github.com/a-green-hand-jack/coding-agent-project-template/blob/v0.1.22/DEVELOPMENT_WRITING_EXAMPLE.md)。
+- 主动回报：[Issue #120](https://github.com/a-green-hand-jack/coding-agent-project-template/issues/120)、[PR #121](https://github.com/a-green-hand-jack/coding-agent-project-template/pull/121)、[固定版本通信规范](https://github.com/a-green-hand-jack/coding-agent-project-template/blob/v0.1.22/.agents/skills/shared/agent-communication/SKILL.md)。
+- 发布交付与最终候选证据：[PR #122](https://github.com/a-green-hand-jack/coding-agent-project-template/pull/122)。
+
 ## v0.1.21 — 2026-10-28
 
 **从理解项目到讲清成果：让多个 coding agent 的工作汇成一次完整交付。**

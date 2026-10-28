@@ -40,12 +40,34 @@ tracked source，也不写到未知的全局目录。
 工作语言与 Issue 开头段落在 registry 的 `writing:` 声明（同一 skill 的 “Writing
 conventions”）；本仓库声明为中文。
 
+Issue、PR、评论与 commit 的阅读职责、正文维护和证据边界统一见
+[`development-writing`](.agents/skills/shared/development-writing/SKILL.md)，
+四类可迁移正反例在其 references。本仓库后续 commit 信息也使用中文，不强制
+Conventional Commits 前缀；下游可在该 skill 的末尾适配段声明自己的 commit 语言
+或格式，未声明语言时沿用已有语言，不改变共享英文文本。
+[真实中文对照](DEVELOPMENT_WRITING_EXAMPLE.md) 保留已认可案例的历史原文、建议
+改写和事实待核对状态，属于本模板示例，下游不复制。范围变更更新 Issue 正文，
+最终实现变更更新 PR 标题和正文，重要决定在评论中保留；写作不增加提交或发送授权。
+
 实现依赖与验收依赖分开记录。接口固定且可以独立推进的部分可以提前开发，
 但须在上游合并后同步目标分支并完成集成验收；真实 blocked-by 不得绕过，混合
 范围需要拆成依赖准确的子任务。执行者负责自己 worktree 的实现、冲突修复和
 证据回报；认领 Issue 的协调者负责交付后的依赖重评估、通知、审阅与复核。
 等待记录写明事件、责任人、关联 head/run、未完事项和后续动作。通信的提交、
 接收确认与任务完成分别记录，具体传输与权限边界见 `agent-communication`。
+
+实现者在实现/验收完成、PR 创建、影响审阅的新 head、阻塞或验收失败，以及职责或
+关闭条件变化时，主动向交接中指定的协调者发送带事件 ID、确定版本、证据和未完义务
+的回报。发送成功、明确 ACK、实际完成分别记录；没有 ACK 就保留负责人、恢复入口
+和有界重试/下一检查条件，不能只在自己的最终回复中宣布交付。没有交付授权时报告
+ready-for-review 并等待，通知不授予提交、开 PR、合并或发布权限。
+协调者在恢复、接到结果或状态更新、准备等待/结束本轮、合并前及 head 变化后主动核对
+所属 Issue 与 GitHub PR/head。发现漏报的 PR 也要接收并核验证据；旧 head 验收不证明
+新 head 已完成。完整触发点见
+[`issue-workflow`](.agents/skills/shared/issue-workflow/SKILL.md#delivery-reporting-and-coordinator-reconciliation)，
+收据、去重、乱序和恢复规则见
+[`agent-communication`](.agents/skills/shared/agent-communication/SKILL.md#delivery-events-and-recovery)。
+会话未运行时不承诺持续感知；下次活动检查点恢复，不新增常驻轮询。
 
 PR 描述应说明改了什么、为什么改、验收和 CI 要求的每项检查的命令与结果，以及
 顺带修复的相关缺陷；只有维护者本人才能完成的步骤写成具体阻塞，说明维护者要做
@@ -72,6 +94,10 @@ bash .agents/scripts/new-agent-prompt.sh 123 fix/issue-123-example
 
 第三个可选参数指定已声明的 PR 目标，省略时为 `dev`；该参数不授予创建、提交或
 合并权限。
+第四个可选参数是 `.project/state/` 下的本地协调者交接文件：包含协调者名字、pane、
+原生 session/thread 或无法解析的原因、任务/角色/attempt、回报授权、恢复入口和
+下一检查条件。脚本原样附入生成结果；省略时会提示派出前补齐。发送前检查实际生成
+内容，私有地址不写入公开 Issue；接收者须先 ACK 范围与授权。
 
 命名使用稳定任务键 `<project>-issue-<N>`：workspace label 追加简短主题，tab
 追加 implement / review / tests 等角色，Herdr agent 遵守长度、字符和 live 唯一性

@@ -196,6 +196,12 @@ mapping and duties until closed; changing a display name never transfers them.
 
 ## Writing conventions
 
+Use [development-writing](../development-writing/SKILL.md) for the common
+reader/evidence principles and the Issue, PR, comment and commit guidance.
+Its [examples](../development-writing/references/four-cases.md) illustrate
+ambiguous acceptance, conflicting records and head-specific evidence without
+changing this workflow's acceptance or authorization gates.
+
 A project declares how it writes in one place, the `writing:` block of
 `.agents/content-registry.yaml`:
 
@@ -208,6 +214,8 @@ writing:
 - `language`: the working language of Issues, PRs, review and Issue comments,
   the Issue-specific section of a handoff prompt, and the human documents
   (`README.md`, `USER.md`, `DEV.md` and the project's release notes).
+  Commit messages use it too unless the project's `development-writing`
+  adaptation explicitly chooses a different commit language or convention.
 - `issue_sections`: the sections an Issue body starts with, in order, for
   example the goal and the approach before the details. The project may use
   them as the fields of its own Issue forms; the template's forms in
@@ -309,6 +317,50 @@ verifies joint acceptance on the latest head and delivers the final PR to
 integration; the parent stays open through final acceptance and delivery.
 Retire children only after their obligations end; retire the parent integration
 worktree/branch only after final delivery and the same close-out gate.
+
+### Delivery reporting and coordinator reconciliation
+
+At dispatch, the claimant supplies its name, pane and native session/thread
+mapping (or a recorded unresolved-address fallback), the task/role/attempt,
+reporting authorization and recovery route in the local handoff. The worker
+ACKs that scope before implementation. Public Dispatch keeps only safe task
+and claimant names; machine-private routing lives under `.project/state/`.
+
+The worker proactively sends these events to that claimant using
+[`agent-communication`](../agent-communication/SKILL.md#delivery-events-and-recovery):
+
+| Trigger | Report before ending the affected work/delivery turn |
+| --- | --- |
+| Implementation or acceptance finishes | Result, exact head/run (or base plus saved diff), checks/artifacts and remaining duties. Without delivery authorization, report ready-for-review and wait. |
+| An authorized PR is created | PR-created with URL, base/head and evidence; do not rely on the worker's final user reply. |
+| A new PR head affects review | Head-updated with old/new head, changed scope and checks that must be repeated. |
+| Blocker or acceptance failure | Exact failure evidence, affected acceptance and owner/next action. |
+| Responsibility transfer or changed close-out conditions | Duties, artifacts/recovery references, old/new owner and required transfer ACK. |
+
+Record submission and explicit ACK separately. A failed send or missing ACK
+remains pending with the worker as reporting owner, a recovery entry, bounded
+retry/next check and authorized escalation route. Do not call it received or
+silently end with only a local log. The communication skill owns receipt,
+deduplication, old-head, re-dispatch and retry rules; do not duplicate them here.
+Reporting never authorizes commit, push, PR creation, merge or release.
+
+The claimant actively reconciles its owned Issues when resuming, receiving a
+result or user status update, preparing to wait/end a coordination turn, before
+merge, and after a head change. Read the local handoff/event/wait records, then
+query current Issue and PR state using `gh issue view`, `gh pr list --state all
+--head <branch>` and `gh pr view <PR> --json url,state,baseRefName,headRefOid,mergedAt`.
+Verify the Issue association and declared target, not just a matching branch.
+Compare expected events, current head, acceptance and outstanding duties. On a
+new head invalidate old-head readiness and apply the PR readiness gate anew.
+
+If a PR exists without a received creation event, record a discovered event
+with the observed PR/head, verify its evidence, update duties and explicitly
+ACK/reconcile with the authorized worker. Missing notification is neither
+completion nor a reason to wait for the maintainer to relay the PR. Keep
+receipt, independent GitHub observation, review, merge and close-out verdicts
+separate. Save the current summary and pending owners before ending the turn.
+No unchanged polling is required: inactive sessions resume this work at their
+next checkpoint; this workflow adds no always-on awareness or daemon.
 
 ### Coordination and waits
 
@@ -510,6 +562,7 @@ Input: Issue number `<N>` and a branch `<branch>` named per `DEV.md`
    ```bash
    bash .agents/scripts/new-agent-prompt.sh <N> <branch> <TARGET_BASE> \
      > <worktree>/.project/state/initial-prompt.md
+   # Optional fourth argument: local coordinator handoff file (see below).
    # append the Issue-specific section from the template below
    # Deliver using agent-communication's resolved native transport or its
    # conditional Herdr fallback, with input preflight and a message id.
@@ -709,6 +762,12 @@ together.
   `.project/state/`, which Close-out always copies, not in the root of
   `.project/`, where a file without a `migrate-project.rules` rule stops the
   migration.
+- **Proactively report delivery events.** Follow [Delivery reporting and
+  coordinator reconciliation](#delivery-reporting-and-coordinator-reconciliation)
+  for implementation/acceptance results, PR-created, head-updated, blockers or
+  failures, and responsibility/close-out changes. Send to the handoff's claimant
+  before ending the affected turn; preserve pending ownership when not ACKed.
+  The session's own final reply or idle state is not coordinator receipt.
 - **Separate implementation from delivery.** Implementation complete means the
   Issue's files are changed, the applicable checks and acceptance runs pass,
   artifacts or receipts were inspected, and the worktree status and diff are
@@ -725,6 +784,9 @@ together.
   comments and human documents in that language and starts Issue bodies with
   the declared sections; template text keeps its language. The generated
   handoff carries this rule only when a language is declared.
+  Commit language follows `development-writing` and its project adaptation.
+  Use that skill for reader-focused bodies and current evidence; a writing
+  prompt never authorizes sending or committing.
 
 ### Issue-specific section appended to the handoff prompt
 
@@ -739,6 +801,10 @@ Acceptance: <the Issue's acceptance evidence, as the checks to run>
 Target: <TARGET_BASE; parent integration Issue/branch if used>
 Identity: <task key, role, attempt; actual workspace/tab/pane IDs and labels;
            Herdr agent name; native name and thread/session ID or mapping fallback>
+Coordinator: <claimant name; pane; native session/thread or unresolved reason>
+Reporting authorization: <permitted events/contact; no implied delivery permissions>
+Recovery: <local receipt entry; pending owner; next checkpoint/retry bound;
+           permitted escalation route>
 Waits: <implementation blockers and acceptance-only dependencies, event/owner/next action>
 
 Constraints:
@@ -747,9 +813,18 @@ Constraints:
 - Do not commit or push until the maintainer asks. Then open the PR from this
   worktree (repository `<REPO>`, base `<TARGET_BASE>`) and do not merge it;
 - <If `<PRE_MERGE_GATE>` is defined: run it before opening the PR and fix what it lists>;
-- When finished, report the result with its evidence, `git status` and
-  `git diff --stat`, and wait for confirmation.
+- ACK the handoff scope and reporting boundary before implementation. Send each
+  required event to the coordinator, including the result with its evidence,
+  `git status` and `git diff --stat`; record explicit ACK or pending recovery.
+  Without further delivery authorization, report ready-for-review and wait.
 ```
+
+The coordinator mapping/authorization/recovery lines may be saved in a local
+file and passed as the fourth argument to `new-agent-prompt.sh`; the script
+includes it verbatim. Inspect the generated prompt before sending, fill every
+mapping/constraint and keep private addresses out of public Issue/PR content.
+Omitting the file preserves the existing invocation but leaves a conspicuous
+instruction to append the local mapping before dispatch.
 
 ### Messages to a running Issue session
 
@@ -777,6 +852,7 @@ the right change; a successful write or unrelated state transition is not receip
 ### PR readiness gate
 
 Before asking for approval or merge, the coordinator checks the delivery
+events and GitHub state at the reconciliation checkpoint above, then checks the
 evidence in order: implementation result and local acceptance; `git status` and
 `git diff --stat`; commit SHA and parent; `git push` result plus the remote head;
 PR base/head, Issue closing reference and changed-file scope; local check

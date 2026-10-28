@@ -7,9 +7,11 @@ concrete project and must state their commands, evidence and failure boundaries.
 Shared skills currently included:
 
 - `shared/worktree-lifecycle/` — reconcile responsibilities before retiring state.
-- `shared/issue-workflow/` — scope, dependencies, optional parent integration and delivery.
+- `shared/issue-workflow/` — scope, dependencies, delivery events and coordinator reconciliation.
+- `shared/development-writing/` — reader decisions, current facts and evidence
+  for Issues, PRs, comments and commits; four neutral cases in references.
 - `shared/agent-communication/` — capability-based transport and distinct
-  submission, acknowledgement and completion receipts.
+  submission, acknowledgement and completion receipts, pending recovery and deduplication.
 - `shared/project-memory-governance/`
 - `shared/asset-lifecycle/`
 - `shared/credential-setup/`
