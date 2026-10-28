@@ -4,6 +4,57 @@
 
 暂无。
 
+## v0.1.23 — 2026-10-28
+
+**验收时守住代码，协作时把时间留给工作。**
+
+Coding-Agent Project Template 为多个 coding agent 提供开发规则、skills、交接脚本与项目骨架。上一版 v0.1.22 解决了“PR 已开，协调者却不知道”；这一版继续解决两个紧邻的问题：验收过程中谁可以修改代码，以及怎样保持必要沟通又不让消息占满工作时间。
+
+### 测试通过，首先要知道测的是哪份代码
+
+下游曾发生过这样的事故：协调者正在跑验收，另一会话按笼统通知在同一个 worktree 中试合并。测试读到变化中的文件，整轮结果作废。即使运行前后 HEAD 相同、工作树干净，也不能排除中途修改后又恢复。
+
+现在，验收前先记录确定版本、负责人、相关写入者、保护的源码和输入，以及允许的日志和产物路径。未提交改动也要保存内容标识。相关写入者明确确认暂停后，验收负责人才能开始；负责人自己也不修改保护范围。验收结束且检查进程退出或完成隔离后，明确归还写入责任，由接收者确认接回。
+
+![验收交接示意：实现会话暂停写入，协调者确认并运行验收，检查退出后合并发送结果和责任归还，执行者确认接回后结束回执链。](https://github.com/a-green-hand-jack/coding-agent-project-template/releases/download/v0.1.23/acceptance-flow.png)
+
+*图 1：责任交接示意。箭头代表明确的先后条件，不代表自动执行或耗时；最后的确认不再要求另一封确认。*
+
+新修改要求、会话重启或超时都不会自动解除暂停。需要改代码时，先结束或作废旧验收，确认旧运行停止或隔离，再交接并重验。只读评审可以继续，验收也可以写约定的输出。使用独立不可变源码快照时，保留来源与隔离证据，就无需暂停开发 checkout。
+
+### 该说的话及时说，其他进度留给下一次结果
+
+主动沟通不等于持续聊天。本版把现有事件协议补充为三种节奏：
+
+| 情况 | 会话怎样处理 | 对工作的影响 |
+| --- | --- | --- |
+| 责任交接、失败、阻塞或使对方下一步失效的变化 | 及时通知；依赖交接的动作必须等明确确认 | 关键消息不会为“降噪”而遗漏 |
+| 同一检查点、同一版本的实现结果、验收与 PR 创建 | 合并消息，保留事件身份、证据和未完职责 | 一次阅读即可接手 |
+| 普通进度、未变化状态、心跳和已处理的重复事件 | 本地记录；有用信息带入下一次实质结果 | 不靠反复催问维持存在感 |
+
+纯 ACK 结束收据链，不再触发 ACK。消息如果同时提出新的责任转移，只确认那项新职责。原有“初次发送加至多一次有条件重试”继续有效；不按固定时间轮询。等待期间继续独立工作，但不能越过尚未确认的交接。
+
+这些规则已接入 `issue-workflow`、`agent-communication`、生成的交接 prompt、索引与 DEV。无需增加参数、锁服务或后台调度器。
+
+### 这次实际验证了什么
+
+Issue #123 的两个真实 Codex 会话完成了“执行者暂停 → 协调者确认接管 → 运行验收 → 合并发送结果和责任归还 → 执行者明确接回”。执行者运行 53 项测试通过；协调者独立运行同一组测试，53 项通过（9.242 秒）。源码清单在运行前后匹配，检查全部退出，随后才归还责任。时间只是该次运行记录，不是性能提升指标。
+
+另有 14 个场景审阅覆盖缺少确认、中途漂移、崩溃恢复、不可变快照和消息重复等分支；这些是规则审阅，未声称真实注入了故障。本规则依赖参与会话遵守约定，无法阻止未参与者改文件；发现干扰仍须作废相关证据。
+
+### Upgrading a project from v0.1.22
+
+1. 在目标项目运行 `bash .agents/scripts/upgrade-template.sh --check v0.1.23`，按 `template-upgrade` 审阅逐路径差异，保留项目自己的适配段。
+2. 更新两个协作 skill、场景参考、交接脚本、索引与 registry；把验收写入边界与消息节奏接入项目自己的 DEV，保留实际运行命令。
+3. 对新验收明确输入/输出、写入者和暂停/归还责任；结合项目现有会话工具验证一次交接。升级本身不会给旧会话自动转移责任，也不授予提交、合并或发布权限。
+
+### 参考资料
+
+- [Issue #123](https://github.com/a-green-hand-jack/coding-agent-project-template/issues/123)：问题、范围与验收。
+- [上一版 v0.1.22](https://github.com/a-green-hand-jack/coding-agent-project-template/releases/tag/v0.1.22)；[完整变化](https://github.com/a-green-hand-jack/coding-agent-project-template/compare/v0.1.22...v0.1.23)。
+- 固定版本：[验收责任规范](https://github.com/a-green-hand-jack/coding-agent-project-template/blob/v0.1.23/.agents/skills/shared/issue-workflow/SKILL.md#acceptance-write-responsibility)、[通讯节奏](https://github.com/a-green-hand-jack/coding-agent-project-template/blob/v0.1.23/.agents/skills/shared/agent-communication/SKILL.md#message-cadence)。
+- [实现 PR #124](https://github.com/a-green-hand-jack/coding-agent-project-template/pull/124)、[实现提交与验证范围](https://github.com/a-green-hand-jack/coding-agent-project-template/commit/482cfa7b036ae26c51a6f876c446432fc67cfca4)。
+
 ## v0.1.22 — 2026-10-28
 
 **让交付被看见，也让记录读得懂。**
