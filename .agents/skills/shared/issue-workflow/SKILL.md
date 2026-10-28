@@ -439,8 +439,11 @@ distinguishes rule/fixture coverage from a real authorized handoff.
 
 ## Shared boundaries
 
-- Require `test "${HERDR_ENV:-}" = 1`. If it fails, the session is not in a
-  Herdr-managed pane: report the blocker and stop. Do not fall back to
+- Check `test "${HERDR_ENV:-}" = 1` and verify the caller identity below.
+  Missing or stale variables leave identity unresolved; they do not establish
+  that the visible session is outside Herdr. Until resolved, stop control and
+  dispatch; only explicitly authorized read-only diagnosis may continue.
+  Do not fall back to
   `git switch -c`, raw `git worktree add`, another worktree manager or a
   temporary directory.
 - Operate only on the workspaces, worktrees, panes and agents created for the
@@ -489,6 +492,80 @@ distinguishes rule/fixture coverage from a real authorized handoff.
   `herdr worktree --help`, `herdr agent --help` and `herdr pane --help`; the
   installed CLI is authoritative.
   General Herdr control rules: `herdr --skill`.
+
+### Codex caller identity and isolation
+
+A pane, a native thread and a tool process's inherited environment are distinct
+identities. `HERDR_ENV=1`, an existing pane ID, a matching cwd or a familiar title
+alone proves none of their correspondence. Apply this check before controlling
+Herdr, and have each new worker repeat it from its own tool environment before
+implementation. Keep private mappings and command evidence in `.project/state/`.
+
+1. Inspect only `HERDR_ENV`, `HERDR_WORKSPACE_ID`, `HERDR_TAB_ID`,
+   `HERDR_PANE_ID` and, when exposed, `CODEX_THREAD_ID`; never dump the environment.
+   Record cwd, `git rev-parse --show-toplevel --git-common-dir`, branch and
+   `git worktree list`. Compare them with the dispatch's Herdr-returned mapping,
+   `herdr agent get <verified-target>`, `herdr pane current --current` (only with
+   valid caller context), and `herdr worktree list --workspace <verified-ws>`.
+   Match workspace, tab, pane, agent kind, native thread when available, worktree
+   and common repository; a valid pane belonging to another session still fails.
+2. On missing values, `agent_not_found`, `workspace_not_found`, `pane_not_found`
+   or a live-but-wrong mapping, preserve the exact observation and stop mutations.
+   With explicit maintainer authorization for diagnosis, use existing read-only
+   Herdr discovery and inspect only candidate sessions within that scope. Match
+   the current session's distinctive latest messages/tool activity with Herdr's
+   returned pane, process and worktree ownership. Cwd/title alone is insufficient;
+   ambiguous candidates remain blocked. Once confirmed, record the recovery
+   evidence and use explicit verified IDs, not `--current` or focused defaults
+   backed by stale/missing variables. Never export invented `HERDR_*` to pass a
+   guard. Missing variables do not by themselves diagnose a daemon defect.
+3. For a new Herdr Codex dispatch needing pane isolation, check `codex --version`
+   and `codex --help`. When supported, include `--no-daemon` in `<AGENT_ARGS>`
+   after Herdr's `--`; record actual returned argv and model/provider/effort.
+   This uses a per-session server even when a shared daemon already exists.
+   If unsupported, report the capability gap before launch; never silently omit
+   isolation. A different per-session environment mechanism is acceptable only
+   with recorded version-specific evidence and authorization. Other agent kinds
+   retain their existing selection and arguments.
+4. Bootstrap only an authorized identity-check handoff until the worker's tool
+   context matches the returned mapping and it explicitly ACKs scope. An absent
+   native thread is recorded as unresolved, not guessed from the agent name;
+   use `agent-communication`'s preflighted fallback, then record the native ID
+   when exposed. Test native queue reachability separately from environment
+   isolation, including after bootstrap: queue submission is not actual receipt
+   in the intended live session. Preserve failures and pending receipts before
+   any eligible fallback; never infer daemon mode from queue success.
+5. Diagnose an existing process only within authorized scope using public CLI
+   status and read-only process inspection. Record process/parent identity,
+   version, startup mode and only the allowlisted identity variables above.
+   Inspect resolved PIDs, not all process environments. Do not read credential
+   files or introduce a runtime wrapper. A shared daemon can retain old context;
+   the dated [capability record](../../../knowledge/shared/agent-session-messaging.md)
+   distinguishes observed evidence from a proposed causal reproduction.
+
+Existing sessions are not bulk-migrated. Apply isolation to new dispatches first;
+diagnose existing sessions and recover only within explicit authorization. Before
+any shared daemon restart or termination, establish affected sessions, owners,
+active work and maintainer approval. Other active sessions are a reason to bound
+impact, never permission to close them. Do not restart a shared service, update
+global integrations or kill processes just to repair a caller mapping. Record
+restart request acceptance (including `shutdown_requested`), old process exit,
+replacement identity/environment and worker scope ACK as separate facts. A
+shutdown request alone is not recovery. Downstream adoption uses the normal
+template upgrade and preserves project adaptations; no direct overwrite.
+
+Illustrative dispatch after capability and hook review (replace placeholders
+with resolved values, keep the permission mode authorized for this task):
+
+```bash
+herdr agent start <AGENT_NAME> --kind codex --pane <returned-pane> \
+  --timeout 60000 -- --no-daemon --model <resolved-model> \
+  -c 'model_provider="<provider>"' -c 'model_reasoning_effort="<effort>"'
+```
+
+Record CLI versions, startup arguments, intended/observed identities, receipt
+transport and explicit ACK locally. Public Dispatch can record `startup:
+--no-daemon` and a sanitized outcome, never private paths, session IDs or logs.
 
 ### Hook review before a session runs
 
@@ -575,7 +652,8 @@ Input: Issue number `<N>` and a branch `<branch>` named per `DEV.md`
    single tab. Never guess `<tab>` from its number.
 4. Start the agent in the new pane, passing the chosen agent kind, provider,
    model and effort explicitly through the slots; never rely on the CLI's
-   default:
+   default. For Codex, first apply [caller identity and isolation](#codex-caller-identity-and-isolation)
+   and include the supported `--no-daemon` in `<AGENT_ARGS>`:
 
    ```bash
    herdr agent start <AGENT_NAME> --kind <AGENT_KIND> --pane <pane> \
@@ -741,6 +819,7 @@ id, a provider endpoint or local path here.
 - agent: <agent kind and permission mode>
 - provider: `<provider>`
 - model: `<resolved model>`; effort: `<effort>`
+- startup: <actual isolation mode and CLI version; for applicable Codex, --no-daemon>
 - reason: <tier>: <the scope, risk or uncertainty that decided it>, and <why an
   expensive provider or model was needed, when one was>
 - session: `<AGENT_NAME>`, branch `<branch>`
@@ -772,6 +851,13 @@ appends one line that keeps the history:
 `new-agent-prompt.sh` prints these rules into every handoff; change both
 together.
 
+- **Verify tool identity before implementation.** Apply [Codex caller identity
+  and isolation](#codex-caller-identity-and-isolation): compare the worker's own
+  allowlisted environment, repository and native thread with Herdr-returned
+  identities, record actual startup mode/model/provider/effort, then ACK scope.
+  Missing/stale context permits only authorized read-only diagnosis until
+  resolved. Never fake variables or restart shared services as a default fix.
+  Bootstrap and post-bootstrap queue receipt follow `agent-communication`.
 - **Verify to completion.** The session runs every check the Issue's acceptance
   and `<LOCAL_CHECK>` call for, including real runs, and reports one definite
   result with the commands and their output. After a push it may read

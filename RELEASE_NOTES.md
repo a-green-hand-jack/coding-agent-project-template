@@ -4,6 +4,54 @@
 
 暂无。
 
+## v0.1.24 — 2026-10-28
+
+**让 Codex 知道自己在哪个窗口，也让交接到达正确的会话。**
+
+Coding-Agent Project Template 为多个 coding agent 提供开发规则、skills、交接脚本与项目骨架。相较 v0.1.23，本版解决派发前一个容易被忽略的问题：用户明明在 Herdr 窗口里，执行命令的 Codex 却可能拿到旧窗口的身份，或者完全没有窗口身份，因而把正常派发误判成“没有 workspace”。
+
+### 窗口在这里，执行命令的服务却可能来自别处
+
+Herdr 的 pane 是终端窗格，workspace 是组织这些窗格的工作区；Codex 的 thread 是对话身份。界面连接的后台 app-server 才可能是启动工具命令的进程。这几层身份需要对应，不能只凭一个环境变量或相同目录推断它们属于同一会话。
+
+本次观察包含两类情况：长期服务保留了已失效的 `HERDR_*`；工具进程中的四个 Herdr 身份变量全部缺失，而当前可见会话仍在真实窗格中。前者可能引发 `pane_not_found` 等错误，后者会让旧的环境检查直接中止。它们是本次观察，尚不构成所有 Codex 版本的共同缺陷。
+
+### 从“看到一个值”改为“确认对应关系”
+
+| 场景 | 以前的风险 | v0.1.24 的处理 |
+| --- | --- | --- |
+| 环境变量缺失或过期 | 误判会话不在 Herdr，或操作旧窗口 | 暂停控制；获授权后只读核对当前活动、Herdr 返回身份和仓库归属 |
+| pane ID 存在 | 把另一个活跃会话当成自己 | 同时匹配 workspace、pane、native thread 与 worktree；目录或标题相同不够 |
+| 派出新的 Codex | 继承共享服务的历史环境 | 检查 CLI 支持后使用 `--no-daemon`，worker 再从自身工具环境独立确认 |
+| 消息提交成功 | 把入队当成接收 | 分开记录提交、明确 ACK 和完成；核验隔离模式下实际通讯可达性 |
+
+![会话身份核验流程：先核对窗口、会话和工具进程；缺失或过期时仅做授权诊断；身份确认后用明确 ID 派发，worker 再核对自身身份，最后确认消息进入正确会话。](https://github.com/a-green-hand-jack/coding-agent-project-template/releases/download/v0.1.24/context-flow.png)
+
+*图 1：派发与身份核验示意，不是后台自动修复器。箭头表示条件和顺序，不表示性能或耗时。*
+
+新规则已接入 `issue-workflow`、`agent-communication`、生成的交接 prompt、项目启动示例和带日期的能力记录。无法确认归属时继续保持阻塞；不猜 workspace、不伪造变量，也不默认重启共享服务。CLI 不支持隔离参数时明确报告能力缺口，不悄悄省略。
+
+### 实际验收：两个 workspace，两条方向的回执
+
+在 Linux、Codex 0.165.0、Herdr client 0.9.4 / server 0.9.1 上，两个以 `--no-daemon` 启动的 Codex 会话分别位于不同 workspace。每个会话都从自己的工具环境读取身份，再与实时 Herdr 查询核对；两个方向的 native queue 消息均由正确的接收方明确 ACK。实施会话使用 GPT-6-Astra/high，机械身份与回执验证使用 GPT-6-Luna/low。验证会话沿用已安装的权限配置，没有增加绕过审批参数；源码保持不变，临时验证 workspace 在正常退出后回收。
+
+较早的只读沙箱尝试曾阻断 Herdr socket 和反向 queue，这些失败证据被保留，**并未被“成功重试”解释为沙箱权限已修复**。后续成功证明指定配置下的 workspace/pane 身份与双向送达；两个会话共用 checkout，不证明文件访问隔离，也不证明上游 daemon 实现已经修复。
+
+本次实现的 62 项测试通过；协调者独立运行 62 项测试通过（9.535 秒）。新增场景覆盖缺失、过期、错误归属、不完整身份、失效目标、不支持参数、共享服务恢复和消息回执边界。它们是无 provider 的规则模型与交接脚本检查，不能替代上述真实会话验收。耗时仅为运行记录，不代表性能提升。
+
+### Upgrading a project from v0.1.23
+
+1. 在目标项目运行 `bash .agents/scripts/upgrade-template.sh --check v0.1.24`，按 `template-upgrade` 审阅逐路径差异，保留项目自己的适配段、模型路由与权限配置。
+2. 更新协作 skill、交接脚本、能力记录与索引。核对项目自己的 Codex 启动示例：先检查安装版本和 `--no-daemon` 支持，再采用隔离启动；不要把模板专属 memory 或测试复制为下游产品内容。
+3. 新派发先验证 worker 身份，再确认一次真实消息交接。既有会话按需诊断，不批量重启 daemon、更新全局集成或终止其他会话。恢复涉及共享服务时，先确认影响范围并获得授权。
+
+### 参考资料
+
+- [Issue #127](https://github.com/a-green-hand-jack/coding-agent-project-template/issues/127)：问题、范围与验收。
+- [上一版 v0.1.23](https://github.com/a-green-hand-jack/coding-agent-project-template/releases/tag/v0.1.23)；[完整变化](https://github.com/a-green-hand-jack/coding-agent-project-template/compare/v0.1.23...v0.1.24)。
+- 固定版本：[身份核验与隔离流程](https://github.com/a-green-hand-jack/coding-agent-project-template/blob/v0.1.24/.agents/skills/shared/issue-workflow/SKILL.md#codex-caller-identity-and-isolation)、[能力与证据边界](https://github.com/a-green-hand-jack/coding-agent-project-template/blob/v0.1.24/.agents/knowledge/shared/agent-session-messaging.md)。
+- [实现 PR #128](https://github.com/a-green-hand-jack/coding-agent-project-template/pull/128)、[实现提交](https://github.com/a-green-hand-jack/coding-agent-project-template/commit/6b4f0ac5ef8301dc37c109b07cfbb9452e4dca4b)：已验收内容与合并检查。
+
 ## v0.1.23 — 2026-10-28
 
 **验收时守住代码，协作时把时间留给工作。**
