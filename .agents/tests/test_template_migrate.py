@@ -274,6 +274,13 @@ class HandoffPrompt(unittest.TestCase):
         self.assertIn("agent, provider, model and effort", flat)
         self.assertIn("re-dispatched", flat)
         self.assertIn("no Dispatch section yet", flat)
+        for boundary in ("your own allowlisted HERDR identity variables",
+                         "repository/common Git dir and native thread",
+                         "supported --no-daemon isolation",
+                         "only authorized read-only diagnosis",
+                         "never fake variables or restart shared services",
+                         "including after bootstrap"):
+            self.assertIn(boundary, flat)
 
     def test_prompt_carries_the_issues_dispatch_record(self) -> None:
         body = (

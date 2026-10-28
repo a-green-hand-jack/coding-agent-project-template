@@ -59,6 +59,16 @@ Validate each complete Herdr agent name, including role/attempt suffix, against
 Do not invent naming flags or rename sessions outside this Issue.
 
 Working rules for this session:
+- Before implementation, apply issue-workflow's Codex caller identity and
+  isolation check. Compare your own allowlisted HERDR identity variables,
+  repository/common Git dir and native thread with Herdr-returned identities;
+  record actual startup mode/model/provider/effort, then explicitly ACK scope.
+  For applicable Codex dispatches verify supported --no-daemon isolation.
+  Missing/stale context permits only authorized read-only diagnosis until
+  resolved; never fake variables or restart shared services as a default fix.
+  Missing native thread permits only the preflighted communication fallback;
+  test actual queue receipt separately, including after bootstrap. Startup,
+  corrected environment, submitted message and receiver ACK are distinct facts.
 - Before the first agent run, inspect every Herdr hook that will run (including
   SessionStart) and record a per-hook receipt under .project/state/. Approve
   only known, necessary hooks; stop on an unknown, changed, or uninspectable

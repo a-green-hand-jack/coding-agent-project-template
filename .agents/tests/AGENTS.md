@@ -19,3 +19,8 @@ python3 -m unittest discover -s .agents/tests -p 'test_template_*.py'
 ```
 
 The real-release test needs the release tags (`git fetch --tags origin`).
+
+`test_template_codex_context.py` models missing/stale or wrong-owner caller
+context, unsupported isolation, shared restart boundaries and native/fallback
+receipts. These synthetic decision scenarios do not enforce the workflow or
+prove live isolation; keep the authorized two-session evidence separate.

@@ -1,7 +1,7 @@
 ---
 name: template-work-runs-on-codex
-date: 2026-10-26
-source: maintainer decision in the coordinating session, 2026-10-26; Issue #108
+date: 2026-10-28
+source: maintainer decision in the coordinating session, 2026-10-26; Issue #108; Issue #127 startup capability correction
 scope: project
 applies_to: this template repository's Issue dispatch
 status: active
@@ -42,15 +42,20 @@ record of what actually ran.
 
 ## Apply
 
-Start the Issue session with Codex and explicit model and effort arguments.
+Start the Issue session with Codex and explicit provider, model and effort arguments.
 Resolve `<newest usable Codex model>` from the models the Codex CLI and account
 currently offer before starting, then record the resolved string in the Issue's
-Dispatch section:
+Dispatch section. Apply the shared
+[caller identity and isolation procedure](../../skills/shared/issue-workflow/SKILL.md#codex-caller-identity-and-isolation)
+first: verify installed CLI support, use `--no-daemon` for this Herdr dispatch,
+and record the worker's actual startup arguments and identity ACK. An unsupported
+isolation flag is a capability gap, not permission to silently omit it. With the
+supported Codex config syntax:
 
 ```bash
 herdr agent start tpl-issue-<N> --kind codex --pane <pane> -- \
-  --model <newest usable Codex model> \
-  --reasoning-effort <effort>
+  --no-daemon --model <newest usable Codex model> \
+  -c 'model_provider="<provider>"' -c 'model_reasoning_effort="<effort>"'
 ```
 
 Map the selected tier's effort onto the Codex CLI's accepted values. If Codex
