@@ -68,6 +68,8 @@ Coding-Agent Project Template 为维护者和 coding agent 提供可采用、可
 - [Issue #115](https://github.com/a-green-hand-jack/coding-agent-project-template/issues/115) · [发布叙事 PR #116](https://github.com/a-green-hand-jack/coding-agent-project-template/pull/116)
 - [v0.1.21 代码与使用入口](https://github.com/a-green-hand-jack/coding-agent-project-template/tree/v0.1.21) · [中文发布示例](https://github.com/a-green-hand-jack/coding-agent-project-template/blob/v0.1.21/RELEASE_EXAMPLE.md) · [发布写作与审阅 skill](https://github.com/a-green-hand-jack/coding-agent-project-template/blob/v0.1.21/.agents/skills/shared/release-doc-audit/SKILL.md)
 
+- [发布 PR #117：候选检查与发布记录](https://github.com/a-green-hand-jack/coding-agent-project-template/pull/117)
+
 ## v0.1.20 — 2026-10-26
 
 - **区分 CLI 暗色输入建议与真实草稿**（#110）：`agent-communication` 现在要求使用 `herdr agent read <target> --source visible --format ansi` 检查输入行；被 `ESC[2m` 包裹的暗色内容是 CLI 建议，可以被发送消息替换，不是人的回答或决定，只有正常亮度文字会阻塞发送。真实草稿阻塞时，消息必须写入对应 Issue 或 PR 评论，并在发送方 pane 说明，不能只留在本地日志。
