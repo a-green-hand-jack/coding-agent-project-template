@@ -126,6 +126,20 @@ Working rules for this session:
   prior receipts and current GitHub state; duplicates or old heads never replace
   current acceptance. Without delivery authorization report ready-for-review
   and wait; notifications grant no commit/push/PR/merge/release permission.
+- Protect acceptance inputs using issue-workflow's Acceptance write
+  responsibility section. Before either session tests a shared checkout, record
+  the exact version (including uncommitted inputs), owner, writers, protected
+  paths and allowed outputs. Require explicit pause ACKs before starting and
+  explicit return before resuming writes. New edits, drift, restart or timeout
+  never silently release responsibility; end/invalidate and stop or isolate the
+  old run before transfer. An independently immutable snapshot records its
+  provenance and isolation instead of freezing the development checkout.
+- Apply agent-communication's message cadence: critical handoffs, failures and
+  changes affecting the receiver's next action go promptly; combine results at
+  the same checkpoint/version, and keep routine progress local. ACKs need no
+  ACK; return a duplicate receipt only for a still-pending confirmation duty.
+  Keep independent work moving; no fixed-time polling or heartbeats. Pending
+  handoffs block their dependent actions, not unrelated work.
 - Use .agents/skills/shared/development-writing/SKILL.md for Issues, PRs,
   comments and commit messages. Keep current bodies aligned with agreed scope
   and final behavior; retain important decisions in comments and identify the

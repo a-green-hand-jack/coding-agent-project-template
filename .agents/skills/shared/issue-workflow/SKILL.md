@@ -344,6 +344,12 @@ silently end with only a local log. The communication skill owns receipt,
 deduplication, old-head, re-dispatch and retry rules; do not duplicate them here.
 Reporting never authorizes commit, push, PR creation, merge or release.
 
+Use the communication skill's [message cadence](../agent-communication/SKILL.md#message-cadence):
+handoffs, blockers and changes affecting the receiver's next action go promptly;
+results at the same checkpoint and version can share one message, including a
+PR-created event. Routine progress stays local. Combining events must retain
+each event's identity, duties and required ACK; it cannot delay a critical handoff.
+
 The claimant actively reconciles its owned Issues when resuming, receiving a
 result or user status update, preparing to wait/end a coordination turn, before
 merge, and after a head change. Read the local handoff/event/wait records, then
@@ -379,6 +385,57 @@ background acceptance, review or a maintainer-only decision. Follow the event
 rather than treating `idle` as completion or inventing a timer/scheduler. Pending
 audit or acceptance obligations survive merge until fulfilled or explicitly
 transferred under authorization, with a receiving owner acknowledgement.
+
+### Acceptance write responsibility
+
+Before either the coordinator or worker runs acceptance against a checkout that
+another session can change, record the boundary in the existing event/receipt
+under `.project/state/`. Identify the checkout, exact HEAD and run ID, acceptance
+owner, every relevant writer, commands, protected source and inputs, and allowed
+output/log paths. For uncommitted work, save the diff and checksum, including
+staged changes and the content/identity of any untracked or ignored inputs the
+run consumes. HEAD or a clean tree alone does not identify those inputs.
+
+1. **Pause and acknowledge.** Request each relevant writer to pause mutations of
+   those paths, including edits, formatting, generated inputs, checkout, pull,
+   merge and rebase. A writer confirms the boundary/version and that its active
+   writers have stopped or are isolated; it then keeps the pause until explicit
+   return. The acceptance owner ACKs responsibility and starts only after all
+   required pause ACKs are recorded and the version is rechecked. A combined
+   ready-for-review message may also be the sender's explicit pause confirmation
+   and transfer request. Silence, idle status or successful delivery is not ACK.
+2. **Run within the boundary.** The owner also refrains from protected writes.
+   Acceptance may write only the agreed outputs/logs; a path consumed as an
+   input cannot also be an unrestricted output. Read-only review and unrelated
+   work may continue. An independently immutable source snapshot needs no pause
+   of the development checkout: record its source HEAD/diff, content digest,
+   isolation/read-only mechanism and input/output mapping, and run against that
+   snapshot. A copy or before/after checksum alone does not prove immutability.
+3. **Reconcile interruption before changing source.** A new authorized edit,
+   head/diff/input drift, lost contact, crash or session restart does not release
+   the pause. Preserve evidence and notify the other owner promptly. End or mark
+   the old acceptance invalid; confirm its processes have stopped or are isolated
+   from the paths before explicitly transferring write responsibility. If run
+   state is unknown, keep the pause and report the concrete recovery blocker.
+   On resume, read the saved boundary, run state and receipts before acting;
+   a successor must acknowledge transfer. Recheck the new version and repeat
+   affected acceptance after the edit. Never infer permission from elapsed time.
+4. **Return explicitly.** On completion or invalidation, the acceptance owner
+   records the exact version, result and artifacts, confirms no remaining run
+   can read the protected paths, and returns write responsibility to named
+   writers. Each recipient ACKs that return before resuming protected edits;
+   combine it with the next substantive result where possible, without delaying
+   a dependent action. The owner's final message can carry both the result and
+   return; an ACK itself needs no ACK. Retain pending duties and their owners.
+
+Both sides enforce their own obligations; the coordinator never sends a vague
+"continue" while acceptance still reads the checkout, and the worker never
+treats a fresh modification request as an implicit release. Matching HEAD and
+clean status before/after cannot rule out a mid-run edit that was restored.
+This is a coordination protocol, not a lock: it cannot prevent writes from
+nonparticipants. Suspected interference invalidates the affected evidence.
+The [scenario review](../agent-communication/references/acceptance-scenarios.md)
+distinguishes rule/fixture coverage from a real authorized handoff.
 
 ## Shared boundaries
 
@@ -768,6 +825,12 @@ together.
   failures, and responsibility/close-out changes. Send to the handoff's claimant
   before ending the affected turn; preserve pending ownership when not ACKed.
   The session's own final reply or idle state is not coordinator receipt.
+- **Protect acceptance inputs.** Follow [Acceptance write responsibility](#acceptance-write-responsibility)
+  before either session tests a shared checkout. Record version, writers,
+  protected inputs and allowed outputs; require pause ACKs and explicit return.
+  New edits, drift, restart or timeout never silently release responsibility.
+  Use message cadence to combine results, keep routine progress local and avoid
+  ACK loops; pending handoffs block only the actions that depend on them.
 - **Separate implementation from delivery.** Implementation complete means the
   Issue's files are changed, the applicable checks and acceptance runs pass,
   artifacts or receipts were inspected, and the worktree status and diff are
@@ -890,8 +953,11 @@ moved, go back to step 2.
    step 1, confirm it is at the PR's latest commit
    (`git -C <worktree> fetch origin` and compare `git -C <worktree> rev-parse HEAD`
    with `gh pr view <PR> --repo <REPO> --json headRefOid --jq .headRefOid`;
-   if they differ, `git -C <worktree> merge --ff-only origin/<branch>`), run
-   `<LOCAL_CHECK>` there, and leave one comment on the PR with:
+   if they differ, `git -C <worktree> merge --ff-only origin/<branch>` only after
+   any prior acceptance has ended and write responsibility is returned).
+   Establish [Acceptance write responsibility](#acceptance-write-responsibility)
+   before running `<LOCAL_CHECK>` there; explicitly return it after the checks
+   stop, including on failure. Leave one comment on the PR with:
 
    - the commit SHA the checks ran on;
    - each command and its result (pass, or fail with the failing output);

@@ -227,6 +227,15 @@ class HandoffPrompt(unittest.TestCase):
             self.assertIn(event, result)
         self.assertIn("Missing ACK stays pending", result)
         self.assertIn("ACK this handoff's scope", result)
+        # The generated handoff must carry the shared-input gate and cadence,
+        # not only delivery reporting; these checks do not prove live receipt.
+        flat = " ".join(result.split())
+        for boundary in ("Require explicit pause ACKs before starting",
+                         "explicit return before resuming writes",
+                         "allowed outputs", "independently immutable snapshot",
+                         "keep routine progress local", "ACKs need no ACK",
+                         "no fixed-time polling or heartbeats"):
+            self.assertIn(boundary, flat)
 
     def test_missing_mapping_is_visible_and_bad_explicit_file_fails(self) -> None:
         result = self.prompt("")
