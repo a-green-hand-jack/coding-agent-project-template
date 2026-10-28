@@ -8,8 +8,10 @@ import json
 import os
 import shlex
 import shutil
+import socket
 import stat
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -17,6 +19,16 @@ from pathlib import Path
 REPOSITORY = Path(__file__).resolve().parents[2]
 MIGRATE = REPOSITORY / ".agents/scripts/migrate-assets.sh"
 PROMPT = REPOSITORY / ".agents/scripts/new-agent-prompt.sh"
+TEARDOWN = REPOSITORY / ".agents/scripts/teardown-worktree.sh"
+
+
+def verify_copy(source: str | Path, copy: str | Path) -> subprocess.CompletedProcess[str]:
+    """Run the exact verifier on nodes created independently of native cp."""
+    code = MIGRATE.read_text().split('<<\'PY\'\n', 1)[1].split("\nPY\n", 1)[0]
+    return subprocess.run(
+        [sys.executable, "-I", "-", str(source), str(copy)], input=code,
+        text=True, capture_output=True, timeout=3,
+    )
 
 
 class MigrateRules(unittest.TestCase):
@@ -37,15 +49,237 @@ class MigrateRules(unittest.TestCase):
     def rules(self, text: str) -> None:
         (self.worktree / ".agents/scripts/migrate-project.rules").write_text(text)
 
-    def migrate(self, *extra: str) -> subprocess.CompletedProcess[str]:
+    def migrate(self, *extra: str, env: dict[str, str] | None = None,
+                destination: str | None = None) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
-            ["bash", str(MIGRATE), "--to", str(self.destination), *extra],
+            ["bash", str(MIGRATE), "--to", destination or str(self.destination), *extra],
             cwd=self.worktree, text=True, capture_output=True,
+            timeout=10, env=env,
         )
 
     def copied(self) -> Path:
         (migration,) = (self.destination / ".project/migrations").iterdir()
         return migration
+
+    def test_fifo_tree_migrates_and_verifies_links_afterward(self) -> None:
+        runs = self.worktree / ".project/runs/r1"
+        runs.mkdir(parents=True)
+        os.mkfifo(runs / "stream.fifo")
+        (runs / "regular.txt").write_text("receipt\n")
+        (runs / "broken-link").symlink_to("missing")
+        (runs / "pipe-link").symlink_to("stream.fifo")
+        (runs / ".empty").mkdir()
+        self.project_file("assets.links", "data=/srv/data\n")
+        (self.worktree / "assets").mkdir()
+        (self.worktree / "assets/data").symlink_to("/srv/data")
+
+        result = self.migrate()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("verified: 4 item(s) identical", result.stdout)
+        self.assertIn("source was not deleted", result.stdout)
+        self.assertTrue(stat.S_ISFIFO((self.copied() / "runs/r1/stream.fifo").lstat().st_mode))
+        self.assertTrue(stat.S_ISFIFO((runs / "stream.fifo").lstat().st_mode))
+        self.assertEqual(os.readlink(self.destination / "assets/data"), "/srv/data")
+        self.assertEqual((self.destination / ".project/assets.links").read_text(), "data=/srv/data\n")
+
+    def verification_tree(self) -> Path:
+        runs = self.worktree / ".project/runs"
+        runs.mkdir()
+        (runs / "file").write_text("receipt\n")
+        (runs / "directory").mkdir()
+        (runs / "directory/.hidden").write_bytes(b"\0\xff\n")
+        (runs / "empty").mkdir()
+        os.mkfifo(runs / "stream\n pipe")
+        (runs / "broken").symlink_to("missing\n")
+        (runs / "pipe-link").symlink_to("stream\n pipe")
+        return runs
+
+    def copy_hook(self, code: str) -> dict[str, str]:
+        """Alter a real cp result at the copy/verification seam."""
+        bin_dir = self.temp / "bin"
+        bin_dir.mkdir(exist_ok=True)
+        hook = bin_dir / "after-copy.py"
+        hook.write_text(
+            "import os, stat, sys\nfrom pathlib import Path\n"
+            "if sys.argv[-2] == '.project/runs':\n"
+            "    source = Path(sys.argv[-2])\n"
+            "    copy = Path(sys.argv[-1]) / 'runs'\n"
+            + "".join(f"    {line}\n" for line in code.splitlines())
+        )
+        wrapper = bin_dir / "cp"
+        wrapper.write_text(
+            "#!/usr/bin/env bash\nset -e\n"
+            f"{shlex.quote(shutil.which('cp'))} \"$@\"\n"
+            f"{shlex.quote(sys.executable)} {shlex.quote(str(hook))} \"$@\"\n"
+        )
+        wrapper.chmod(0o755)
+        return {**os.environ, "PATH": f"{bin_dir}:{os.environ['PATH']}"}
+
+    def test_fifo_and_unusual_names_verify_without_reading_streams(self) -> None:
+        self.verification_tree()
+        assets = self.worktree / "assets"
+        assets.mkdir()
+        os.mkfifo(assets / "pipe")
+        result = self.migrate()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        copy = self.copied() / "runs"
+        self.assertEqual(os.readlink(copy / "broken"), "missing\n")
+        self.assertEqual((copy / "directory/.hidden").read_bytes(), b"\0\xff\n")
+        self.assertTrue((copy / "empty").is_dir())
+        self.assertTrue(stat.S_ISFIFO((self.destination / "assets/pipe").lstat().st_mode))
+
+    def test_native_socket_copy_is_verified_or_refused_when_omitted(self) -> None:
+        runs = self.worktree / ".project/runs"
+        runs.mkdir()
+        stream = socket.socket(socket.AF_UNIX)
+        self.addCleanup(stream.close)
+        stream.bind(str(runs / "socket"))
+        probe = self.temp / "native-copy"
+        native = subprocess.run(
+            ["cp", "-a", str(runs), str(probe)], text=True, capture_output=True, timeout=5,
+        )
+        result = self.migrate()
+        if (probe / "socket").exists():
+            self.assertEqual(native.returncode, 0, native.stderr)
+            self.assertTrue(stat.S_ISSOCK((probe / "socket").lstat().st_mode))
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertTrue(stat.S_ISSOCK((self.copied() / "runs/socket").lstat().st_mode))
+        else:
+            # BSD cp may warn but exit 0 after omitting sockets. Migration must
+            # refuse that incomplete copy, never silently waive the missing node.
+            self.assertIn("socket", native.stderr)
+            self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertNotIn("verified:", result.stdout)
+            if native.returncode == 0:
+                self.assertIn("DIFFERS: .project/runs", result.stderr)
+                self.assertIn("verification FAILED", result.stderr)
+        self.assertTrue(stat.S_ISSOCK((runs / "socket").lstat().st_mode))
+
+    def test_missing_socket_after_copy_fails_verification(self) -> None:
+        runs = self.worktree / ".project/runs"
+        runs.mkdir()
+        stream = socket.socket(socket.AF_UNIX)
+        self.addCleanup(stream.close)
+        stream.bind(str(runs / "socket"))
+        result = self.migrate(env=self.copy_hook("(copy / 'socket').unlink(missing_ok=True)"))
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("DIFFERS: .project/runs", result.stderr)
+        self.assertIn("verification FAILED", result.stderr)
+        self.assertNotIn("verified:", result.stdout)
+
+    def test_top_level_fifo_is_verified_by_type(self) -> None:
+        os.mkfifo(self.worktree / ".project/runs")
+        result = self.migrate()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertTrue(stat.S_ISFIFO((self.copied() / "runs").lstat().st_mode))
+
+    def test_teardown_entrypoint_finishes_with_fifo(self) -> None:
+        self.verification_tree()
+        for script in (MIGRATE, TEARDOWN, MIGRATE.with_name("inspect-state.sh")):
+            shutil.copy2(script, self.worktree / ".agents/scripts" / script.name)
+        result = subprocess.run(
+            ["bash", ".agents/scripts/teardown-worktree.sh", "--migrate-to", str(self.destination)],
+            cwd=self.worktree, text=True, capture_output=True, timeout=20,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("ready for managed worktree removal; no source directory was deleted", result.stdout)
+        self.assertTrue(stat.S_ISFIFO((self.copied() / "runs/stream\n pipe").lstat().st_mode))
+
+    def test_regular_content_is_checked_past_first_chunk(self) -> None:
+        runs = self.worktree / ".project/runs"
+        runs.mkdir()
+        (runs / "file").write_bytes(b"x" * (1024 * 1024) + b"end")
+        result = self.migrate(env=self.copy_hook(
+            "with (copy / 'file').open('r+b') as output:\n"
+            "    output.seek(-1, 2)\n"
+            "    output.write(b'!')"
+        ))
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("verification FAILED", result.stderr)
+
+    def test_verification_does_not_depend_on_diff_options_or_diagnostics(self) -> None:
+        self.verification_tree()
+        bin_dir = self.temp / "no-diff"
+        bin_dir.mkdir()
+        diff = bin_dir / "diff"
+        diff.write_text("#!/usr/bin/env bash\necho 'diff must not be invoked' >&2\nexit 2\n")
+        diff.chmod(0o755)
+        result = self.migrate(env={**os.environ, "PATH": f"{bin_dir}:{os.environ['PATH']}"})
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertNotIn("diff must not be invoked", result.stderr)
+
+    def test_migration_needs_no_gnu_realpath_and_resolves_missing_destination(self) -> None:
+        runs = self.worktree / ".project/runs"
+        runs.mkdir()
+        os.mkfifo(runs / "stream")
+        bin_dir = self.temp / "bsd-tools"
+        bin_dir.mkdir()
+        realpath = bin_dir / "realpath"
+        realpath.write_text(
+            "#!/usr/bin/env bash\necho 'realpath: illegal option -- m' >&2\nexit 1\n"
+        )
+        realpath.chmod(0o755)
+        link = self.worktree / "destination-link"
+        link.symlink_to(self.destination, target_is_directory=True)
+        # Resolve relative paths from the caller, including symlink parents,
+        # missing components and '..', as GNU realpath -m did.
+        self.destination = link / "new canonical"
+        result = self.migrate(env={**os.environ, "PATH": f"{bin_dir}:{os.environ['PATH']}"},
+                              destination="destination-link/missing/../new canonical")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn(f"migrated_to={self.destination.resolve()}", result.stdout)
+        self.assertTrue(stat.S_ISFIFO((self.copied() / "runs/stream").lstat().st_mode))
+
+    def test_resolved_destination_inside_source_still_stops_before_copy(self) -> None:
+        link = self.temp / "source-link"
+        link.symlink_to(self.worktree, target_is_directory=True)
+        result = self.migrate(destination=str(link / "missing/../nested"))
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("destination must be outside this worktree", result.stderr)
+        self.assertFalse((self.worktree / "nested").exists())
+
+    def test_mismatches_are_rejected_even_with_matching_special_files(self) -> None:
+        self.verification_tree()
+        changes = {
+            "content": "(copy / 'file').write_text('changed')",
+            "missing-file": "(copy / 'file').unlink()",
+            "extra-file": "(copy / 'extra').touch()",
+            "missing-fifo": "(copy / 'stream\\n pipe').unlink()",
+            "fifo-as-file": "(copy / 'stream\\n pipe').unlink()\n(copy / 'stream\\n pipe').touch()",
+            "file-as-fifo": "(copy / 'file').unlink()\nos.mkfifo(copy / 'file')",
+            "link-target": "(copy / 'pipe-link').unlink()\n(copy / 'pipe-link').symlink_to('file')",
+            "broken-target-newline": "(copy / 'broken').unlink()\n(copy / 'broken').symlink_to('missing')",
+            "file-as-link": "(copy / 'file').unlink()\n(copy / 'file').symlink_to(source.resolve() / 'file')",
+            "directory-as-link": "(copy / 'empty').rmdir()\n(copy / 'empty').symlink_to(source.resolve() / 'empty')",
+            "missing-directory": "(copy / 'empty').rmdir()",
+            "extra-directory": "(copy / 'extra').mkdir()",
+        }
+        for name, code in changes.items():
+            with self.subTest(change=name):
+                self.destination = self.temp / name
+                self.destination.mkdir()
+                result = self.migrate(env=self.copy_hook(code))
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                self.assertIn("DIFFERS: .project/runs", result.stderr)
+                self.assertIn("verification FAILED", result.stderr)
+                self.assertNotIn("verified:", result.stdout)
+
+    @unittest.skipIf(os.geteuid() == 0, "root bypasses permission errors")
+    def test_read_and_directory_traversal_errors_fail_verification(self) -> None:
+        runs = self.verification_tree()
+        for name, path in (("read", runs / "file"), ("traverse", runs / "directory")):
+            with self.subTest(error=name):
+                self.destination = self.temp / name
+                self.destination.mkdir()
+                mode = path.stat().st_mode
+                try:
+                    result = self.migrate(env=self.copy_hook(f"Path({str(path)!r}).chmod(0)"))
+                    self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                    self.assertIn("verification error:", result.stderr)
+                    self.assertIn("Permission denied", result.stderr)
+                    self.assertIn("verification FAILED", result.stderr)
+                finally:
+                    path.chmod(mode)
 
     def test_template_rules_migrate_state_assets_and_leave_no_unique_copy(self) -> None:
         state = self.worktree / ".project/state/initial-prompt.md"
@@ -186,6 +420,47 @@ class MigrateRules(unittest.TestCase):
 
     def test_wildcard_duplicate_is_a_second_rule(self) -> None:
         self.assert_rejected("plan-*|copy|\nplan-*|copy|\n", 2, "second rule for plan-*")
+
+
+class SpecialFileVerification(unittest.TestCase):
+    """Verify independently created sockets and existing safe device nodes."""
+
+    def test_socket_pairs_and_mismatched_or_missing_nodes(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="socket-verify-") as temp:
+            source, copy = Path(temp) / "source", Path(temp) / "copy"
+            source.mkdir()
+            copy.mkdir()
+            with socket.socket(socket.AF_UNIX) as left, socket.socket(socket.AF_UNIX) as right:
+                left.bind(str(source / "socket"))
+                right.bind(str(copy / "socket"))
+                result = verify_copy(source, copy)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                (copy / "socket").unlink()
+                os.mkfifo(copy / "socket")
+                self.assertEqual(verify_copy(source, copy).returncode, 1)
+                (copy / "socket").unlink()
+                self.assertEqual(verify_copy(source, copy).returncode, 1)
+
+    def test_character_devices_match_by_type_without_reading(self) -> None:
+        if not all(Path(path).exists() and stat.S_ISCHR(os.lstat(path).st_mode)
+                   for path in ("/dev/null", "/dev/zero")):
+            self.skipTest("safe character-device fixtures unavailable")
+        result = verify_copy("/dev/zero", "/dev/zero")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        result = verify_copy("/dev/null", "/dev/zero")
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_block_devices_match_by_type_and_reject_character_device(self) -> None:
+        candidates = ("/dev/loop0", "/dev/sda", "/dev/disk0")
+        devices = [path for path in candidates
+                   if Path(path).exists() and stat.S_ISBLK(os.lstat(path).st_mode)]
+        if not devices:
+            self.skipTest("block-device nodes unavailable; never create privileged devices")
+        result = verify_copy(devices[0], devices[-1])
+        self.assertEqual(result.returncode, 0, result.stderr)
+        if Path("/dev/null").exists():
+            result = verify_copy(devices[0], "/dev/null")
+            self.assertEqual(result.returncode, 1, result.stderr)
 
 
 class HandoffPrompt(unittest.TestCase):

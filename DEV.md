@@ -171,7 +171,12 @@ worktree 的 `.project/`。具体项目可以提供可执行的
 
    该命令会检查 ignored state、复制 `.project/state`、`runs`、`artifacts`、
    `manifest`、`migrate-project.rules` 标记 `copy` 的条目和资产软链接，逐项校验
-   并写入迁移记录；它不会自动删除 worktree。`setup-project.sh` 在 `.project/`
+   并写入迁移记录；它不会自动删除 worktree。校验需要 Python 3，按相对路径和
+   类型核对目录项，比较普通文件内容与软链接目标；FIFO、socket 和设备节点只
+   核对类型，不读取内容。缺项、多项、类型或内容不符、读取错误都会使校验失败。
+   复制仍使用系统的 `cp -a`；若它不复制 socket（如 macOS 的 BSD cp），迁移会
+   拒绝不完整的副本，不会忽略缺失的节点或自动重建 socket。
+   `setup-project.sh` 在 `.project/`
    下创建的条目，在 `.agents/scripts/migrate-project.rules` 里逐行写明迁移方式
    （`NAME|ACTION|WHY`，ACTION 为 `copy`、`drop` 或 `login`），否则 teardown 会
    停下来要求决定。`NAME` 可以是 shell 通配符，一行管一类文件，例如
