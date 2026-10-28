@@ -11,6 +11,12 @@
 较大的工作单元由 Issue/branch/PR 构成可追溯的交付单元；小修小改直接在 `dev`
 里做，不建 Issue、worktree 或 PR。
 
+它服务于维护项目的人和参与开发的 coding agent，交付可采用、可升级的规则、
+skills、脚本和项目骨架。核心概念是产品、开发、human 三个平面，以及承载变更的
+Issue、worktree、证据和交付。模板不定义下游产品的领域模型，不规定评测、实验或
+论文的通用目录，也不提供第二套调度器。采用模板前先明确自己的用户、交付物、
+核心概念和非目标，再按这些概念组织产品；已有测试不因采用模板而统一搬迁。
+
 ## 开始一个新项目
 
 1. 在 GitHub 使用 **Use this template** 创建新仓库，并优先选择 **Private**。
@@ -18,8 +24,8 @@
    开头段落，或删掉这一块（不声明）；不用托管 CI 时删掉
    `.github/workflows/template-check.yml`。
 2. 在新仓库运行 `bash .agents/scripts/init-branches.sh`，建立 `dev`、推送它并
-   将 GitHub 默认分支设为 `dev`；之后 Issue branch 从 `dev` 创建，发布才合并
-   到 `main`。
+   将 GitHub 默认分支设为 `dev`；简单 Issue branch 从 `dev` 创建。需要联合验收
+   的父任务可以按 `DEV.md` 声明集成分支，最终仍交付到 `dev`；发布才合并到 `main`。
 3. 修改本 README、`USER.md` 和 `DEV.md` 中的项目占位内容。
 4. 在产品树放入产品：默认是 `src/`；产品树不是 `src/` 时（例如论文的 `paper/`），
    在 `AGENTS.md` 的“三个平面”和下面的目录表中写明。

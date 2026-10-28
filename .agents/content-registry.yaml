@@ -4,7 +4,7 @@ purpose: >-
   which content belongs to one concrete project.
 template:
   repository: https://github.com/a-green-hand-jack/coding-agent-project-template
-  version: v0.1.20
+  version: v0.1.21
   # A derived template (a template built from another template) records itself
   # above and the template it follows here; nobody else writes this block, and a
   # project made from a derived template removes it (DEV.md, template relationship):
@@ -54,13 +54,13 @@ entries:
     note: Recreate as a relative symlink to AGENTS.md; never duplicate its content.
   - path: .agents/skills/shared/worktree-lifecycle/
     scope: shared_with_adaptation
-    note: Adapt Herdr workspace names, setup commands, stop and monitor commands and repository state paths; retirement stops the worktree's own processes, migrates state and assets, verifies them, and only then removes the worktree.
+    note: Adapt Herdr workspace names and project commands; retire only after background acceptance and outstanding obligations are fulfilled or explicitly transferred with acknowledgement, then stop owned processes, migrate and verify state/assets, and remove the worktree.
   - path: .agents/skills/shared/issue-workflow/
     scope: shared_with_adaptation
-    note: Fill the adaptation slots for base branch, repository, agent kinds and their model families, agent kind and prefix, provider and model arguments, model selection and fallback order, dispatch tier models, effort arguments, excluded models, fallback agent, workspace label prefix, CI, product gate, archive and run commands, and the monitor and stop commands close-out uses.
+    note: Fill dispatch/lifecycle slots and align task-key, role and attempt names with returned IDs; the claimant owns dependency re-evaluation and delivery. Simple Issues target dev; a declared parent integration branch records child targets, final dev PR and acceptance obligations.
   - path: .agents/skills/shared/agent-communication/
     scope: shared
-    note: Route confirmed handoffs and follow-up messages through each agent's native transport; adapt only the destination's target resolution and state receipt paths.
+    note: Resolve native capabilities before choosing transport; distinguish submitted, acknowledged and completed. Herdr is a conditional fallback, never receipt proof by itself.
   - path: .agents/skills/shared/project-memory-governance/
     scope: shared
     note: Generic classification, registration and cleanup procedure.
@@ -81,7 +81,7 @@ entries:
     note: Adapt current and target release tags, local conflicts and migration evidence.
   - path: .agents/skills/shared/release-doc-audit/
     scope: shared_with_adaptation
-    note: Set RELEASE_HEADING to the destination's release-notes layout and adapt release-note ownership; the audit runs against the destination tree and target tag.
+    note: Write and visually review standalone release narratives; adapt audience/type, repository URL, publication surface/image hosting, release-note ownership and RELEASE_HEADING. Includes shared release-type references; project examples stay outside this package. Preserve version, registry, path and machine-readable upgrade checks.
   - path: .agents/skills/shared/asset-lifecycle/
     scope: shared_with_adaptation
     note: Adapt asset classes, storage roots and migration evidence.
@@ -121,6 +121,9 @@ entries:
   - path: .agents/memory/shared/product-state-root.md
     scope: shared_with_adaptation
     note: Fill STATE_MARKER, STATE_ENV and DEFAULT_ROOT; product commands resolve a worktree's state root from the setup marker, and the lookup stops at the repository boundary.
+  - path: .agents/memory/shared/project-positioning-before-layout.md
+    scope: shared
+    note: Establish users, deliverables, concepts and non-goals before mapping paths and reading directory contracts; product concepts govern layout, and adaptation cannot authorize a conflict.
   - path: .agents/memory/shared/provider-cost-routing.md
     scope: shared
     note: Ordinary tests and mechanical work use the cheapest token source and model that can judge them; a cheap run is still a real provider-backed run and never replaces a capability check; agent, provider, model and effort are explicit and recorded with what the run proves.
@@ -156,6 +159,9 @@ entries:
   - path: .agents/knowledge/shared/
     scope: shared
     note: Reusable sourced facts with a refresh condition; adapt sources before reuse.
+  - path: .agents/knowledge/shared/agent-session-messaging.md
+    scope: shared
+    note: Dated Claude native messaging/version/tool facts, Codex and Claude naming sources, and an observed Codex first-turn queue failure; refresh before relying on changed client behavior.
   - path: .agents/knowledge/shared/gpt5-strict-backend-requests.md
     scope: shared
     optional: true
@@ -182,6 +188,12 @@ entries:
   - path: RELEASE_NOTES.md
     scope: template
     note: Template release history stays in the template repository; downstream projects keep their own release notes.
+  - path: RELEASE_EXAMPLE.md
+    scope: template
+    note: Chinese project-specific draft for v0.1.20 through PR 114; a human-facing example, not release history or downstream shared guidance.
+  - path: .github/release-examples/
+    scope: template
+    note: Small versioned diagram source and static image for RELEASE_EXAMPLE.md; human documentation assets, not product inputs or downstream payload.
   - path: .agents/skills/template-harvest/
     scope: template
     note: Maintainer procedure that collects settled downstream practice; keep it in the template repository and never copy it downstream.

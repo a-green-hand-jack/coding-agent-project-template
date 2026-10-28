@@ -1,0 +1,12 @@
+{
+  "theme": "base",
+  "themeVariables": { "fontFamily": "Noto Sans CJK SC, sans-serif" },
+  "flowchart": {
+    "useMaxWidth": true,
+    "htmlLabels": true,
+    "nodeSpacing": 22,
+    "rankSpacing": 28,
+    "diagramPadding": 16,
+    "wrappingWidth": 340
+  }
+}

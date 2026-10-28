@@ -1,6 +1,6 @@
 ---
 name: issue-workflow
-description: Several coordinator sessions share the dev checkout, each claiming one Issue; the claimant implements it in its own Herdr worktree and agent session dispatched by difficulty (start), merges its PR after resolving conflicts with the current dev in that worktree (merge), and retires the worktree after the merge (close-out); small changes are made directly in the dev checkout.
+description: Coordinate an Issue's scope, dependencies, dispatch, review, integration and close-out through isolated Herdr worktrees; use a declared parent integration branch when children need joint acceptance.
 ---
 
 # Issue workflow
@@ -11,7 +11,8 @@ starts, merges or retires the work of one Issue. Each Issue is implemented by a
 separate agent session in its own Herdr worktree; the maintainer talks to that
 session directly in its pane. That session opens the PR; the coordinator that
 claimed the Issue merges it after review on GitHub and then closes the worktree
-out.
+out when its outstanding responsibilities are complete. Commit, push, PR and
+merge actions still require the authorization specified by the project and task.
 
 Before sending an Issue handoff or follow-up, read the shared
 [`agent-communication`](../agent-communication/SKILL.md) skill. It separates
@@ -38,10 +39,10 @@ this skill, *the coordinator* is the one that claimed the Issue at hand.
 - An Issue another coordinator claimed is not touched. Taking it over, also
   from a claimant whose pane is gone, is the maintainer's decision.
 - An Issue that depends on one another coordinator claimed is recorded with
-  blocked-by ([Phased work](#phased-work) step 5) and waits until that Issue is
-  merged. Do not enter its worktree and do not press its session; to hurry it,
-  ask the maintainer. Its coordinator starts what it blocked ([Close-out](#close-out)
-  step 10).
+  accurate blocked-by relations ([Phased work](#phased-work)). Its blocked scope
+  waits for the required delivery. Do not enter its worktree or press its
+  session; use the maintainer for cross-coordinator routing unless explicitly
+  authorized. Its claimant re-evaluates readiness after delivery.
 - The dev checkout is common ground; see the shared dev checkout rules under
   [Shared boundaries](#shared-boundaries).
 
@@ -124,7 +125,7 @@ project-neutral.
 
 | Slot | Meaning | Default |
 | --- | --- | --- |
-| `<BASE>` | Integration branch that worktrees start from and PRs target. | `dev` |
+| `<BASE>` | Repository integration branch; default source and PR target for simple Issues and final target for a parent integration PR. A declared parent may give children a different target (below). | `dev` |
 | `<REPO>` | `owner/name` that owns the Issues and PRs. Pass `--repo <REPO>` to every `gh` call when the clone has no unambiguous default repository. | this repository |
 | `<AGENT_KINDS>` | Herdr agent kinds this project dispatches, in preference order, and the model family each may use: Codex its OpenAI/Codex family, Claude Code its Anthropic family, Pi the family of the provider configured for it. The first usable one is `<AGENT_KIND>`. `herdr agent start --help` lists the installed kinds. | `codex`, `claude`, `pi` |
 | `<AGENT_KIND>` | Herdr agent kind for the Issue session: the first usable kind in `<AGENT_KINDS>`. | project choice |
@@ -135,14 +136,63 @@ project-neutral.
 | `<MODEL_LOW>`, `<MODEL_MID>`, `<MODEL_HIGH>` | Models for the dispatch tiers (see Dispatch by difficulty), as the agent CLI names them: a model name, an alias, or a series whose newest usable member is resolved at dispatch time. | project choice |
 | `<EXCLUDED_MODELS>` | Models and providers never dispatched unless the maintainer asks for one by name. | none |
 | `<FALLBACK_AGENT>` | Agent kind used only when the primary agent or its provider is unavailable, with its own `<AGENT_ARGS>`, `<PROVIDER_ARGS>`, `<MODEL_ARGS>` and tier models. | none |
-| `<AGENT_PREFIX>` | Short project prefix. The agent name is `<AGENT_PREFIX>-issue-<N>` and must be unique across the whole Herdr server. | project choice |
-| `<WORKSPACE_PREFIX>` | Prefix of the Herdr workspace label, so that a server holding worktrees of several repositories shows which repository an Issue workspace belongs to. Herdr accepts upper-case letters in labels but not in agent names, so a project may prefer an upper-case prefix here. | `<AGENT_PREFIX>` |
+| `<AGENT_PREFIX>` | Short lower-case project prefix. It forms the stable task key `<AGENT_PREFIX>-issue-<N>`; agent names add role/attempt only as needed and must fit the live-name limits below. | project choice |
+| `<WORKSPACE_PREFIX>` | Display form of the same project prefix, optionally upper-case; preserve its mapping to the stable task key, not a second task identity. Workspace labels append the Issue number and short topic. | `<AGENT_PREFIX>` |
 | `<MERGE_METHOD>` | `gh pr merge` method flag. Close-out's ancestry check assumes a merge commit. | `--merge` |
 | `<CI>` | Whether the project adopts the template's optional `.github/workflows/template-check.yml`. `yes`: adopted; its result is read and noted on the PR, never waited for and never a condition (see Merge). `no`: that workflow is left out (`template-adoption` step 3). | project fact |
 | `<LOCAL_CHECK>` | The verification commands from `DEV.md`, always filled whatever `<CI>` is. They are the merge gate, run locally; when `<CI>` is `yes` they are the same steps the workflow runs. | `DEV.md` verification strategy |
 | `<PRE_MERGE_GATE>` | Optional read-only product command that must pass before merging, for example `<cmd> archive --check`. | none |
 | `<ARCHIVE_CMD>` | Product command that archives and registers non-rebuildable results before a worktree is retired. | none |
 | `<MONITOR_CMD>`, `<STOP_CMD>` | Product commands that list live runs started in a checkout (the dev checkout or a worktree) and stop one. Close-out stops every run the worktree started through `<STOP_CMD>`, and never through a generic process killer. | none |
+
+### Task names and identifiers
+
+Use one stable `<TASK_KEY>` = `<AGENT_PREFIX>-issue-<N>` across the layers. Derive
+display names for their purpose; never derive IDs or paths from them:
+
+| Layer | Name | Identity to record |
+| --- | --- | --- |
+| Git / worktree | `<type>/issue-<N>-<slug>`; keep Herdr's returned directory | branch, returned worktree path and repository |
+| Herdr workspace | `<WORKSPACE_PREFIX>-issue-<N> <short topic>` | returned workspace ID |
+| Herdr tab | `<TASK_KEY> <role>`; name even a single tab, not just `1` | returned tab ID and its workspace |
+| Herdr agent | `<TASK_KEY>` for the sole worker; append a short role for multiple agents | live name and pane ID |
+| Native session | same task key and role where supported; optional topic in display title | actual native name and thread/session ID |
+
+Roles may be `implement`, `review` or `tests`. Herdr agent names must match
+`[a-z][a-z0-9_-]{0,31}` and be unique on the server. Before start or rename,
+validate the complete name including role/attempt suffix: at most 32 characters
+and no live collision. Reject an invalid name and choose a recorded alias first.
+Choose a short project prefix
+that leaves room for Issue, role and attempt; if it cannot fit, explicitly record
+an abbreviated alias to the full task key, never silently truncate or collide.
+Coordinators use `<AGENT_PREFIX>-coord-<parent-or-topic>` under the same limits.
+Re-dispatch preserves the task key and records the new native ID and attempt;
+while an old agent is live, append a short unique suffix such as `-a2`. Keep the
+old mapping until its responsibilities end.
+
+Resolve native naming from the [dated client capability record](../../../knowledge/shared/agent-session-messaging.md)
+and installed CLI. Use only an available, authorized naming surface with safe
+input state; otherwise record the thread ID to Herdr name mapping. Never invent
+a flag or infer a native address from a display name.
+
+Start records planned names, then verifies actual workspace/tab/agent/native
+names and returned IDs after launch in Dispatch and `.project/state/`. Only
+rename sessions this Issue manages; never batch-rename existing downstream work.
+The handoff carries the mapping, role, attempt and target branch so a receiver
+can distinguish a display title from an address.
+
+Example mapping (illustrative returned IDs, not live targets):
+
+| Task / attempt | Branch / worktree | Workspace | Tab | Herdr agent / pane | Native session |
+| --- | --- | --- | --- | --- | --- |
+| `demo-issue-42`, implement, 1 | `feat/issue-42-import`; Herdr-returned path | `DEMO-issue-42 Import` / `w42` | `demo-issue-42 implement` / `w42:t1` | `demo-issue-42` / `w42:p1` | `demo-issue-42 implement` / returned thread A |
+| same task, review, 1 | same Issue worktree, authorized read-only review | same workspace / `w42` | `demo-issue-42 review` / `w42:t2` | `demo-issue-42-review` / `w42:p2` | `demo-issue-42 review` / returned thread B |
+| same task, implement, 2; first worker still live | same branch/path, handover before writes | same workspace / `w42` | `demo-issue-42 implement a2` / `w42:t3` | `demo-issue-42-a2` / `w42:p3` | naming unavailable: map thread C to `demo-issue-42-a2` |
+
+The last row is a re-dispatch, recorded with its agent/provider/model/effort and
+reason. It never lets two workers edit the same state concurrently: hand over
+write ownership first, or use separately authorized isolation. Retain thread A's
+mapping and duties until closed; changing a display name never transfers them.
 
 ## Writing conventions
 
@@ -180,9 +230,11 @@ with one sub-Issue per phase, so that progress is checked off phase by phase.
 
 1. The parent Issue holds the goal, the phases and a checklist with one line
    per phase (`- [ ] #<C> <phase>`). Phasing does not change scope: every phase
-   stays part of the parent's plan, and the parent closes when the last phase
-   merges. The checklist says what the phases are; what must wait for what is
-   recorded as blocked-by (step 3), never as a sentence in a body.
+   stays part of the parent's plan. The parent closes only after every phase and
+   parent acceptance obligation is fulfilled and the final delivery reaches
+   `<BASE>`. The checklist says what the phases are; what must wait for what is
+   recorded as blocked-by for implementation (step 3), with acceptance-only
+   waits identified separately in the acceptance plan.
 2. Each phase is a sub-Issue with its own scope and acceptance, linked to the
    parent with GitHub's sub-issue relation. It goes through [Start](#start),
    [Merge](#merge) and [Close-out](#close-out) like any Issue, and its PR says
@@ -194,17 +246,20 @@ with one sub-Issue per phase, so that progress is checked off phase by phase.
    | Relation | Record | Dispatch |
    | --- | --- | --- |
    | Parallel: the two are unrelated. | Only the parent link. | Start together. |
-   | Serial: B needs the merged code of A. | `gh issue edit <B> --add-blocked-by <A>` | Start B from the new `<BASE>` after A is merged and closed out. |
-   | Synchronous: both must land together, because `<BASE>` breaks if either merges alone (an interface changed with all its callers). | Do not split: one sub-Issue, one PR, one worktree. | Start the one Issue. |
-   | Asynchronous: B needs only A's interface (a parameter, a file format, a command's output), not its implementation. | Fix the interface first, in the parent Issue or as a small interface sub-Issue. A and B are both blocked-by that interface sub-Issue; an interface written in the parent needs no blocked-by. | Start A and B together once the interface is fixed. |
+   | Serial: B needs the merged code of A. | `gh issue edit <B> --add-blocked-by <A>` | Start B from its updated target after the required A delivery is verified; unrelated cleanup waits do not delay it. |
+   | Synchronous: both must land together, because `<BASE>` breaks if either merges alone (an interface changed with all its callers). | Keep one sub-Issue/PR, or explicitly declare the parent integration branch and joint acceptance below. | Never deliver a partial set to `<BASE>`; the parent gate covers the complete set. |
+   | Asynchronous: B can implement against A's fixed interface, but integrated acceptance needs A's merged behavior. | Fix the interface in the parent or an interface sub-Issue first. Keep implementation blockers distinct from acceptance dependencies in the parent and child acceptance plans. | Start only the independently implementable scope; after A merges, sync the current target, resolve conflicts and run the integrated acceptance. Never report B fully complete before that. |
 
 4. The coordinator that claimed the parent claims every sub-Issue and dispatches
    its worktree. A sub-Issue starts when it has no open blocker
    ([Start](#start) step 1); it does not wait in arrival order
    ([Independent Issues run in parallel](#independent-issues-run-in-parallel)).
-   Every sub-Issue starts from the latest `<BASE>`, never from the branch of one
-   that has not merged: stacked branches save time only until the earlier PR
-   changes, and then cost repeated rebases and conflicts.
+   Every sub-Issue starts from its latest declared PR target: normally `<BASE>`,
+   or the parent's integration branch below, never an arbitrary sibling branch.
+   A fixed interface permits early implementation only when it can progress
+   independently; it does not bypass a real open blocked-by. If one Issue mixes
+   ready implementation and blocked integration, split the ready work into an
+   accurately linked sub-Issue and keep the blocked acceptance scope waiting.
 5. Link and relate Issues with `gh` (`gh issue create --help`,
    `gh issue edit --help`); the Issue number is the argument, a URL also works:
 
@@ -225,6 +280,53 @@ with one sub-Issue per phase, so that progress is checked off phase by phase.
    `--remove-blocking` undo a link. Closing a blocker does not remove the link;
    the reader counts only blockers whose `state` is `OPEN`. GraphQL's
    `issueDependenciesSummary { blockedBy }` also gives that count.
+
+### Optional parent integration branch
+
+Simple Issues continue to target `<BASE>`. For children that need joint review
+or acceptance, the parent may declare a named integration branch. Record before
+dispatch: parent goal and claimant, branch and starting `<BASE>` SHA, each child
+PR's base, the final integration-to-`<BASE>` PR, joint acceptance and its owner,
+and responsibility for archiving, dependency notifications and cleanup. These
+records grant no commit, push, merge or cross-session permissions.
+
+Create the parent integration worktree through Herdr's native `worktree create`
+from `<BASE>`; use its returned workspace and path. Create each child's isolated
+worktree from the latest integration head using Start, with that branch as its
+declared target. No new scheduler is involved. Child PRs merge into the declared
+integration branch; they do not deliver the parent to `<BASE>`. Recheck the latest
+integration head after each merge and notify authorized dependent workers with
+the exact head, scope and remaining acceptance dependencies.
+
+In Start and Merge below, `<TARGET_BASE>` means the Issue's recorded PR target,
+defaulting to `<BASE>`; `<target>` is its verified checkout, normally `<dev>` or
+the parent's Herdr worktree. Locate it from Herdr and Git, not a guessed path.
+Keep shared `<dev>` on `<BASE>`; do not switch it to the integration branch.
+Resolve conflicts and check each PR against its current target in its own
+worktree. The parent owner then syncs current `<BASE>` in the parent worktree,
+verifies joint acceptance on the latest head and delivers the final PR to
+`<BASE>`. A child may close after its own declared deliverable is accepted in
+integration; the parent stays open through final acceptance and delivery.
+Retire children only after their obligations end; retire the parent integration
+worktree/branch only after final delivery and the same close-out gate.
+
+### Coordination and waits
+
+The Issue worker owns implementation, conflict fixes, evidence and reporting in
+its own worktree. The claimant owns dependency re-evaluation, review, integration
+and delivery, including after a PR merges. After an upstream delivery or changed
+scope, read current heads and blockers, identify affected dependents, send an
+authorized notification through `agent-communication`, obtain acknowledgement,
+then verify their updated acceptance on the latest target. Another claimant's
+work stays read-only unless the maintainer authorizes contact or takeover.
+
+For each wait, record in the Issue or `.project/state/`: the event awaited, owner,
+Issue/PR/head or run id, remaining obligation, next action and who resumes it.
+Distinguish waiting for an interface, upstream merge, receiver acknowledgement,
+background acceptance, review or a maintainer-only decision. Follow the event
+rather than treating `idle` as completion or inventing a timer/scheduler. Pending
+audit or acceptance obligations survive merge until fulfilled or explicitly
+transferred under authorization, with a receiving owner acknowledgement.
 
 ## Shared boundaries
 
@@ -302,7 +404,17 @@ Input: Issue number `<N>` and a branch `<branch>` named per `DEV.md`
 (`<type>/issue-<N>-<slug>`, with `<type>` one of `fix`, `feat`, `docs`, `chore`).
 
 1. Claim the Issue ([Claim](#claim)) and confirm it has settled scope and
-   acceptance: `gh issue view <N>`. Confirm it has no open blocker; if it has,
+   acceptance: `gh issue view <N>`. For structural work, first state its users,
+   deliverables, core concepts and non-goals and map existing paths to proposed
+   product, development, human, state and asset destinations. Read the affected
+   directory AGENTS.md chains and registry, not only root docs. Organize by
+   product concepts, not experiment batches; preserve existing test placement
+   unless the approved design needs it changed. Link the authoritative README,
+   USER and DEV content; memory records the decision and reasons. Resolve
+   contract conflicts explicitly before dispatch; an adaptation cannot authorize
+   an exception (`project-positioning-before-layout`, `template-adoption`).
+   Record `<TARGET_BASE>` and `<target>` (default `<BASE>` and `<dev>`).
+   Confirm the Issue has no open implementation blocker; if it has,
    do not start it, and report which Issue it waits for:
 
    ```bash
@@ -310,18 +422,23 @@ Input: Issue number `<N>` and a branch `<branch>` named per `DEV.md`
      --jq '.blockedBy.nodes[] | select(.state=="OPEN") | "#\(.number) \(.title)"'
    ```
 
-   It prints nothing when it may start. Locate the dev checkout `<dev>`
+   It prints nothing when it may start. Acceptance-only waits still remain in
+   the acceptance plan; split mixed blocked scope as in Phased work, never
+   ignore an open blocked-by. Locate the dev checkout `<dev>`
    (`.result.source.source_checkout_path`) with
-   `herdr worktree list --workspace "$HERDR_WORKSPACE_ID"`, confirm
-   `git branch --list <branch>` is empty, then bring `<BASE>` up to date:
+   `herdr worktree list --workspace "$HERDR_WORKSPACE_ID"`. Resolve `<target>`
+   from that list and verify its repository and checked-out `<TARGET_BASE>`.
+   Confirm `git branch --list <branch>` is empty, then bring the target up to date:
 
    ```bash
-   git -C <dev> fetch origin
-   git -C <dev> rev-list --count <BASE>..origin/<BASE>
+   git -C <target> fetch origin
+   git -C <target> rev-list --count <TARGET_BASE>..origin/<TARGET_BASE>
    ```
 
-   If the count is not 0, run the dev live-run check, then
-   `git -C <dev> pull --ff-only`.
+   If the count is not 0, run the target's live-run check, then
+   `git -C <target> pull --ff-only`. An unpublished parent branch is usable
+   locally only with a recorded authoritative head; PRs require an authorized
+   push. Do not pretend an absent remote target is synchronized.
 2. Choose the tier and then the agent kind, provider, model and effort in the
    order [Dispatch by difficulty](#dispatch-by-difficulty) gives, and make sure
    the Issue body has a matching Dispatch section; write or correct it now if it
@@ -331,11 +448,12 @@ Input: Issue number `<N>` and a branch `<branch>` named per `DEV.md`
 
    ```bash
    herdr worktree create --workspace "$HERDR_WORKSPACE_ID" \
-     --branch <branch> --base <BASE> --label <WORKSPACE_PREFIX>-issue-<N> \
+     --branch <branch> --base <TARGET_BASE> --label "<WORKSPACE_LABEL>" \
      --no-focus
    ```
 
-   The label names the Issue workspace in `herdr workspace list`
+   `<WORKSPACE_LABEL>` is `<WORKSPACE_PREFIX>-issue-<N> <short topic>` from Task
+   names and identifiers. The label names the Issue workspace in `herdr workspace list`
    (`herdr worktree list` shows the open workspace id instead). Without it Herdr derives one from the branch, such as
    `issue-12-fix-parser`, which does not say which repository it belongs to.
    Close-out still locates the worktree by branch.
@@ -343,14 +461,21 @@ Input: Issue number `<N>` and a branch `<branch>` named per `DEV.md`
    From the returned JSON record the worktree path `<worktree>`, the workspace
    id `<ws>` and the root pane id `<pane>` (herdr 0.9.1: `.result.worktree.path`,
    `.result.workspace.workspace_id`, `.result.root_pane.pane_id`).
+   Resolve that pane's tab from `herdr tab list --workspace <ws>`, record `<tab>`,
+   and name it with `herdr tab rename <tab> "<TASK_KEY> <role>"`, even for a
+   single tab. Never guess `<tab>` from its number.
 4. Start the agent in the new pane, passing the chosen agent kind, provider,
    model and effort explicitly through the slots; never rely on the CLI's
    default:
 
    ```bash
-   herdr agent start <AGENT_PREFIX>-issue-<N> --kind <AGENT_KIND> --pane <pane> \
+   herdr agent start <AGENT_NAME> --kind <AGENT_KIND> --pane <pane> \
      --timeout 60000 -- <AGENT_ARGS> <PROVIDER_ARGS> <MODEL_ARGS>
    ```
+
+   Resolve `<AGENT_NAME>` from the task key/role/attempt rules above and check
+   live uniqueness before launch. Pass native naming only when supported, or
+   record the native ID mapping after startup. Keep provider/model/effort explicit.
 
    - `agent_not_ready` means a dialog blocked startup. Look with
      `herdr agent read <name> --source visible`. If it is the agent's folder-trust
@@ -383,17 +508,25 @@ Input: Issue number `<N>` and a branch `<branch>` named per `DEV.md`
    started:
 
    ```bash
-   bash .agents/scripts/new-agent-prompt.sh <N> <branch> \
+   bash .agents/scripts/new-agent-prompt.sh <N> <branch> <TARGET_BASE> \
      > <worktree>/.project/state/initial-prompt.md
    # append the Issue-specific section from the template below
-   herdr agent prompt <name> "$(cat <worktree>/.project/state/initial-prompt.md)"
-   herdr agent wait <name> --until working --until blocked --timeout 30000
+   # Deliver using agent-communication's resolved native transport or its
+   # conditional Herdr fallback, with input preflight and a message id.
    ```
 
-   Do not add `--wait` to `agent prompt`: it blocks until the first turn ends. On
-   `blocked`, read the screen and hand it to the maintainer. A timeout does not
-   mean the prompt was lost: `herdr agent read <name>` first, never resend blindly.
-7. Add the session name and `<branch>` to the Issue's Dispatch section. Report
+   Record submission and receiver acknowledgement separately. A working-state
+   transition is useful status evidence, not acknowledgement of this scope.
+   On `blocked`, read the screen and hand it to the maintainer. A timeout does
+   not mean the prompt was lost: inspect first, never resend blindly.
+7. Verify actual names against the plan using workspace/tab lists, `agent get`
+   and the native session's supported status/name surface. Correct an owned
+   workspace label with `herdr workspace rename <ws> "<WORKSPACE_LABEL>"` and an
+   owned tab label with `herdr tab rename <tab> "<TASK_KEY> <role>"` when needed;
+   never rename downstream sessions. Add the identity
+   mapping (task key, role, attempt, branch, workspace/tab/pane IDs, actual Herdr
+   name and native name/ID) to Dispatch and local state; keep machine-private
+   paths local. Add the session name and `<branch>` to the Issue's Dispatch section. Report
    `<ws>`, the agent name, `<branch>` and `<worktree>` to the maintainer, who
    switches to that workspace (or uses `herdr agent focus <name>` on request).
    From here the coordinator does not edit that worktree, except to resolve a
@@ -500,7 +633,7 @@ id, a provider endpoint or local path here.
 - model: `<resolved model>`; effort: `<effort>`
 - reason: <tier>: <the scope, risk or uncertainty that decided it>, and <why an
   expensive provider or model was needed, when one was>
-- session: `<AGENT_PREFIX>-issue-<N>`, branch `<branch>`
+- session: `<AGENT_NAME>`, branch `<branch>`
 ```
 
 Edit the body through a file rather than shell quoting:
@@ -561,13 +694,16 @@ together.
   larger problem is reported for a separate Issue.
 - **Other worktrees are not its concern.** Parallel worktrees are expected to
   change the same files. At [Merge](#merge) the coordinator resolves this PR's
-  conflicts with the current `<BASE>` in this worktree, itself or through this
+  conflicts with the current `<TARGET_BASE>` in this worktree, itself or through this
   session. The session completes its Issue fully and does not narrow its change
   to avoid conflicts.
 - **Merge implies close-out.** The approval to merge the PR covers its
   [Close-out](#close-out): right after the verified merge, the coordinator
-  migrates `.project/` and removes the worktree without asking again. Results
-  that cannot be rebuilt are archived before the merge.
+  checks outstanding responsibilities, then migrates `.project/` and removes
+  the worktree when the close-out gate passes, without asking again. Background
+  acceptance, pending audits and unfulfilled promises retain an owner even after
+  merge; keep the worktree or explicitly transfer them under authorization.
+  Results that cannot be rebuilt are archived before the merge.
 - **Keep its own files in `.project/state/`.** The session's working files
   (plans, PR body drafts, messages to the coordinator) go under
   `.project/state/`, which Close-out always copies, not in the root of
@@ -577,12 +713,13 @@ together.
   Issue's files are changed, the applicable checks and acceptance runs pass,
   artifacts or receipts were inspected, and the worktree status and diff are
   reported. Delivery complete is a separate gate: a named commit exists, the
-  commit is pushed and the remote head is recorded, the PR targets `<BASE>` and
+  commit is pushed and the remote head is recorded, the PR targets `<TARGET_BASE>` and
   contains the Issue and evidence, the PR head and checks are read, required
-  approval is present, the merge reaches `<BASE>`, and close-out verifies state
+  approval is present, the merge reaches `<TARGET_BASE>`, and close-out verifies state
   migration, Herdr worktree removal, local/remote branch cleanup, and a clean
   canonical checkout. An agent's self-report, a local commit, or a passing test
-  alone never satisfies the delivery gate.
+  alone never satisfies the delivery gate. A child passing it in integration
+  still leaves the parent's final `<BASE>` delivery and joint acceptance open.
 - **Write in the declared language.** When the registry declares
   [writing conventions](#writing-conventions), the session writes Issues, PRs,
   comments and human documents in that language and starts Issue bodies with
@@ -599,12 +736,16 @@ Also read first:
 
 Scope: <everything in the Issue's scope; what the Issue explicitly excludes>
 Acceptance: <the Issue's acceptance evidence, as the checks to run>
+Target: <TARGET_BASE; parent integration Issue/branch if used>
+Identity: <task key, role, attempt; actual workspace/tab/pane IDs and labels;
+           Herdr agent name; native name and thread/session ID or mapping fallback>
+Waits: <implementation blockers and acceptance-only dependencies, event/owner/next action>
 
 Constraints:
 - Follow AGENTS.md: no credentials or machine-private paths; local state only
   under this worktree's .project/;
 - Do not commit or push until the maintainer asks. Then open the PR from this
-  worktree (repository `<REPO>`, base `<BASE>`) and do not merge it;
+  worktree (repository `<REPO>`, base `<TARGET_BASE>`) and do not merge it;
 - <If `<PRE_MERGE_GATE>` is defined: run it before opening the PR and fix what it lists>;
 - When finished, report the result with its evidence, `git status` and
   `git diff --stat`, and wait for confirmation.
@@ -612,23 +753,12 @@ Constraints:
 
 ### Messages to a running Issue session
 
-The handoff prompt in Start step 6 goes to an agent whose input line is empty.
-Every later message from the coordinator is different: the maintainer shares
-the pane with the agent and may have a draft typed in its input line.
+Initial handoffs and follow-ups use `agent-communication` for target and input
+preflight, capability-based native transport, conditional fallback and separate
+submitted/acknowledged/completed receipts. Dim suggestions are not human drafts.
+Record scope revisions and exact commit/run ids so the receiver can acknowledge
+the right change; a successful write or unrelated state transition is not receipt.
 
-- **Look before sending.** `herdr agent prompt <name> "..."` appends to whatever
-  the input line holds, so a draft and the message merge into one. Before
-  sending a follow-up to an agent that is already running, run
-  `herdr agent read <name> --source visible` and look at the input line. If it
-  is not empty, do not send. Put the message in an Issue comment, or ask the
-  maintainer to include it in their own message.
-- **Use the communication protocol.** For each follow-up, record the target
-  agent session, conversation/thread (when available), selected transport and
-  confirmation result. Codex follow-ups use `codex queue --thread <THREAD>
-  --message <TEXT>` when the native thread is resolved; Claude Code and Pi use
-  `herdr agent prompt`. If Codex's thread cannot be resolved, record the reason
-  and the fallback before sending the Herdr prompt. A successful write is not
-  proof of receipt: inspect the resulting agent state or native acknowledgement.
 - **Do not blind-retry a stall.** After `agent_prompt_stalled`, inspect the
   target with `herdr agent get` and `herdr agent read --source visible`, preserve
   the exact failure and state in `.project/state/` or the Issue, and retry only
@@ -651,32 +781,32 @@ evidence in order: implementation result and local acceptance; `git status` and
 `git diff --stat`; commit SHA and parent; `git push` result plus the remote head;
 PR base/head, Issue closing reference and changed-file scope; local check
 results on that exact head; CI state read once; review approval; merge result;
-post-merge `<BASE>` pull and local checks; and close-out receipt. Record each
+post-merge target pull and local checks; and close-out receipt. Record each
 item as `pass`, `fail` with its output, or `blocked` with the maintainer-only
 action. Do not label a PR ready from an agent report, a stale check, or a
 commit that was not pushed. A failed item stops the gate and sends the exact
 evidence back to the Issue session or maintainer.
 
-The coordinator merges the PRs of the Issue it claimed into `<BASE>`. PRs of
+The coordinator merges the PRs of the Issue it claimed into `<TARGET_BASE>`. PRs of
 several coordinators may be open at once and conflict, for example when each
 appends to the same index. Each coordinator resolves the conflicts between its
-own PR and the `<BASE>` of that moment, in that PR's own worktree; the dev
+own PR and the `<TARGET_BASE>` of that moment, in that PR's own worktree; the dev
 checkout is only pulled.
 
 Handle one PR at a time and re-check the next one after each merge. Another
-coordinator may merge in between: when `gh pr merge` refuses or `<BASE>` has
+coordinator may merge in between: when `gh pr merge` refuses or `<TARGET_BASE>` has
 moved, go back to step 2.
 
-1. Update the dev checkout (locate `<dev>` as in Close-out step 1). Run the dev
-   live-run check first; with a live run, stop here and report, before pulling.
-   Otherwise `git -C <dev> pull --ff-only`.
+1. Resolve `<target>` and the recorded `<TARGET_BASE>` (default `<dev>` and
+   `<BASE>`). Run the target live-run check first; with a live run, stop here
+   and report before pulling. Otherwise `git -C <target> pull --ff-only`.
 2. Inspect the PR:
 
    ```bash
    gh pr view <PR> --repo <REPO> --json state,baseRefName,headRefName,mergeable,mergeStateStatus
    ```
 
-   `state` must be `OPEN` and the base `<BASE>`. Maintainer approval must be
+   `state` must be `OPEN` and the base `<TARGET_BASE>`. Maintainer approval must be
    visible on the PR or the Issue; without it, do not merge and report.
    `mergeable` `UNKNOWN` means GitHub is still computing it; query again.
 
@@ -713,10 +843,11 @@ moved, go back to step 2.
    `gh pr merge <PR> --repo <REPO> <MERGE_METHOD>` without `--delete-branch`;
    Close-out deletes the branch. Then do step 5 and Close-out before the next PR.
 
-   When `mergeable` is `CONFLICTING`, merge the current `<BASE>` into the PR
+   When `mergeable` is `CONFLICTING`, merge the current `<TARGET_BASE>` into the PR
    branch in `<worktree>` (located as in Close-out step 1), never in the dev
    checkout. The coordinator does it itself only while the Issue session is
-   `idle` or `done` (`herdr agent get <AGENT_PREFIX>-issue-<N>`); otherwise, or
+   `idle` or `done` (`herdr agent get <AGENT_NAME>` from the current attempt's
+   recorded mapping); otherwise, or
    by choice, it hands the work to the Issue session as described in
    [Messages to a running Issue session](#messages-to-a-running-issue-session),
    with the rules of this step as constraints. When `<MONITOR_CMD>` is defined,
@@ -726,7 +857,7 @@ moved, go back to step 2.
    ```bash
    git -C <worktree> status --porcelain
    git -C <worktree> fetch origin
-   git -C <worktree> merge origin/<BASE>
+   git -C <worktree> merge origin/<TARGET_BASE>
    ```
 
    The first command must print nothing. Resolve per file, `git add`, then
@@ -738,14 +869,17 @@ moved, go back to step 2.
    `git -C <worktree> push origin <branch>` only after the maintainer confirms,
    then re-check from step 2: the new head needs `<LOCAL_CHECK>` and its PR
    comment again before `gh pr merge`.
-5. Verify the merged `<BASE>`: run the dev live-run check, `git -C <dev> pull --ff-only`,
-   then `<LOCAL_CHECK>` in `<dev>`. On failure, report the output; do not patch
-   around it in the dev checkout. The CI run on this PR's merge commit is only
+5. Verify the merged `<TARGET_BASE>`: run the target live-run check,
+   `git -C <target> pull --ff-only`, then `<LOCAL_CHECK>` in `<target>`. Re-evaluate
+   dependent implementation and acceptance waits on this exact head as in
+   Coordination and waits, before cleanup; cleanup delays must not hide delivery
+   from dependents. On failure, report the output; do not patch around it in the
+   shared dev checkout. The CI run on this PR's merge commit is only
    noted in the report, not waited for:
 
    ```bash
    sha=$(gh pr view <PR> --repo <REPO> --json mergeCommit --jq .mergeCommit.oid)
-   gh run list --repo <REPO> --branch <BASE> --commit "$sha"
+   gh run list --repo <REPO> --branch <TARGET_BASE> --commit "$sha"
    ```
 
 6. Close out the PR's worktree (below) right away.
@@ -761,6 +895,10 @@ report to the maintainer instead, when:
 - the PR deliberately only references its Issue (`Refs #N`) and the Issue stays
   open, because the work continues;
 - the maintainer said to keep the worktree;
+- background acceptance, a pending audit or another promised follow-up still
+  needs this worktree or its session. First finish it, or explicitly transfer it
+  under authorization to a named owner with acknowledgement and accessible
+  state/results. A merged PR and an idle agent do not discharge it;
 - a precondition in step 3, 4 or 5 fails: uncommitted changes, unpushed commits,
   a live run in the dev checkout, an agent still working or blocked, a run that
   `<STOP_CMD>` could not stop, a container that mounts the worktree, or state
@@ -776,6 +914,9 @@ workspace, normally the dev checkout's.
    `herdr worktree open --workspace "$HERDR_WORKSPACE_ID" --path <worktree> --no-focus`
    and take `<ws>` from its result. Stop and report if the entry is missing or
    `<ws>` equals `$HERDR_WORKSPACE_ID`.
+   Also resolve `<target>` on `<TARGET_BASE>` for this PR. With a parent
+   integration branch it differs from `<dev>`; migration still goes to canonical
+   `<dev>`, while ancestry and branch deletion use the accepted PR target.
 2. Confirm the PR merged and the Issue closed:
 
    ```bash
@@ -783,25 +924,32 @@ workspace, normally the dev checkout's.
    gh issue view <N> --repo <REPO> --json state
    ```
 
-   The PR must be `MERGED` with base `<BASE>` and head `<branch>`. If the Issue is
-   still `OPEN` only because the PR lacked `Closes #<N>`, close it with
+   The PR must be `MERGED` with base `<TARGET_BASE>` and head `<branch>`. Check
+   remaining obligations in the Issue, PR and `.project/state/`, including
+   background run receipts and promised audit/review follow-ups. Only if this
+   Issue's deliverable and acceptance are complete may a missing automatic
+   closure (including a child merged into integration) be repaired with
    `gh issue close <N> --repo <REPO> --comment "Resolved by #<PR>."`.
-3. Confirm the branch reached `<BASE>` and the worktree is clean:
+   Never close a parent merely because its last child merged.
+3. Confirm the branch reached `<TARGET_BASE>` and the worktree is clean:
 
    ```bash
    git -C <dev> fetch origin --prune
-   git -C <dev> merge-base --is-ancestor <branch> origin/<BASE>
+   git -C <target> merge-base --is-ancestor <branch> origin/<TARGET_BASE>
    git -C <worktree> status --porcelain
    ```
 
    The second command must exit 0 and the third must print nothing (the ignored
    `.project/` is handled in step 6). Stop and report otherwise. A project that
    squash- or rebase-merges cannot pass the ancestry check; it writes its own
-   evidence that the branch's content reached `<BASE>` in the
+   evidence that the branch's content reached `<TARGET_BASE>` in the
    `## In this repository` section, keyed to this step, uses it instead, and
    records the evidence in the report.
-4. Bring the dev checkout's `<BASE>` up to date so it contains the merged PR
-   (step 6 copies state into it and step 8's `branch -d` judges against it).
+4. Bring the target checkout up to date with its live-run check and
+   `git -C <target> pull --ff-only`, confirming `<TARGET_BASE>` contains the
+   merged PR (step 8's `branch -d` judges against it). Keep canonical `<dev>`
+   synchronized separately; step 6 copies state there even for a child whose
+   code has reached only the parent integration branch.
    Run the dev live-run check first, then:
 
    ```bash
@@ -811,8 +959,14 @@ workspace, normally the dev checkout's.
    Stop and report if `<dev>` is not on `<BASE>`, local changes block the pull, or
    local `<BASE>` has diverged from `origin/<BASE>`. Do not merge, rebase or reset
    to force it (see the shared dev checkout rules). Conflicts between a PR and
-   `<BASE>` belong to Merge, in the PR's worktree, not here.
-5. Stop what this worktree started, before anything is migrated or removed.
+   `<TARGET_BASE>` belong to Merge, in the PR's worktree, not here.
+5. Reconcile obligations before stopping what this worktree started. `idle` or
+   `done` only describes the foreground agent, not background acceptance or
+   unfinished promises. Compare the wait records, Issue/PR commitments, project
+   monitor and `.project/runs/`; keep the worktree if acceptance still needs it,
+   or complete an authorized, acknowledged transfer first. Do not stop a run
+   still responsible for acceptance just to make cleanup pass. Once no duty
+   depends on the run or session, stop its remaining processes before migration.
    This step's order is fixed: processes stopped, then state and assets
    migrated, then the worktree removed.
 
@@ -824,8 +978,9 @@ workspace, normally the dev checkout's.
    close-out and goes to the maintainer. When `<MONITOR_CMD>` and `<STOP_CMD>`
    are defined, run `<MONITOR_CMD>` in `<worktree>` and stop every run it lists
    through `<STOP_CMD>`, one at a time, then run `<MONITOR_CMD>` again until it
-   lists none. Stopping is the default; only a run `<STOP_CMD>` cannot stop, or
-   one the maintainer asked to keep, goes to the maintainer. Never use `pkill`,
+   lists none. This applies only after the obligation check above; a run
+   `<STOP_CMD>` cannot stop, or one the maintainer asked to keep, retains the
+   worktree and goes to the maintainer. Never use `pkill`,
    `killall`, `fuser -k` or a name pattern: only the project's own `<STOP_CMD>`
    may stop a process, so that a process this worktree did not start is never
    touched.
@@ -897,7 +1052,7 @@ workspace, normally the dev checkout's.
 8. Delete the branches:
 
    ```bash
-   git -C <dev> branch -d <branch>
+   git -C <target> branch -d <branch>
    git -C <dev> push origin --delete <branch>
    ```
 
@@ -919,12 +1074,17 @@ workspace, normally the dev checkout's.
      rules and every asset link, and no unique copy of a result remains only in
      the retired worktree;
    - non-rebuildable results are archived and registered, or the gap is reported.
-10. List what this Issue was blocking and start what is now free:
+10. Confirm the post-delivery dependency re-evaluation from Merge step 5, also
+    when close-out was retained. List what this Issue was blocking and start what
+    is now free; notify already-started dependents to sync and finish acceptance:
 
     ```bash
     gh issue view <N> --repo <REPO> --json blocking \
       --jq '.blocking.nodes[] | select(.state=="OPEN") | .number'
     ```
+
+    Also read acceptance-only waits in the parent/child plans and state receipts;
+    they are not all represented by implementation blocked-by edges.
 
     For each `<M>` it prints, read its open blockers and claimant:
 
@@ -934,8 +1094,8 @@ workspace, normally the dev checkout's.
     ```
 
     - Claimed by you (or a sub-Issue of an Issue you claimed) and
-      `open-blockers=0`: start it ([Start](#start)), from the `<BASE>` just
-      pulled.
+      `open-blockers=0`: start it ([Start](#start)), from its latest declared
+      target. For a running dependent, notify and recheck its acceptance wait.
     - Still has open blockers: leave it; report which Issues it still waits for.
     - Claimed by another coordinator: do not touch it; its coordinator starts it
       ([Several coordinators](#several-coordinators)). Report it to the maintainer

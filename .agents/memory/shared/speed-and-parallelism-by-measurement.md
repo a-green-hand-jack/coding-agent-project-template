@@ -44,7 +44,10 @@ Downstream adopters each reached the same practice independently and kept it:
   other's output, and they do not write the same state, file or external
   resource. Independent units start together, each in its own worktree and
   session or its own worker. A unit that needs another's delivery starts when
-  that delivery lands, not before and not later. For Issues the dependency is
+  that delivery lands, not before and not later. A fixed interface may release
+  independent implementation while acceptance waits for merged behavior; those
+  are separate scopes and dependencies, never permission to bypass a blocker.
+  For Issues the dependency is
   recorded on GitHub as blocked-by, not in prose or in a coordinator's memory,
   so that every coordinator can read what is free to start
   (`issue-workflow`, Phased work).

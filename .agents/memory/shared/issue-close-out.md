@@ -14,13 +14,17 @@ superseded_by: null
 ## Decision
 
 The coordinator that claimed the Issue merges its PR after the maintainer has
-approved it on GitHub. When the PR conflicts with the current `dev`, that
+approved it on GitHub. When the PR conflicts with its current declared target
+(normally `dev`, optionally a parent's integration branch), that
 coordinator resolves the conflict in the PR's own worktree, itself or through the
 Issue session, and pushes before merging; the shared dev checkout is only
 fast-forwarded with `git pull --ff-only`. Mechanical conflicts keep both sides;
 semantic ones go to the maintainer. The maintainer's approval to merge covers the
-close-out: after the merge is verified, the coordinator retires the worktree and
-its branches immediately and reports, without asking again.
+close-out: after the merge is verified and remaining responsibilities are
+fulfilled or explicitly transferred under authorization with acknowledgement,
+the coordinator retires the worktree and its branches and reports without
+asking again. Idle and merged are not evidence that background acceptance,
+pending audits or promised follow-ups are complete.
 
 Results that cannot be rebuilt are archived before the merge rather than left in
 the migration directory. A live run in the dev checkout holds back a pull or

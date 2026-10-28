@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-[[ -n "${1:-}" ]] || { echo "usage: $0 ISSUE_NUMBER [BRANCH]" >&2; exit 2; }
+[[ -n "${1:-}" ]] || { echo "usage: $0 ISSUE_NUMBER [BRANCH] [TARGET_BASE]" >&2; exit 2; }
 issue=$1
 branch=${2:-}
+target_base=${3:-dev}
 if ! command -v gh >/dev/null 2>&1; then
   echo 'gh is required to load the Issue details' >&2
   exit 1
@@ -32,7 +33,8 @@ cat <<PROMPT
 Work on Issue #$number: $title
 
 Issue: $url
-Branch: $branch (create it from dev through Herdr's native worktree command)
+Branch: $branch (create it from $target_base through Herdr's native worktree command)
+PR target: $target_base (a parent integration target must be declared in the Issue)
 
 Start in the new worktree and run:
   bash .agents/scripts/setup-worktree.sh
@@ -42,6 +44,14 @@ Read AGENTS.md, .agents/AGENTS.md, the Issue, and the directly relevant
 .agents/skills/shared/agent-communication/SKILL.md before sending or
 receiving a handoff. Keep product, development and human documentation planes
 separate, and preserve unrelated changes.
+
+Confirm the handoff's identity mapping: stable project-issue-number task key,
+role and attempt; returned workspace/tab/pane IDs and actual labels; Herdr agent
+name and native session/thread ID. Align names where supported, keep Herdr's
+returned worktree path, and record an ID mapping when native naming is unavailable.
+Validate each complete Herdr agent name, including role/attempt suffix, against
+[a-z][a-z0-9_-]{0,31} (32 characters maximum) and live uniqueness before start/rename.
+Do not invent naming flags or rename sessions outside this Issue.
 
 Working rules for this session:
 - Before the first agent run, inspect every Herdr hook that will run (including
@@ -80,12 +90,15 @@ Working rules for this session:
   reported for a separate Issue.
 - Other worktrees are not your concern. Parallel worktrees may change the same
   files; at merge the coordinator that claimed this Issue resolves conflicts
-  with the current dev in this worktree, itself or through you. Complete the
+  with the current $target_base in this worktree, itself or through you. Complete the
   Issue fully and do not narrow the change to avoid conflicts.
-- Merge implies close-out. Approval to merge the PR covers its close-out: right
-  after the verified merge the coordinator migrates .project/ and removes this
-  worktree without asking again, so archive results that cannot be rebuilt
-  before the merge.
+- Merge implies close-out. Approval to merge the PR covers its close-out: after
+  the verified merge, reconcile background acceptance, pending audits and
+  promised follow-ups. Keep this worktree while it still owns those duties,
+  or explicitly transfer them under authorization with acknowledgement. Then
+  migrate .project/ and remove it without asking again. Archive results that
+  cannot be rebuilt before the merge. A child integration merge does not
+  complete the parent's final delivery to dev.
 - Keep your own working files (plans, PR body drafts and messages to the
   coordinator) in .project/state/, not in the root of .project/. Close-out
   copies .project/state/ without further rules; a file in the root of
