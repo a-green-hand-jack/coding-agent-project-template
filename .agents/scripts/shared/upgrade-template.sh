@@ -791,7 +791,7 @@ def prepare_layout(upgrade, source_text, target_text, local_text):
         legacy = entry_of(path, parse_registry(local_text))
         explicit = legacy['path']==path or len(Path(legacy['path']).parts)>=3
         group = "shared" if explicit and scope_in(legacy) in SHARED else "project"
-        if parts[-1] in ('setup-project.sh','migrate-project.rules'): group='project' 
+        if parts[-1] in ('setup-project.sh','migrate-project.rules'): group='project'
         new = "/".join((*parts[:2], group, *parts[2:]))
         local_moves[path] = new
         upgrade.aliases[new] = path
