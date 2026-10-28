@@ -9,7 +9,8 @@ exactly `## In this repository`, not even in an example.
 Update the content registry when adding, renaming or retiring a shared skill.
 
 `issue-workflow/` owns acceptance write responsibility; `agent-communication/`
-owns transport, receipts and message cadence. Its
+owns transport, receipts, receive-time classification, recoverable terminal
+summaries and message cadence. Its
 `references/acceptance-scenarios.md` reviews their shared boundary without
 claiming fixture review proves a real exchange.
 

@@ -350,10 +350,16 @@ results at the same checkpoint and version can share one message, including a
 PR-created event. Routine progress stays local. Combining events must retain
 each event's identity, duties and required ACK; it cannot delay a critical handoff.
 
-The claimant actively reconciles its owned Issues when resuming, receiving a
-result or user status update, preparing to wait/end a coordination turn, before
-merge, and after a head change. Read the local handoff/event/wait records, then
-query current Issue and PR state using `gh issue view`, `gh pr list --state all
+The claimant reconciles at active checkpoints: resume, received results or user
+requests, before ending a coordination turn, before merge and after a head
+change. First apply the communication skill's
+[receive-time classification](../agent-communication/SKILL.md#receive-and-reconcile-before-acting)
+to the local handoff/event/wait records and current/terminal summary. Fold already
+delivered backlog without waiting for more messages. Covered terminal events
+need no new GitHub query, dispatch, test, message/ACK or user completion report.
+Unknown state, contradictions, new duties and genuine user questions trigger
+only necessary checks; active review/merge and changed-head gates still require
+current evidence. Query relevant Issue and PR state using `gh issue view`, `gh pr list --state all
 --head <branch>` and `gh pr view <PR> --json url,state,baseRefName,headRefOid,mergedAt`.
 Verify the Issue association and declared target, not just a matching branch.
 Compare expected events, current head, acceptance and outstanding duties. On a
@@ -361,10 +367,12 @@ new head invalidate old-head readiness and apply the PR readiness gate anew.
 
 If a PR exists without a received creation event, record a discovered event
 with the observed PR/head, verify its evidence, update duties and explicitly
-ACK/reconcile with the authorized worker. Missing notification is neither
+ACK/reconcile with the authorized worker when a current duty requires it; an
+already covered milestone is recorded locally. Missing notification is neither
 completion nor a reason to wait for the maintainer to relay the PR. Keep
 receipt, independent GitHub observation, review, merge and close-out verdicts
-separate. Save the current summary and pending owners before ending the turn.
+separate. Save the current summary and pending owners before ending the turn,
+including coverage, risks, transfer ACKs and whether completion was reported.
 No unchanged polling is required: inactive sessions resume this work at their
 next checkpoint; this workflow adds no always-on awareness or daemon.
 
@@ -911,6 +919,13 @@ together.
   failures, and responsibility/close-out changes. Send to the handoff's claimant
   before ending the affected turn; preserve pending ownership when not ACKed.
   The session's own final reply or idle state is not coordinator receipt.
+- **Classify received backlog first.** Apply agent-communication's receive-time
+  classification before queries, replies or dispatch. Recover the current or
+  migrated terminal summary; fold duplicates and covered outcomes locally with
+  zero repeated actions, ACKs or user completion reports. Preserve conflicts,
+  late risks and untransferred duties; genuine new user instructions remain
+  actionable. Old event authorization grants no new permission. No timer or
+  background consumer is added, and forced client turns remain a runtime limit.
 - **Protect acceptance inputs.** Follow [Acceptance write responsibility](#acceptance-write-responsibility)
   before either session tests a shared checkout. Record version, writers,
   protected inputs and allowed outputs; require pause ACKs and explicit return.
@@ -1197,6 +1212,14 @@ workspace, normally the dev checkout's.
    depends on the run or session, stop its remaining processes before migration.
    This step's order is fixed: processes stopped, then state and assets
    migrated, then the worktree removed.
+
+   Save the current/terminal summary defined by agent-communication with the
+   event/receipt state before migration. Include final version, covered outcomes,
+   completed/transferred duties and successor ACKs, risks, evidence and prior
+   user-report disposition. Record and verify the migrated summary's recovery
+   path in the coordinator's `.project/state/` before removal. Later backlog
+   uses that summary, not the retired session; a transferred risk follows its
+   acknowledged owner. A child merged into integration retains parent duties.
 
    ```bash
    herdr pane list --workspace <ws>

@@ -24,3 +24,9 @@ The real-release test needs the release tags (`git fetch --tags origin`).
 context, unsupported isolation, shared restart boundaries and native/fallback
 receipts. These synthetic decision scenarios do not enforce the workflow or
 prove live isolation; keep the authorized two-session evidence separate.
+
+`test_template_agent_communication.py` also folds synthetic backlog into a
+test-only receipt/terminal summary model. It checks action/message/user-report
+counts, retained conflicts and risks, covered outcomes and restart recovery.
+It is a protocol counterexample check, not a runtime consumer or proof that a
+live agent obeys the rules; native transport and receiver evidence stay separate.
