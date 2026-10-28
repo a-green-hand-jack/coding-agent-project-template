@@ -20,7 +20,8 @@ usage() {
   exit 2
 }
 [[ "${1:-}" == '--to' && -n "${2:-}" ]] || usage
-destination=$(realpath -m "$2")
+# Resolve links and missing destination components without GNU-only realpath -m.
+destination=$(python3 -I -c 'import os, sys; print(os.path.realpath(sys.argv[1]))' "$2")
 shift 2
 also_list=
 skip_list=
@@ -267,13 +268,58 @@ printf 'migrated_from=%q\n' "$root" > "$migration/migrated-from.env"
 printf '%s' "$report" > "$migration/migration-report.txt"
 
 # -- verify the copy ---------------------------------------------------------------------------
-diff_cmd='diff -rq'
-! diff --no-dereference /dev/null /dev/null >/dev/null 2>&1 || diff_cmd='diff -rq --no-dereference'
 same() { # SOURCE COPY
-  if [[ -L "$1" ]]; then [[ -L "$2" && "$(readlink "$1")" == "$(readlink "$2")" ]]
-  elif [[ -d "$1" ]]; then $diff_cmd "$1" "$2"
-  else cmp -s "$1" "$2"
-  fi
+  python3 -I - "$1" "$2" <<'PY'
+import os
+import stat
+import sys
+
+
+def regular(path):
+    # Never block on a FIFO or follow a link swapped in after lstat.
+    fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW)
+    try:
+        if not stat.S_ISREG(os.fstat(fd).st_mode):
+            raise OSError(f"not a regular file: {path!r}")
+        return os.fdopen(fd, "rb")
+    except BaseException:
+        os.close(fd)
+        raise
+
+
+def same(source, copy):
+    kind = stat.S_IFMT(os.lstat(source).st_mode)
+    if kind != stat.S_IFMT(os.lstat(copy).st_mode):
+        return False
+    if kind == stat.S_IFLNK:
+        return os.readlink(source) == os.readlink(copy)
+    if kind == stat.S_IFDIR:
+        with os.scandir(source) as entries:
+            names = {entry.name for entry in entries}
+        with os.scandir(copy) as entries:
+            copied_names = {entry.name for entry in entries}
+        return names == copied_names and all(
+            same(os.path.join(source, name), os.path.join(copy, name))
+            for name in sorted(names)
+        )
+    if kind == stat.S_IFREG:
+        with regular(source) as left, regular(copy) as right:
+            while True:
+                chunk = left.read(1024 * 1024)
+                if chunk != right.read(1024 * 1024):
+                    return False
+                if not chunk:
+                    return True
+    # Special files have no comparable contents; only their path/type matters.
+    return kind in (stat.S_IFIFO, stat.S_IFSOCK, stat.S_IFBLK, stat.S_IFCHR)
+
+
+try:
+    sys.exit(0 if same(*sys.argv[1:]) else 1)
+except OSError as error:
+    print(f"verification error: {error}", file=sys.stderr)
+    sys.exit(1)
+PY
 }
 echo
 echo '## verification'
