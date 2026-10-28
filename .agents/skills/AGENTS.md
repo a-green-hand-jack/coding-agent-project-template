@@ -13,7 +13,8 @@ Shared skills currently included:
   for Issues, PRs, comments and commits; four neutral cases in references.
 - `shared/agent-communication/` — capability-based transport and distinct
   submission, acknowledgement and completion receipts, message cadence,
-  pending recovery and deduplication; acceptance/cadence scenario review in references.
+  pending recovery and receive-time backlog/terminal reconciliation;
+  acceptance/cadence scenario review in references.
 - `shared/project-memory-governance/`
 - `shared/asset-lifecycle/`
 - `shared/credential-setup/`

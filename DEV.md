@@ -61,13 +61,22 @@ Conventional Commits 前缀；下游可在该 skill 的末尾适配段声明自�
 的回报。发送成功、明确 ACK、实际完成分别记录；没有 ACK 就保留负责人、恢复入口
 和有界重试/下一检查条件，不能只在自己的最终回复中宣布交付。没有交付授权时报告
 ready-for-review 并等待，通知不授予提交、开 PR、合并或发布权限。
-协调者在恢复、接到结果或状态更新、准备等待/结束本轮、合并前及 head 变化后主动核对
-所属 Issue 与 GitHub PR/head。发现漏报的 PR 也要接收并核验证据；旧 head 验收不证明
+协调者在恢复、接到结果或状态更新、准备结束本轮、合并前及 head 变化后的活动检查点，
+先读任务摘要和收据，按接收分类归并已经到达的积压，再决定是否核对 GitHub PR/head。
+已被终态证据覆盖的事件默认只留本地处置记录，不新增查询、派发、测试、消息/ACK 或
+用户完成汇报；异 ID 同结果也如此。状态未知、矛盾、新职责或用户主动询问才触发必要
+核对；实际审阅、合并和新 head 的验证门槛仍须满足。发现漏报的 PR 要按其当前职责
+接收并核验证据；旧 head 验收不证明
 新 head 已完成。完整触发点见
 [`issue-workflow`](.agents/skills/shared/issue-workflow/SKILL.md#delivery-reporting-and-coordinator-reconciliation)，
 收据、去重、乱序和恢复规则见
 [`agent-communication`](.agents/skills/shared/agent-communication/SKILL.md#delivery-events-and-recovery)。
 会话未运行时不承诺持续感知；下次活动检查点恢复，不新增常驻轮询。
+任务摘要保留最终版本、已覆盖结果、完成或经 ACK 转移的职责、风险及证据入口，随
+现有收据迁移，并在协调者状态中登记可恢复路径。迟到失败、未转移职责和同 ID 内容
+冲突必须保留并归并实际增量；用户真正的新指令不受事件去重影响，旧消息里的授权
+也不成为新授权。客户端若仍启动空转 turn 或要求可见回复，应单独记录这一限制；
+本协议不修改底层消息队列，也不承诺隐藏通知。
 
 协调者和执行者在同一 checkout 上验收前，按
 [`验收写入责任`](.agents/skills/shared/issue-workflow/SKILL.md#acceptance-write-responsibility)

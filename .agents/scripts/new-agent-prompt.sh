@@ -133,7 +133,8 @@ Working rules for this session:
   receipt/recovery rules; a local final reply or idle state is not receipt.
   Record submitted and explicit ACK separately. Missing ACK stays pending with
   an owner, recovery entry and bounded retry/next checkpoint. On resume check
-  prior receipts and current GitHub state; duplicates or old heads never replace
+  prior receipts and the current/terminal summary before necessary GitHub checks;
+  duplicates or old heads never replace
   current acceptance. Without delivery authorization report ready-for-review
   and wait; notifications grant no commit/push/PR/merge/release permission.
 - Protect acceptance inputs using issue-workflow's Acceptance write
@@ -150,6 +151,17 @@ Working rules for this session:
   ACK; return a duplicate receipt only for a still-pending confirmation duty.
   Keep independent work moving; no fixed-time polling or heartbeats. Pending
   handoffs block their dependent actions, not unrelated work.
+- Classify received backlog before queries, replies or dispatch using
+  agent-communication's receive-time classification. Recover the current or
+  migrated terminal summary and fold already-delivered duplicates, superseded
+  milestones and terminal no-new-information events locally: zero new GitHub
+  queries, dispatches, tests, messages/ACKs or user completion reports. Different
+  event IDs can cover the same outcome. Retain conflicting same-ID content,
+  late risks and untransferred duties with owners; reconcile each actual increment
+  once. Genuine new user instructions are not events to deduplicate; old event
+  authorization is not fresh approval. Preserve the summary/evidence through
+  migration, add no waiting window or consumer, and record forced client replies
+  as runtime limits rather than claiming the underlying queue was changed.
 - Use .agents/skills/shared/development-writing/SKILL.md for Issues, PRs,
   comments and commit messages. Keep current bodies aligned with agreed scope
   and final behavior; retain important decisions in comments and identify the
