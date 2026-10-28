@@ -14,6 +14,13 @@ the agent received or started the message.
 
 ## Protocol
 
+Before using caller-relative Herdr commands, apply
+[`issue-workflow`'s identity check](../issue-workflow/SKILL.md#codex-caller-identity-and-isolation).
+The sender's inherited environment is not the target's identity. Missing/stale
+`HERDR_*` or a live pane with wrong ownership requires authorized read-only
+recovery, not guessed IDs or a shared daemon restart. Use explicit verified IDs
+after recovery. A missing native thread is a separate transport capability gap.
+
 1. Resolve the target by its Herdr agent name or pane id. Read `herdr agent
    get <target>` and record the target name, pane, worktree and current state.
    Resolve the native conversation/thread id or exact session name separately;
@@ -46,6 +53,15 @@ the agent received or started the message.
    If native submission fails, preserve the exact result and inspect session/input
    state before using an eligible fallback; do not blind-retry. See the dated
    [bootstrap observation](../../../knowledge/shared/agent-session-messaging.md).
+   For Codex `--no-daemon`, independently verify that the native queue reaches
+   the intended live session, including after its first turn. Neither a resolved
+   thread nor a successful queue submission proves reachability. If submission
+   succeeds but receipt is absent, retain pending state and inspect at the next
+   active checkpoint; do not manufacture a timeout by polling. Before fallback,
+   reconcile the same event ID against the receiver's actual history/status so
+   a later native delivery is deduplicated. Fallback remains subject to the
+   retry bound and fresh idle/empty-input preflight; no service restart or
+   credential/endpoint discovery is implied.
 4. Record distinct states against a message id and its Issue, scope revision or
    commit/run identifiers. Capture the transport result (exit status and redacted
    output), then read `herdr agent get <TARGET>` and the pane or native state:

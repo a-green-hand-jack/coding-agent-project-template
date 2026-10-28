@@ -9,7 +9,8 @@ refresh or expiry condition.
 
 - [`agent-session-messaging.md`](agent-session-messaging.md) — dated native
   messaging/version and naming capabilities, delivery and idle-notice semantics,
-  and an observed Codex first-turn bootstrap limitation.
+  observed Codex bootstrap limitations, and dated Herdr caller-context/isolation
+  evidence with separate queue reachability and recovery boundaries.
 - [`credential-inventory.md`](credential-inventory.md) — the formats of the
   device `inventory.yaml` and the project's `credentials.yaml`, and what
   `probe-credentials.sh --check` and its probes check and print.
