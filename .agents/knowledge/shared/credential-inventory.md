@@ -2,12 +2,7 @@
 name: credential-inventory
 date: 2026-10-24
 source: .agents/scripts/probe-credentials.sh, setup-worktree.sh and diagnose-environment.sh as released in v0.1.16 (Issue #70), and their tests in the template's .agents/tests/test_template_credentials.py; moved here from llm-credentials in Issue #87
-scope: shared
 applies_to: repositories that adopt llm-credentials and name their credentials in a device inventory.yaml and a project credentials.yaml
-status: active
-refresh_after: when probe-credentials.sh, setup-worktree.sh or diagnose-environment.sh change what they read, check or print, or when the inventory or credentials.yaml fields change
-supersedes: null
-superseded_by: null
 ---
 
 # Credential inventory, credentials.yaml and probes
@@ -59,12 +54,12 @@ credentials:
     overrides: GOOGLE_GEMINI_BASE_URL      # set in CREDENTIAL_DIR/overrides.env on this machine
 ```
 
-- `bash .agents/scripts/probe-credentials.sh --check` reads no network. It
+- `bash .agents/scripts/shared/probe-credentials.sh --check` reads no network. It
   reports a variable without a row, an empty variable not marked, and each
   project row that is missing, an empty placeholder, retired or unset.
   `setup-worktree.sh` runs it and fails on an error. With
   `--shared-file <path>` it checks a device's inventory without a project.
-- `bash .agents/scripts/probe-credentials.sh` runs the probes and prints
+- `bash .agents/scripts/shared/probe-credentials.sh` runs the probes and prints
   `credential <name>: ok | failed | not-probed (...)`;
   `diagnose-environment.sh` shows these lines and fails on a required
   credential that failed.
@@ -72,10 +67,10 @@ credentials:
 
 ## Evidence
 
-The usage comment at the top of `.agents/scripts/probe-credentials.sh` and its
+The usage comment at the top of `.agents/scripts/shared/probe-credentials.sh` and its
 `--check` and probe code paths; the calls to it in `setup-worktree.sh` and
 `diagnose-environment.sh`. In the template repository,
-`python3 -m unittest discover -s .agents/tests -p 'test_template_credentials.py'`
+`python3 -m unittest discover -s .agents/tests/project -p 'test_template_credentials.py'`
 exercises both modes against fake inventories and a local HTTP endpoint.
 
 ## Refresh

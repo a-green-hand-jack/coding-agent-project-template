@@ -31,8 +31,8 @@
 - 开始实现 Issue 时不要在当前 agent 窗口直接切分支。通过 Herdr 的原生
   worktree 能力从声明的目标（默认 `dev`）创建 Issue worktree，在新 pane 启动独立
   agent session，
-  运行 `bash .agents/scripts/setup-worktree.sh`，再用
-  `bash .agents/scripts/new-agent-prompt.sh <issue-number>` 生成交接 prompt。
+  运行 `bash .agents/scripts/shared/setup-worktree.sh`，再用
+  `bash .agents/scripts/shared/new-agent-prompt.sh <issue-number>` 生成交接 prompt。
   简单 Issue 默认从 `dev` 开始并回到 `dev`；父任务需要联合验收时，可以按
   `issue-workflow` 声明父集成分支、子 PR 目标和最终 dev PR，再从该目标创建子 worktree。
   Herdr 不可用时报告阻塞，不回退到当前窗口直接实现。
@@ -54,7 +54,7 @@
 
 ## 上下文与状态
 
-每个 worktree 必须先运行 `.agents/scripts/setup-worktree.sh`。所有本地状态进入
+每个 worktree 必须先运行 `.agents/scripts/shared/setup-worktree.sh`。所有本地状态进入
 该 worktree 的 `.project/`。外部大资产必须有仓库内 `assets/` 软链接和 manifest；
 凭据只通过路径或运行时环境注入，绝不写入 Git、日志或 manifest；项目需要的凭据
 只按名字登记在根目录的 `credentials.yaml`（见 `llm-credentials`）。

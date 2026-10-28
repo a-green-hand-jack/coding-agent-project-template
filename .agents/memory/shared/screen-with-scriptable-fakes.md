@@ -2,11 +2,7 @@
 name: screen-with-scriptable-fakes
 date: 2026-10-23
 source: Issue #80, from two downstream adopters that each built such a fake; placement decided by the template maintainer in that Issue
-scope: shared
 applies_to: repositories whose product calls a non-deterministic external boundary, such as a provider's HTTP upstream or an agent executor
-status: active
-supersedes: null
-superseded_by: null
 ---
 
 # Screen failure paths with a scriptable fake before the real run

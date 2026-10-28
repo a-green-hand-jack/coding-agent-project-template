@@ -8,7 +8,7 @@ under `shared/` or `project/`; do not append facts to this index.
 - [`shared/`](shared/AGENTS.md) — reusable facts whose source and refresh rule
   apply across projects.
 - [`project/`](project/AGENTS.md) — facts owned by this repository.
-- [`ENTRY_TEMPLATE.md`](ENTRY_TEMPLATE.md) — front matter and body structure for
+- [`entry-template.md`](entry-template.md) — front matter and body structure for
   a new record.
 
 Search the relevant index before creating a record. Update the index link and

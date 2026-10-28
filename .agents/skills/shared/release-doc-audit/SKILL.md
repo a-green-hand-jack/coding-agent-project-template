@@ -156,22 +156,13 @@ a rendering pass. Do not publish merely to obtain a preview.
    registry entry points to an existing path. For a quick registry-path check:
 
    ```bash
-   python3 - <<'PY'
-   from pathlib import Path
-   import yaml
-   root = Path('.')
-   data = yaml.safe_load(Path('.agents/content-registry.yaml').read_text())
-   missing = []
-   for entry in data['entries']:
-       path = entry['path']
-       matches = list(root.glob(path)) if any(ch in path for ch in '*?[') else [root / path]
-       if not matches or not any(match.exists() for match in matches):
-           missing.append(path)
-   if missing:
-       raise SystemExit('missing registry paths: ' + ', '.join(missing))
-   print('registry paths exist')
-   PY
+   bash .agents/scripts/shared/check-development.sh
    ```
+
+   The schema-aware check distinguishes active paths from retired history,
+   optional rejection and template-only omissions, validates real CLAUDE links,
+   and checks generated indexes. Do not replace it with a blanket exists check.
+
 
 5. Record findings, locations, classifications, resolutions or intentional
    exceptions, together with the candidate identity, checks and rendered-page

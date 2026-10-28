@@ -2,9 +2,8 @@
 
 This directory contains dated facts owned by this template repository. Every
 record is a separate Markdown file with the fields in
-[`../ENTRY_TEMPLATE.md`](../ENTRY_TEMPLATE.md), `scope: project`, and a refresh
-or expiry condition.
+[`../entry-template.md`](../entry-template.md), a registry-owned refresh condition.
 
-## Index
+<!-- registry-index:start -->
 
-No project knowledge records are present in this template yet.
+<!-- registry-index:end -->

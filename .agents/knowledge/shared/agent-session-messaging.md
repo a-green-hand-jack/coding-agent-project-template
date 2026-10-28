@@ -6,12 +6,7 @@ source: >-
   https://learn.chatgpt.com/docs/developer-commands?surface=cli;
   installed CLI help; coordinator-supplied Codex bootstrap observation for Issue 113;
   Issue 127 scoped Linux caller-context and isolated-session observations
-scope: shared
 applies_to: naming, Codex caller-context isolation and authorized handoffs between coding-agent sessions
-status: active
-refresh_after: when the client, naming or messaging capability, or delivery behavior changes; recheck before relying on a different installation
-supersedes: null
-superseded_by: null
 ---
 
 # Native session messaging, naming and bootstrap limits

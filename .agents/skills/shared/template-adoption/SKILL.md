@@ -102,7 +102,7 @@ example assets or project-specific memory and knowledge.
    `diagnose-environment.sh` fails with the fix when that happens.
    If the product resolves a state root of its own, follow the shared
    `product-state-root` memory record next to the setup hook
-   (`.agents/scripts/setup-project.sh`) so every command started in a worktree
+   (`.agents/scripts/project/setup-project.sh`) so every command started in a worktree
    finds that worktree's `.project/`.
 
    Copy shared skills and memory records registered `shared_with_adaptation`
@@ -130,8 +130,8 @@ example assets or project-specific memory and knowledge.
      additions.
 
    Adopt scripts unchanged and put project-specific setup in the
-   `.agents/scripts/setup-project.sh` hook. When that hook creates entries in
-   `.project/`, say in `.agents/scripts/migrate-project.rules` how teardown
+   `.agents/scripts/project/setup-project.sh` hook. When that hook creates entries in
+   `.project/`, say in `.agents/scripts/project/migrate-project.rules` how teardown
    migrates each one, one `NAME|ACTION|WHY` line per entry: `copy`, `drop` with
    the reason it may be left behind, or `login` for a link to the canonical
    checkout's login directory (`llm-credentials`; the link is dropped and a real
@@ -153,3 +153,12 @@ example assets or project-specific memory and knowledge.
 
 The destination repository remains the authority for its product and project
 history; this template supplies a development control plane, not a new product.
+
+## Development catalog adoption
+
+Adopt the six shared/project category skeletons and their real relative CLAUDE
+links, but never template-only payloads. Register independent local documents or
+packages with stable IDs and explicit unknown history. Use the naming, metadata
+and many-to-many migration contract in `.agents/AGENTS.md`; preserve adoption or
+rejection decisions in the same registry. Regenerate group indexes after excluding
+template-only packages, then run check-development and recursive check-shells.

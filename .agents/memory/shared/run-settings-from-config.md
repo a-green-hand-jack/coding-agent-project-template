@@ -2,11 +2,7 @@
 name: run-settings-from-config
 date: 2026-10-15
 source: Issue #30, harvested from two independent downstream adopters of this template
-scope: shared
 applies_to: repositories whose product has commands that start runs with tunable parameters such as limits, rounds, agent, model, reasoning effort, resources, image or network
-status: active
-supersedes: null
-superseded_by: null
 ---
 
 # Run parameters come from configuration, not code

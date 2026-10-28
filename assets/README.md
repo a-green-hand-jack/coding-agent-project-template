@@ -13,5 +13,5 @@ assets/my-dataset -> /managed/storage/my-dataset
 Add the asset's logical name, source, version, checksum and rebuildability to
 [`MANIFEST.yaml`](MANIFEST.yaml). Put local link mappings in the ignored
 `.project/assets.links` file, one `name=absolute/path` entry per line, then run
-`bash .agents/scripts/setup-worktree.sh` to create the links. Do not commit
+`bash .agents/scripts/shared/setup-worktree.sh` to create the links. Do not commit
 large binary payloads, credentials or unregistered paths.

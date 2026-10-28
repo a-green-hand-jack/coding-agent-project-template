@@ -2,11 +2,7 @@
 name: template-work-runs-on-codex
 date: 2026-10-28
 source: maintainer decision in the coordinating session, 2026-10-26; Issue #108; Issue #127 startup capability correction
-scope: project
 applies_to: this template repository's Issue dispatch
-status: active
-supersedes: previous Pi-based template maintenance dispatch decision
-superseded_by: null
 ---
 
 # Template work runs on Codex first

@@ -14,9 +14,9 @@ agent, or preparing a merged branch for removal.
    there and launch an independent coding-agent session; do not implement the Issue
    by switching branches in the parent session. If Herdr is unavailable, report
    the blocker instead of falling back to an in-place branch.
-2. Enter the returned worktree and run `.agents/scripts/setup-worktree.sh`.
+2. Enter the returned worktree and run `.agents/scripts/shared/setup-worktree.sh`.
    The parent session can generate the handoff with
-   `.agents/scripts/new-agent-prompt.sh ISSUE [BRANCH] [TARGET_BASE]`.
+   `.agents/scripts/shared/new-agent-prompt.sh ISSUE [BRANCH] [TARGET_BASE]`.
 3. Confirm the `.project/home` marker, branch, state root, output directory and
    asset links all belong to this worktree. Do not reuse another worktree's state.
    Verify the task-key/role/attempt mapping and actual workspace, tab, agent and
@@ -42,12 +42,12 @@ agent, or preparing a merged branch for removal.
    `killall`, `fuser -k` or a name pattern, so a process this worktree did not
    start is never touched. Then check what the monitor does not see: the process
    identities recorded under `.project/runs/` and the containers that mount the
-   worktree (`.agents/scripts/inspect-state.sh` lists them, running or stopped).
+   worktree (`.agents/scripts/shared/inspect-state.sh` lists them, running or stopped).
    A run that cannot be stopped, a recorded process still running, a container
    that mounts the worktree or a state that cannot be confirmed stops the
    retirement and goes to the maintainer.
 6. Migrate once nothing runs. Run
-   `.agents/scripts/teardown-worktree.sh --migrate-to <canonical-project>`. It
+   `.agents/scripts/shared/teardown-worktree.sh --migrate-to <canonical-project>`. It
    inspects state, then copies
    `.project/state`, `runs`, `artifacts`, `manifest`, the entries
    `migrate-project.rules` marks `copy` and the untracked asset links into the

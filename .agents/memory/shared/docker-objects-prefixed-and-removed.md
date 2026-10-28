@@ -2,11 +2,7 @@
 name: docker-objects-prefixed-and-removed
 date: 2026-10-18
 source: Issue #54, harvested from one downstream adopter of this template
-scope: shared
 applies_to: repositories whose product, tests, probes or diagnostics start images, containers, networks or volumes in Docker, especially on a shared or long-lived machine
-status: active
-supersedes: null
-superseded_by: null
 ---
 
 # Docker objects carry the project prefix and are removed once expired
