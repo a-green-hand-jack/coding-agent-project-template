@@ -18,7 +18,8 @@ Shared skills currently included:
 - `shared/template-feedback/`
 - `shared/template-adoption/` — positioning and path contracts before migration.
 - `shared/template-upgrade/`
-- `shared/release-doc-audit/`
+- `shared/release-doc-audit/` — self-contained release narratives, visual review
+  and version/registry/upgrade consistency; release-type guidance in references.
 
 Add new skills to this list and to `.agents/content-registry.yaml` in the same
 change.

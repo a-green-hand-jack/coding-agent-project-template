@@ -81,7 +81,7 @@ entries:
     note: Adapt current and target release tags, local conflicts and migration evidence.
   - path: .agents/skills/shared/release-doc-audit/
     scope: shared_with_adaptation
-    note: Set RELEASE_HEADING to the destination's release-notes layout and adapt release-note ownership; the audit runs against the destination tree and target tag.
+    note: Write and visually review standalone release narratives; adapt audience/type, repository URL, publication surface/image hosting, release-note ownership and RELEASE_HEADING. Includes shared release-type references; project examples stay outside this package. Preserve version, registry, path and machine-readable upgrade checks.
   - path: .agents/skills/shared/asset-lifecycle/
     scope: shared_with_adaptation
     note: Adapt asset classes, storage roots and migration evidence.
@@ -188,6 +188,12 @@ entries:
   - path: RELEASE_NOTES.md
     scope: template
     note: Template release history stays in the template repository; downstream projects keep their own release notes.
+  - path: RELEASE_EXAMPLE.md
+    scope: template
+    note: Chinese project-specific draft for v0.1.20 through PR 114; a human-facing example, not release history or downstream shared guidance.
+  - path: .github/release-examples/
+    scope: template
+    note: Small versioned diagram source and static image for RELEASE_EXAMPLE.md; human documentation assets, not product inputs or downstream payload.
   - path: .agents/skills/template-harvest/
     scope: template
     note: Maintainer procedure that collects settled downstream practice; keep it in the template repository and never copy it downstream.

@@ -253,11 +253,26 @@ template:
 
 ## 发布
 
+发布正文面向读者独立讲清楚项目背景、比较起点、核心变化、证据与边界，以及如何
+使用、升级或获取成果。按用户影响组织内容，用有图注的流程图、对照表或真实
+结果帮助理解；参考资料保留 Issue、PR、前版、固定代码和完整 compare 链接，
+正文不能依靠读者点开它们才能理解。不同发布对象和小发布的取舍见
+[`release-doc-audit`](.agents/skills/shared/release-doc-audit/SKILL.md) 及其类型参考。
+
+本仓库的[中文图文发布草稿](RELEASE_EXAMPLE.md) 展示 v0.1.20 到 PR #114 的实际
+变化，图源和静态图在 `.github/release-examples/`；它们属于模板专属 human 示例，
+下游不复制，也不代表新版本已经发布。共享 skill 保持英文，下游在末尾适配段
+填写受众、发布面、图像托管、仓库 URL、release notes 归属与 `RELEASE_HEADING`。
+
 发布前检查：工作树干净、文档与行为一致、资产 manifest 可解析、环境入口可用、
 适用的回归和真实运行证据已记录。运行
 `.agents/skills/shared/release-doc-audit/`，处理或记录每个文档审计发现。发布只
 从 `main` 或 release branch 进行，并更新下游项目自己的 `RELEASE_NOTES.md`；
 模板仓库的 `RELEASE_NOTES.md` 只记录模板版本，不作为下游版本记录。
+同时检查目标发布面的实际渲染、窄屏可读性和图链接；不支持内嵌图时使用可访问的
+静态图。仅本地准备时记录预览面和托管检查缺口，不为预览而发布。历史验收与最终
+候选验证分别说明，保留 `### Upgrading ...` 和 **Command only.** / 编号手动步骤
+的机器读取协议；草稿不改历史 release、版本号或 registry 的模板版本。
 
 模板仓库发布前还要运行 `.agents/skills/template-harvest/`，收集下游已沉淀的通用
 实践，并把每个候选的分类与 Issue 记录下来；没有可访问的下游时在发布记录中写明。
