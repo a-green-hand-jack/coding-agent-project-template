@@ -69,6 +69,22 @@ ready-for-review 并等待，通知不授予提交、开 PR、合并或发布权
 [`agent-communication`](.agents/skills/shared/agent-communication/SKILL.md#delivery-events-and-recovery)。
 会话未运行时不承诺持续感知；下次活动检查点恢复，不新增常驻轮询。
 
+协调者和执行者在同一 checkout 上验收前，按
+[`验收写入责任`](.agents/skills/shared/issue-workflow/SKILL.md#acceptance-write-responsibility)
+登记确定版本（含未提交输入）、负责人、相关写入者、保护路径及允许的输出。所有
+相关写入者明确确认暂停后才开始；验收可以写约定的日志和产物，只读评审照常进行。
+独立不可变快照保留来源与隔离证据，无需冻结开发 checkout。新修改要求、漂移、
+失联或重启都不能默默解冻：先结束或作废旧验收，确认运行停止或隔离，再明确归还
+写入责任并由接收方确认。超时不是授权，前后相同 HEAD 也不能排除中途修改后恢复。
+
+按 [`消息节奏`](.agents/skills/shared/agent-communication/SKILL.md#message-cadence)
+及时发送关键交接、失败和影响对方下一步的变更；同一检查点、同一版本的结果与
+待办合并，普通进度只记本地。收据可以捎带在有内容的消息里，但依赖该交接的动作
+仍须等待明确 ACK；ACK 不再要求 ACK，重复事件只在发送方仍有待确认义务时返回
+已有收据。不循环催问或心跳，等待期间继续独立工作。
+[`场景审阅`](.agents/skills/shared/agent-communication/references/acceptance-scenarios.md)
+覆盖失败分支，不能替代授权双方真实暂停、验收、归还及合并结果消息的运行证据。
+
 PR 描述应说明改了什么、为什么改、验收和 CI 要求的每项检查的命令与结果，以及
 顺带修复的相关缺陷；只有维护者本人才能完成的步骤写成具体阻塞，说明维护者要做
 什么。真实运行、构建和发布证据放在 Issue 或 PR 中，不靠 agent 的自述代替。
