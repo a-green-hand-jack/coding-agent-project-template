@@ -1,0 +1,18 @@
+flowchart TD
+  A["明确用户、交付物与非目标<br/>读取目录契约，逐路径映射"]
+  B["登记稳定任务键<br/>角色、attempt 与实际会话 ID"]
+  C["推进可独立实现的范围<br/>所需上游未交付时，联合验收等待"]
+  D["同步声明的目标并验收<br/>父任务最终交付 dev"]
+  E["复核交付证据<br/>消息提交、接收确认与完成分开"]
+  F{"仍有验收、审计<br/>或承诺未完成？"}
+  G["保留 worktree 履责<br/>或经授权移交并获确认"]
+  H["停止所属进程 → 迁移与校验<br/>确认无唯一副本后回收"]
+  A --> B --> C --> D --> E --> F
+  F -->|有| G
+  G -->|职责已结清| F
+  F -->|无| H
+  classDef default fill:#eff6ff,stroke:#2563eb,color:#102a43,font-size:18px;
+  classDef decision fill:#fff7df,stroke:#a16207,color:#422006;
+  classDef finish fill:#ecfdf5,stroke:#15803d,color:#14532d;
+  class F decision;
+  class H finish;
