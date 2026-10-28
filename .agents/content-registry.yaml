@@ -4,7 +4,7 @@ purpose: >-
   which content belongs to one concrete project.
 template:
   repository: https://github.com/a-green-hand-jack/coding-agent-project-template
-  version: v0.1.24
+  version: v0.1.25
   # A derived template (a template built from another template) records itself
   # above and the template it follows here; nobody else writes this block, and a
   # project made from a derived template removes it (DEV.md, template relationship):
@@ -57,13 +57,13 @@ entries:
     note: Adapt Herdr workspace names and project commands; retire only after background acceptance and outstanding obligations are fulfilled or explicitly transferred with acknowledgement, then stop owned processes, migrate and verify state/assets, and remove the worktree.
   - path: .agents/skills/shared/issue-workflow/
     scope: shared_with_adaptation
-    note: Fill dispatch/lifecycle slots and task/role/attempt mappings, including the local coordinator reporting boundary and Codex caller identity/isolation checks. Owns acceptance input protection, writer pause and explicit return. Workers report delivery events; claimants reconcile GitHub at lifecycle checkpoints. Simple Issues target dev; parent integration records child targets, final dev PR and acceptance obligations.
+    note: Fill dispatch/lifecycle slots and task/role/attempt mappings, including the local coordinator reporting boundary and Codex caller identity/isolation checks. Owns acceptance input protection, writer pause and explicit return. Workers report delivery events; claimants classify backlog before necessary GitHub reconciliation and preserve terminal summary recovery through migration. Simple Issues target dev; parent integration records child targets, final dev PR and acceptance obligations.
   - path: .agents/skills/shared/development-writing/
     scope: shared_with_adaptation
     note: Common reader and evidence principles plus Issue, PR, comment and commit guidance; neutral examples in references. Uses writing.language by default for commits; any project-specific commit language or convention goes only in the trailing adaptation section. Historical project cases are not part of this shared package.
   - path: .agents/skills/shared/agent-communication/
     scope: shared
-    note: Resolve native capabilities before transport; distinguish submitted, acknowledged and completed. Keep event identity, pending ownership, bounded recovery and duplicate/stale-head dispositions. Message cadence combines milestones, keeps routine progress local and prevents ACK loops; references review acceptance/cadence scenarios separately from real runs. Herdr is a conditional fallback, never receipt proof by itself.
+    note: Classify received backlog before queries or sends; retain covered outcomes, terminal summaries and late risks in existing event/receipt state. Resolve native capabilities before transport; distinguish submitted, acknowledged and completed. Keep pending ownership and bounded recovery. Message cadence combines milestones and prevents repeated completion reports and ACK loops; references and provider-free fixtures remain separate from live receiver evidence. Herdr is a conditional fallback, never receipt proof by itself.
   - path: .agents/skills/shared/project-memory-governance/
     scope: shared
     note: Generic classification, registration and cleanup procedure.

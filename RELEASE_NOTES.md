@@ -4,6 +4,55 @@
 
 暂无。
 
+## v0.1.25 — 2026-10-28
+
+**让旧消息停在记录里，把注意力留给新工作。**
+
+Coding-Agent Project Template 为多个 coding agent 提供开发规则、skills、交接脚本与项目骨架。相较 v0.1.24，本版解决一种收尾后的协作噪声：代码已经合并、版本已经发布、worktree 已经回收，之前排队的“PR 已创建”“审计结束”“没有剩余职责”却陆续到达。每条消息都是真的，但再次解释一遍完成情况，并没有推进工作。
+
+本版让接收方先判断消息是否改变当前决策，再决定查询、回复或行动。它不会清空队列，也不是 Codex 或 Herdr 的底层补丁；改变的是参与会话处理消息的流程。
+
+### 从逐条反应，到先看已经完成了什么
+
+| 到达的信息 | 容易出现的问题 | v0.1.25 的处理 |
+| --- | --- | --- |
+| 同一事件再次投递 | 重新核查、再发确认 | 找到原收据，本地归并；只有真实未完成的确认义务才补收据 |
+| 不同 ID 描述同一个已完成结果 | 把新 ID 当成新工作 | 比较结果、版本、内容与覆盖证据，不重复执行或完成汇报 |
+| 任务回收后才到达早期里程碑 | 唤醒退役会话、重新解释收尾 | 通过协调者保存的入口读取已迁移摘要，不重建 worktree |
+| 旧版本带来新失败或未完职责 | 为了安静而误删重要信息 | 保留实际增量和负责人，只处理一次；终态不能掩盖新风险 |
+| 用户提出新任务 | 被旧事件去重误伤 | 按当前用户指令处理；消息里引用的旧授权不算新授权 |
+
+![接收流程示意：先读取摘要和收据，核对内容与职责；已覆盖的旧结果只归并，新结果、风险或未完职责保留并处理；回收时迁移摘要与证据。](https://github.com/a-green-hand-jack/coding-agent-project-template/releases/download/v0.1.25/late-events.png)
+
+*图 1：消息处置示意。箭头表示判断顺序，不表示自动过滤器或耗时。用户真正的新指令始终按当前授权处理。*
+
+“已经覆盖”需要明确证据。例如，最终结果能覆盖此前的 PR-created 里程碑，但相同提交上的新失败不能被它覆盖。任务摘要保存最终版本、已接收结果、未完或已转移职责、风险、证据入口，以及是否已经向用户报告完成；回收时随现有状态迁移。这样，下一次恢复会话仍能知道哪些事情不必再做。
+
+规则已接入 `agent-communication`、`issue-workflow`、生成的交接 prompt 和 DEV。它复用现有记录，不增加消息数据库、后台消费者或定时轮询。
+
+### 验证结果：旧消息安静，新职责没有丢失
+
+两个现有 Codex 会话进行了两批原生消息验证。第一批包含重复结果、不同 ID 的相同结果、迟到的 PR-created/no-duties、旧 attempt 的结果，以及一个明确授权的本地测试职责；第二批在后续活动检查点重放旧事件和同一职责。
+
+实际操作记录显示：已覆盖的旧样本没有触发 GitHub 查询、派发、测试、逐条消息/ACK 或重复任务完成汇报。新增测试职责只创建了一份本地证据；第二批重放没有重建该证据，前后哈希相同。接收方最后只发送一份合并验证结果，协调者接收并结束该测试职责。这里的“风险”是预先声明的合成测试数据，不是实际归档故障。
+
+独立验收运行 78 项测试，全部成功（9.019 秒）；另有执行者的 78 项测试记录（9.551 秒）。审阅还发现并修正了两个测试模型的过度去重缺口：同版本的新结果，以及同名风险的新细节。新增反例确认这些实际增量会保留，而等价重试保持安静。测试模型仅用于协议反例检查，不在运行时替 agent 执行过滤。
+
+**边界仍然明确**：两批消息仍各自启动了接收方回合，也产生了指令要求的 commentary 和 agent 自选的简短最终处置文字。验证证明没有重复执行或重复完成汇报，不证明零 token 开销、通知被隐藏或客户端不再启动空转回合。冲突、恢复/迁移和真正用户来源的部分分支是 fixture 验证，不能冒充真实故障实验。上述耗时是运行记录，不是性能改善指标。
+
+### Upgrading a project from v0.1.24
+
+1. 在目标项目运行 `bash .agents/scripts/upgrade-template.sh --check v0.1.25`，按 `template-upgrade` 审阅逐路径迁移，保留项目自己的适配段、会话工具和权限边界。
+2. 更新两个协作 skill、场景参考、生成交接脚本和索引，并把“先读摘要、再按实际增量处理”接入项目的 DEV。不要将模板专属测试或本模板的发布历史复制进下游产品。
+3. 对当前任务补齐已有结果的覆盖证据、未完职责和恢复入口；回收前确认摘要随状态迁移。无法确认状态时保留为未知，不为安静而丢掉迟到失败，也不批量唤醒已退役会话。
+
+### 参考资料
+
+- [Issue #130](https://github.com/a-green-hand-jack/coding-agent-project-template/issues/130)：问题、约束和验收。
+- [上一版 v0.1.24](https://github.com/a-green-hand-jack/coding-agent-project-template/releases/tag/v0.1.24)；[完整变化](https://github.com/a-green-hand-jack/coding-agent-project-template/compare/v0.1.24...v0.1.25)。
+- 固定版本：[接收分类](https://github.com/a-green-hand-jack/coding-agent-project-template/blob/v0.1.25/.agents/skills/shared/agent-communication/SKILL.md#receive-and-reconcile-before-acting)、[协调与收尾](https://github.com/a-green-hand-jack/coding-agent-project-template/blob/v0.1.25/.agents/skills/shared/issue-workflow/SKILL.md)。
+- [实现 PR #131](https://github.com/a-green-hand-jack/coding-agent-project-template/pull/131)、[实现提交](https://github.com/a-green-hand-jack/coding-agent-project-template/commit/9591f81ef7ac569c3d12635b6b88b4015f29a063)：完整变更和验收边界。
+
 ## v0.1.24 — 2026-10-28
 
 **让 Codex 知道自己在哪个窗口，也让交接到达正确的会话。**
