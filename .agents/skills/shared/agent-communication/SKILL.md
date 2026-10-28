@@ -114,6 +114,8 @@ original event or a failed attempt. Record:
 
 The receiver explicitly ACKs the event ID and version, recording accepted,
 duplicate, superseded or needs-reconciliation disposition plus pending duties.
+Use the cadence below to combine a receipt with substantive work; a dependent
+handoff still requires prompt explicit ACK. An ACK itself requests no ACK.
 An ACK confirms receipt even if acceptance failed; it never grants review,
 merge or release approval. `completed` requires the requested outcome's actual
 evidence on the current version. An idle notice or acceptance of an old head
@@ -121,8 +123,10 @@ cannot establish current completion.
 
 Apply these rules when receiving or recovering:
 
-- Deduplicate by task, dispatch attempt and event ID, not by arrival time. A
-  duplicate gets the recorded disposition/ACK without repeating actions. If
+- Deduplicate by task, dispatch attempt and event ID, not by arrival time. Record
+  a duplicate locally without repeating actions or reflexively replying. Return
+  the existing receipt only when the sender still has an actual pending
+  confirmation obligation; never respond to an ACK with another ACK. If
   the same ID carries different content, retain both and request correction;
   do not silently overwrite either.
 - Retain delayed or superseded events and their receipts. Compare PR head and
@@ -154,6 +158,31 @@ than overwriting input. Neither session can promise ongoing awareness while
 not running; recovery occurs at its next active checkpoint, not in an implicit
 background monitor.
 
+## Message cadence
+
+| Event | Send/confirm rule |
+| --- | --- |
+| Responsibility handoff, safety issue, blocker/failure, or change affecting the receiver's next action | Notify promptly with exact version, evidence and requested action. Explicitly ACK a handoff before its dependent action; do not wait for a later milestone. |
+| Implementation/acceptance result, PR-created or review evidence at the same checkpoint and version | Combine into one substantive message, retaining event IDs, outcomes and pending owners. A head update that invalidates the receiver's work is immediate. |
+| Routine progress, unchanged state, repeated status or heartbeat | Record locally; no send or ACK request. Fold useful progress into the next substantive milestone. |
+
+A message can report a result, request/confirm a pause and carry earlier receipts
+at once, provided each responsibility and version is explicit. Do not merge
+different versions into one verdict or drop a PR-created, failure or transfer
+event for quietness. Receipt can ride the next substantive message unless an
+action depends on it now; otherwise save it for the next active checkpoint.
+An ACK is terminal for receipt tracking, not a new ACK obligation. If it also
+proposes a new task/transfer, acknowledge only that new obligation.
+
+Keep working on independent tasks or read-only review while a receipt is pending.
+Do not perform the dependent action, continuously wait for messages, poll on a
+fixed timer, inspect unchanged state repeatedly or send heartbeats. The existing
+one-initial-plus-at-most-one-conditional-retry bound still applies. On recovery
+read durable state first; elapsed time is neither a retry condition by itself nor
+permission to take write responsibility. Use
+[`issue-workflow`](../issue-workflow/SKILL.md#acceptance-write-responsibility)
+for the acceptance boundary and pause/return duties, not a second protocol here.
+
 ## Fixtures
 
 Provider-free fixtures should exercise these decisions: empty input permits a
@@ -165,3 +194,9 @@ command has the exact
 fallback to `herdr agent prompt`. Fixtures model Herdr responses and never
 invoke a provider or include credentials. They include a dim ANSI suggestion
 that permits sending and a normal-brightness draft that refuses it.
+
+The [acceptance and cadence scenarios](references/acceptance-scenarios.md) are
+provider-free scenario review, not an executable enforcement layer or proof of
+live delivery. Real acceptance requires an authorized sender/receiver exchange
+and run evidence on the recorded version; do not disturb unrelated sessions to
+manufacture failures.

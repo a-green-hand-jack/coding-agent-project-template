@@ -8,6 +8,11 @@ adaptations only in a trailing `## In this repository` section (see
 exactly `## In this repository`, not even in an example.
 Update the content registry when adding, renaming or retiring a shared skill.
 
+`issue-workflow/` owns acceptance write responsibility; `agent-communication/`
+owns transport, receipts and message cadence. Its
+`references/acceptance-scenarios.md` reviews their shared boundary without
+claiming fixture review proves a real exchange.
+
 `development-writing/` owns the common writing principles and four development
 record types; `references/four-cases.md` holds transferable weak/rewrite examples.
 Concrete historical cases stay outside shared packages.
