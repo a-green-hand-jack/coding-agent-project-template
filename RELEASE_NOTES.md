@@ -4,6 +4,70 @@
 
 暂无。
 
+## v0.1.21 — 2026-10-28
+
+**从理解项目到讲清成果：让多个 coding agent 的工作汇成一次完整交付。**
+
+Coding-Agent Project Template 为维护者和 coding agent 提供可采用、可升级的开发规则、skills、脚本和项目骨架。产品放在项目声明的产品树，开发资料放在 `.agents/`，面向人的说明放在根文档；下游自己决定产品是什么。
+
+当多个 agent 同时工作，难点往往发生在交接处：大家是否理解同一个交付物？谁在等谁？消息发出后有没有被理解？PR 合并后是否还有验收没结束？这次发布在 v0.1.20 的基础上，把定位、派出、通信、联合验收和回收的责任连起来，也补齐了最后一步：向人完整展示这一段时间的变化。
+
+### 先理解项目，再安排工作
+
+目录分区正确，仍可能做出错误的产品。现在，采用模板或进行结构性改动之前，先明确用户、交付物、核心概念和非目标，读取受影响目录的规则，再逐路径决定保留和迁移。README 解释定位，USER 解释使用，DEV 解释开发，memory 保存决定和理由。项目适配不能静默绕过目录契约，也不要求把论文、数据或已有测试强行塞进统一的软件结构。
+
+对于多个组件共同交付的任务，区分“实现需要等待”和“最后验收需要等待”。接口已经固定的独立部分可以先做，但不能绕过真实的 blocked-by 依赖。需要联合验收时，可以声明父集成分支：子 PR 先汇入，组合验收后再交付 dev。子 PR 合并不代表父任务已经完成。
+
+![协作交付流程：理解项目、登记任务身份、独立实现、同步验收、复核职责；职责结清后停止运行、迁移状态并回收。](https://raw.githubusercontent.com/a-green-hand-jack/coding-agent-project-template/ebb7ecfe5c746e1382b909cac3684b6df5ee816a/.github/release-examples/coordination-flow.png)
+
+*图 1：核心协作流程示意。箭头表达责任和先后条件，不表示自动执行或耗时。需要上游的验收继续等待，独立实现可先行；仍有验收、审计或承诺的工作区保留到职责结清，或完成授权移交。*
+
+### 找得到任务，也看得清完成到了哪一步
+
+一个稳定任务键现在连接 worktree、workspace、tab、Herdr agent 和原生 session。比如 `app-issue-42` 可以对应工作区 `APP-issue-42 导出结果`、tab `app-issue-42 implement` 和同名 agent。显示名称适应各层用途，实际地址始终登记工具返回的 ID；重新派出保留任务键，区分角色和 attempt，避免新旧会话混淆。
+
+消息明确分为“已提交、已确认、已完成”：传输工具接受消息，只说明提交成功；接收者明确确认范围，才算收到；结果经证据验收，才算完成。Codex 优先用已解析 thread 的原生队列；具备相应能力的 Claude 会话优先用原生消息；Pi 使用 Herdr prompt。回退发送先检查能力、会话状态和输入行，记录原因，不盲重试。
+
+| 维护者遇到的问题 | v0.1.21 的改进 | 能据此做出的判断 |
+| --- | --- | --- |
+| 目录符合模板，却误解了产品 | 定位先于布局，逐路径核对契约 | 要交付什么、资料放哪里 |
+| 子任务都说完成，组合仍不能用 | 区分实现与验收依赖，声明最终集成目标 | 谁能先做、谁还欠联合验收 |
+| 窗口很多，任务与会话对不上 | 统一任务键，保留角色、attempt 和 ID 映射 | 找到负责该任务的具体会话 |
+| 消息发出了，却没有明确回应 | 分开记录提交、接收确认和结果验收 | 交接停在哪一步、由谁继续跟进 |
+| PR 合并了，不确定窗口能否关闭 | 回收前结清后台验收、审计和承诺 | 何时能迁移资产并安全回收 |
+| 发布只有 PR 清单，看不懂意义 | 独立叙事、图表展示和首尾参考资料 | 不读开发历史也能理解变化和使用入口 |
+
+*表 1：本版本解决的协作与阅读问题。这里比较的是流程能力，不是团队效率或成功率的测量。*
+
+### Release 也成为面向人的交付物
+
+扩展后的 `release-doc-audit` 不再只检查版本号和路径。它指导作者按读者顺序组织发布主张、必要背景、前后变化、证据解释、获取或升级方式及限制，并保留 Issue、PR、前版、固定代码与完整 compare 作为参考。
+
+图表承担解释任务：表格帮助比较，流程图说明顺序和职责，结果图展示测量，真实截图呈现使用效果。要求图注、适用的条件和单位，并检查实际渲染、窄屏可读性及图片访问；示意图不能冒充真实运行。产品升级、结果发布、阶段报告和代码归档分别选择需要的材料，小修也可以用简短正文和紧凑对照讲完整。
+
+仓库新增中文 `RELEASE_EXAMPLE.md`，以此次协调流程变化展示完整叙事，并保留可重建的图源和静态图。这个历史范围明确的示例不随共享 skill 复制到下游；下游采用的是写作与审阅方法，而不是模板自己的发布内容。
+
+### 验证与适用边界
+
+两项改动分别在最新 PR head 上通过 51 项模板测试：协调流程 PR #114 为 9.972 秒，发布叙事 PR #116 为 10.443 秒；脚本语法、初始化、诊断和 diff 检查通过。发布示例实际查看了 GitHub GFM 渲染结果的 1000px/500px Chrome 预览，中文、流程图、图注和表格可读；静态图按保留的图源与配置重建后字节一致。
+
+这些证据支持文档、交接文本和已有脚本接缝的一致性。13 个协调场景的规范走查不等于所有客户端组合的真实端到端实验；本版没有测量团队效率提升，也不提供新调度器或消息服务。原生通信仍受客户端能力和权限影响。最终发布候选的检查和公开页面核验记录在文末发布 PR 中，不用历史验收代替最终检查。
+
+### Upgrading a project from v0.1.20
+
+1. 按本项目的 `template-upgrade` 流程，以 `v0.1.21` 为目标，先运行 `bash .agents/scripts/upgrade-template.sh --check v0.1.21` 查看计划，再应用升级并处理冲突。保留项目适配内容，不覆盖本项目自己的 release notes。
+2. 检查 Issue 派出、通信和回收的本地补充：更新“所有子 PR 一律目标 dev”“队列接受就是接收确认”“idle 或合并即可回收”等旧约定。普通任务仍交付 dev，父集成分支仅在需要时明确声明。
+3. 为后续派出确定短项目任务前缀，记录角色、attempt 和实际返回的 ID。已有活跃会话保留可追溯映射，不批量改名；检查后台验收和未完承诺后再回收。
+4. 适配 release skill 的受众、发布类型、仓库 URL、图像托管、发布面和版本标题模式。今后的 release 使用项目自己的证据与图像；模板专属的示例、发布历史和图像不会作为共享内容迁入。
+5. 运行项目自己的适用检查，审阅最终文档和升级结果。模板测试不替代下游产品的构建或真实运行验收。
+
+### 参考资料
+
+- [上一版 v0.1.20](https://github.com/a-green-hand-jack/coding-agent-project-template/releases/tag/v0.1.20) · [本版本完整比较](https://github.com/a-green-hand-jack/coding-agent-project-template/compare/v0.1.20...v0.1.21)
+- [Issue #113](https://github.com/a-green-hand-jack/coding-agent-project-template/issues/113) · [协调流程 PR #114](https://github.com/a-green-hand-jack/coding-agent-project-template/pull/114)
+- [Issue #115](https://github.com/a-green-hand-jack/coding-agent-project-template/issues/115) · [发布叙事 PR #116](https://github.com/a-green-hand-jack/coding-agent-project-template/pull/116)
+- [v0.1.21 代码与使用入口](https://github.com/a-green-hand-jack/coding-agent-project-template/tree/v0.1.21) · [中文发布示例](https://github.com/a-green-hand-jack/coding-agent-project-template/blob/v0.1.21/RELEASE_EXAMPLE.md) · [发布写作与审阅 skill](https://github.com/a-green-hand-jack/coding-agent-project-template/blob/v0.1.21/.agents/skills/shared/release-doc-audit/SKILL.md)
+
 ## v0.1.20 — 2026-10-26
 
 - **区分 CLI 暗色输入建议与真实草稿**（#110）：`agent-communication` 现在要求使用 `herdr agent read <target> --source visible --format ansi` 检查输入行；被 `ESC[2m` 包裹的暗色内容是 CLI 建议，可以被发送消息替换，不是人的回答或决定，只有正常亮度文字会阻塞发送。真实草稿阻塞时，消息必须写入对应 Issue 或 PR 评论，并在发送方 pane 说明，不能只留在本地日志。
