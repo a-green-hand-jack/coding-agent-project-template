@@ -45,7 +45,7 @@ https://github.com/a-green-hand-jack/coding-agent-project-template 的 <TEMPLATE
 请使用本仓库采用的 template-upgrade skill，把当前项目从登记的模板版本升级到
 https://github.com/a-green-hand-jack/coding-agent-project-template 的 <TEMPLATE_TAG>。
 先检查当前 template registry、git 状态、Issue、memory、knowledge、skills、
-资产和 worktree 状态，再运行 bash .agents/scripts/upgrade-template.sh --check
+资产和 worktree 状态，再运行 bash .agents/scripts/shared/upgrade-template.sh --check
 <TEMPLATE_TAG>（还没有这条命令时，按 template-upgrade 的说明运行目标版本里的
 副本）并报告它的计划。计划给出 Light path: yes 时走轻量路径：在 Issue branch
 中运行该命令和项目检查，然后开 PR。否则以计划为起点输出逐路径迁移地图，区分

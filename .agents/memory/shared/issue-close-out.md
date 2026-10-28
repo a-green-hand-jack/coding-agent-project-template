@@ -2,11 +2,7 @@
 name: issue-close-out
 date: 2026-10-13
 source: Issue #18, harvested from downstream adopters of this template; Issues #34 and #40; Issue #87 (steps left to issue-workflow); Issue #89 (several coordinators)
-scope: shared
 applies_to: repositories that manage Issue worktrees with Herdr, develop from a dev integration branch and merge PRs back into it
-status: active
-supersedes: null
-superseded_by: null
 ---
 
 # Close out an Issue's worktree after its PR merges

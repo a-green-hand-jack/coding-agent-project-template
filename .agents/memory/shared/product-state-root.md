@@ -2,11 +2,7 @@
 name: product-state-root
 date: 2026-10-15
 source: Issue #42, harvested from a downstream adopter of this template
-scope: shared
 applies_to: repositories whose product commands keep persistent state per worktree under the worktree's `.project/`
-status: active
-supersedes: null
-superseded_by: null
 ---
 
 # Product commands find the worktree's state root from the setup marker

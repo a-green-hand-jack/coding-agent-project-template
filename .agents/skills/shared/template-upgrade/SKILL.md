@@ -17,7 +17,7 @@ downstream repository with the template tree or merge template history into it.
 
 ## The upgrade command
 
-`bash .agents/scripts/upgrade-template.sh [--check] [--resolved PATH]... <TARGET_TAG>`
+`bash .agents/scripts/shared/upgrade-template.sh [--check] [--resolved PATH]... <TARGET_TAG>`
 does the mechanical part of steps 1, 2 and 5:
 
 - It reads the followed template from the registry (step 1) and fetches both
@@ -57,7 +57,9 @@ the followed template's repository (the URL from step 1):
 ```bash
 clone=.project/state/template-upgrade/coding-agent-project-template.git
 [ -d "$clone" ] || git clone -q --bare https://github.com/a-green-hand-jack/coding-agent-project-template "$clone"
-bash <(git -C "$clone" show <TARGET_TAG>:.agents/scripts/upgrade-template.sh) <TARGET_TAG>
+mkdir -p .project/state/template-upgrade/target-command
+git -C "$clone" archive <TARGET_TAG> .agents/scripts/shared | tar -x -C .project/state/template-upgrade/target-command
+bash .project/state/template-upgrade/target-command/.agents/scripts/shared/upgrade-template.sh <TARGET_TAG>
 ```
 
 ## Light path
@@ -149,7 +151,7 @@ mechanical part.
      way.
 
    Replace adopted scripts whole; the project's
-   `.agents/scripts/setup-project.sh` and `.agents/scripts/migrate-project.rules`
+   `.agents/scripts/project/setup-project.sh` and `.agents/scripts/project/migrate-project.rules`
    are not template files and stay. A local edit to an adopted script is a local
    conflict: move it into one of those two files (`template-adoption` step 5), or
    report it through `template-feedback` when neither can hold it. When the
@@ -168,7 +170,7 @@ capabilities it adopted and which it intentionally kept different.
 ## Backfill a missing template record
 
 A repository adopted before `v0.1.5` records its adopted release only in its
-developer docs or git history, and `.agents/scripts/diagnose-environment.sh`
+developer docs or git history, and `.agents/scripts/shared/diagnose-environment.sh`
 reports a missing registry `template.version`. On the Issue branch, before the
 migration map:
 
@@ -192,9 +194,39 @@ migration map:
    ```
 
 3. Verify with `grep -A2 '^template:' .agents/content-registry.yaml`, and with
-   `bash .agents/scripts/diagnose-environment.sh` once the target scripts are
+   `bash .agents/scripts/shared/diagnose-environment.sh` once the target scripts are
    in place.
 
 The backfilled value is the release the repository **adopted**. Step 5 of the
 procedure later moves it to the target tag; list the backfill in the migration
 report with its evidence.
+
+## Schema 1 to 2 and layout migration
+
+Use the target release command **and its sibling content_registry.py**, not the
+old flat script. Inspect `--check` first. The target registry maps source paths
+before comparing blobs, preserving their merge base and local trailing sections.
+Local lifecycle/optional rejection and writing/template identity remain local.
+Project hooks move to scripts/project; template commands move to scripts/shared.
+Local flat content uses its existing registered scope or schema1 project default;
+unknown classification or a naming conflict needs an explicit reviewed decision.
+Multi-source/multi-target maps are reported for manual reconciliation; the version
+does not advance across an unresolved content conflict. `--resolved` never grants
+permission to discard a local record. New optional content still needs adoption.
+
+After upgrading, generate indexes from the merged registry and run the official
+check. Verify each old path disposition, independent document registration,
+retired history and adaptation section. Repeating the same upgrade must leave
+all content and the new layout unchanged. Old compatibility wrappers are absent:
+all known template callers move together, and downstream callers must update in
+the reviewed migration. Preserve their old command references as history only.
+
+Preserve an adopter's stable IDs and retarget imported migration destinations and
+current replacement edges to those IDs; retain upstream IDs as provenance.
+Resolve legacy lifecycle references by ID, repository/record-relative path, or an
+unambiguous filename. Reconcile the whole graph before stripping frontmatter or
+moving project files. Missing/ambiguous targets, cycles or conflicting metadata
+hold all source writes and version advancement. Preserve retired/superseded
+memory and knowledge bodies with explicit historical retention and a reason;
+generated indexes mark them as history. Known upstream historical descriptions
+stay explicitly recorded as provenance, not fabricated replacement identities.

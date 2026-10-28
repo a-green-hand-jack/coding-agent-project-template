@@ -21,15 +21,17 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Check shell syntax
-        run: bash -n .agents/scripts/*.sh
+        run: bash .agents/scripts/shared/check-shells.sh
+      - name: Check development registry
+        run: bash .agents/scripts/shared/check-development.sh
       - name: Initialize worktree state
-        run: bash .agents/scripts/setup-worktree.sh
+        run: bash .agents/scripts/shared/setup-worktree.sh
       - name: Diagnose template
-        run: bash .agents/scripts/diagnose-environment.sh
+        run: bash .agents/scripts/shared/diagnose-environment.sh
       # The template's own tests (scope: template) exist only in the template
       # repository; elsewhere this step is skipped.
       - name: Run the template's own tests
-        if: hashFiles('.agents/tests/test_template_*.py') != ''
+        if: hashFiles('.agents/tests/project/test_template_*.py') != ''
         run: |
           git fetch --quiet --depth=1 origin '+refs/tags/*:refs/tags/*'
-          python3 -m unittest discover -s .agents/tests -p 'test_template_*.py' -v
+          python3 -m unittest discover -s .agents/tests/project -p 'test_template_*.py' -v

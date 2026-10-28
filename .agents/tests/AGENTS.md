@@ -15,7 +15,7 @@ of `diagnose-environment.sh`. They write only to temporary directories, and
 CI runs them:
 
 ```bash
-python3 -m unittest discover -s .agents/tests -p 'test_template_*.py'
+python3 -m unittest discover -s .agents/tests/project -p 'test_template_*.py'
 ```
 
 The real-release test needs the release tags (`git fetch --tags origin`).

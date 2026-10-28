@@ -2,11 +2,7 @@
 name: third-party-llm-compat-patches
 date: 2026-10-15
 source: Issue #44, from one downstream adopter's benchmark evaluation; placement decided by the template maintainer in that Issue
-scope: shared
 applies_to: repositories that run third-party tools (benchmarks, agent SDKs, agent CLIs) which call an LLM provider or relay
-status: active
-supersedes: null
-superseded_by: null
 ---
 
 # Compatibility changes to third-party LLM tools live in the repository

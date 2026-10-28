@@ -2,11 +2,7 @@
 name: issue-dispatch-by-difficulty
 date: 2026-10-15
 source: Issue #26, harvested from a downstream adopter of this template; Issue #87 (steps left to issue-workflow)
-scope: shared
 applies_to: repositories that start Issue agents with the issue-workflow skill
-status: active
-supersedes: null
-superseded_by: null
 ---
 
 # Dispatch each Issue agent by difficulty and record it in the Issue

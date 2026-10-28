@@ -2,11 +2,7 @@
 name: harvest-decisions
 date: 2026-10-24
 source: the ten per-run harvest records from 2026-10-13 to 2026-10-23, merged in Issue #87 (their text is in Git history); the run reports in the ignored .project/runs/harvest-<date>/
-scope: project
 applies_to: this template repository's maintenance of its downstream adopters
-status: active
-supersedes: null
-superseded_by: null
 ---
 
 # Lasting decisions from downstream harvests

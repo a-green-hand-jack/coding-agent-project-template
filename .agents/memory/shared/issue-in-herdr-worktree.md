@@ -2,11 +2,7 @@
 name: issue-in-herdr-worktree
 date: 2026-10-13
 source: Issue #18, harvested from downstream adopters of this template; Issue #34; Issue #87 (steps left to issue-workflow); Issue #89 (several coordinators); Issue #93 (dependencies)
-scope: shared
 applies_to: repositories that manage Issue worktrees with Herdr and develop from a dev integration branch
-status: active
-supersedes: null
-superseded_by: null
 ---
 
 # Implement each Issue in its own Herdr worktree and agent session

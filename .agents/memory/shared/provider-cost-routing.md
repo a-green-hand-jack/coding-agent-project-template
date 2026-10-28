@@ -2,11 +2,7 @@
 name: provider-cost-routing
 date: 2026-10-25
 source: Issue #101 (maintainer decision on provider cost, agent dispatch and evidence)
-scope: shared
 applies_to: repositories whose tests, checks, coding agents or tools call LLM providers
-status: active
-supersedes: null
-superseded_by: null
 ---
 
 # Route provider and model cost first, and keep every cheap run real
