@@ -43,6 +43,20 @@ for runtime in docker podman; do
   if [[ -z "$ids" ]]; then printf '%s: none\n' "$runtime"; continue; fi
   format='{{$n := .Name}}{{$s := .State.Status}}{{range .Mounts}}{{$n}}{{"\t"}}{{$s}}{{"\t"}}{{.Source}}{{"\t"}}{{.Destination}}{{"\n"}}{{end}}'
   found=0
+  # Inspect all containers in one request; keep the per-container fallback for
+  # races or errors so that an uninspectable live container still blocks removal.
+  if mounts=$("$runtime" inspect --type container --format "$format" $ids 2>/dev/null); then
+    ids=''
+    while IFS=$'\t' read -r name status source destination; do
+      [[ -n "$source" ]] || continue
+      resolved=$(realpath -m -- "$source" 2>/dev/null || printf '%s' "$source")
+      if inside "$source" || inside "$resolved"; then
+        printf '%s: LIVE %s (%s) mounts %s at %s\n' "$runtime" "${name#/}" "$status" "$source" "$destination"
+        found=1
+        live=1
+      fi
+    done <<<"$mounts"
+  fi
   for id in $ids; do
     # A container removed since `ps` is skipped; any other failure cannot be judged.
     if ! mounts=$("$runtime" inspect --type container --format "$format" "$id" 2>/dev/null); then
