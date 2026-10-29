@@ -1,8 +1,80 @@
 # Release notes
 
-## Unreleased
+## v0.1.26 — 2026-10-30
 
-暂无。
+**开发目录按用途分组，升级保留内容身份和项目决定。**
+
+Coding-Agent Project Template 为维护者和采用方提供开发规则、脚本与项目骨架。
+v0.1.25 的 memory/knowledge 已分组，但 scripts/tests 仍平铺，内容登记主要表达
+复用分类。这次把六类开发资料放进一致的 shared/project 骨架，并让正式命令检查
+文件归属、命名、生命周期、索引和迁移记录。产品 `src/`、根目录 human 文档、
+`.project/` 状态及资产管理策略保持各自边界；execution 只提供治理入口。
+
+### 旧路径如何迁移
+
+| v0.1.25 路径或记录 | 新位置或处理 |
+| --- | --- |
+| `.agents/scripts/*.sh` | `.agents/scripts/shared/*.sh`，所有模板调用方同步更新 |
+| 项目 `scripts/setup-project.sh`、`scripts/migrate-project.rules` | 同类别 `project/`，保留项目正文 |
+| `.agents/tests/test_template_*.py` | `.agents/tests/project/`，仍为 template-only |
+| `.agents/skills/template-harvest/` | `.agents/skills/project/template-harvest/`，仍不向下游复制 |
+| memory/knowledge 的 `ENTRY_TEMPLATE.md` | 同类别 `entry-template.md` |
+| 六类目录及 shared/project 的治理入口 | `AGENTS.md` 与真实相对 `CLAUDE.md -> AGENTS.md` |
+| memory/knowledge 的生命周期与归属 frontmatter | 迁入 registry；正文保留内容日期、来源、理由和历史证据 |
+| 其他源文件、旧分类默认值 | registry 的逐项迁移表记载 keep、拆分登记或退役分类；不据此删除项目状态 |
+
+*表：路径组迁移概览。`content-registry.yaml` 的 migrations 提供每个旧文件、旧登记项、
+稳定 ID、目标身份、来源提交、处置理由和验证入口；多来源/多目标用数组表达。*
+
+物理分组和复用权限分开：放在 project/ 的模板维护测试和 harvest 仍属于 template，
+不会变成下游项目内容。registry schema 2 是身份、路径、归属、摘要和生命周期的
+唯一权威；分组索引从它生成，正文不再手工维护同一状态。
+采用方已有的稳定 ID 会同时更新迁移目标和替代链引用，上游身份保留为来源。
+已被替代或退役的决策正文可以按明确的 historical 保留策略继续保存，索引标记为历史；
+无法唯一解析的替代关系会保持源文件和登记表不变，并阻止版本推进。未知历史信息明确为 unknown，
+只知道月份时保留月份。名称按文档/Shell kebab-case、Python snake_case 和 test_ 规则
+检查；标准入口或第三方名称需要带理由的例外。
+
+### 破坏性变化与验收
+
+旧的平铺脚本入口不再保留；下游的自有调用方需要按迁移表更新。schema 1 不能直接
+通过 schema 2 检查器，必须用目标版本升级入口。新命令依赖同目录的标准库 Python
+模块 `content_registry.py`，因此不能只下载一个 Shell 文件或沿用旧的 process-substitution
+启动例子。所有工具仍在开发面，不新增产品依赖或执行引擎。
+
+资产迁移校验现在按文件类型检查 FIFO 等特殊文件，避免把它们当成普通文件读取；
+工作树状态检查批量查询容器，查询失败时仍逐个检查，避免遗漏无法检查的容器。
+
+验收入口为 `check-development.sh`、递归 `check-shells.sh`、worktree setup、diagnose、
+inspect-state 和 `python3 -m unittest discover -s .agents/tests/project -p 'test_template_*.py'`。
+测试以旧 Git release 构建真实仓库夹具，调用正式升级命令，检查项目正文、适配段、
+optional 拒绝和 retired 来源保留，以及升级后正式检查和重复升级字节一致性。
+坏链接/Git mode、未登记内容、归属冲突、命名例外、失效/循环替代链和多对多待处理内容
+都有反例检查；原测试发现集合通过迁移映射归一化比较。它们证明治理与升级接缝，
+不替代下游产品运行验收。
+
+本次发布候选 `4429865` 的本地完整回归为 111 项通过；registry、递归 Shell、
+setup 和环境诊断通过。测试覆盖模板升级和迁移接缝，不代表下游产品验收。
+
+### Upgrading a project from v0.1.25
+
+1. 阅读目标版本 `.agents/AGENTS.md` 和 registry 的逐路径迁移表，保留本地修改、
+   项目内容、适配段、optional 拒绝和 retired 记录。取得目标 tag 的完整
+   `.agents/scripts/shared/` 到 `.project/state/template-upgrade/target-command/`，
+   用其中的 `upgrade-template.sh --check <TARGET_TAG>` 生成计划；具体可执行命令见
+   `template-upgrade` skill。不要先运行旧的平铺升级脚本。
+2. 审阅旧到新的路径、ID 和登记 schema 变化。模板脚本移入 shared，项目 hook 移入
+   project；本地其余平铺内容沿用已有 scope 或旧 schema 的 project 默认值。
+   自有命名不符合新规则时明确改名或登记有理由的标准名称例外。多对多正文合并/提炼
+   必须逐项处理，命令会保持受影响文件并停止版本推进；逐来源和目标确认 resolved。
+3. 在获批范围内应用命令，更新自有调用方，运行
+   `bash .agents/scripts/shared/check-development.sh --write-indexes`，再运行不带写选项的
+   正式检查、递归 Shell 检查、setup、diagnose 和项目自己的验收。重复升级确认旧布局
+   不会复活。保留项目自己的 release notes，不复制模板发布历史。
+
+比较基线为 [v0.1.25](https://github.com/a-green-hand-jack/coding-agent-project-template/releases/tag/v0.1.25)；
+相关变更见 [PR #135](https://github.com/a-green-hand-jack/coding-agent-project-template/pull/135)
+和 [PR #134](https://github.com/a-green-hand-jack/coding-agent-project-template/pull/134)。
 
 ## v0.1.25 — 2026-10-28
 

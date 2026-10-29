@@ -2,11 +2,7 @@
 name: project-positioning-before-layout
 date: 2026-10-28
 source: Issue #113
-scope: shared
 applies_to: template adoption and Issues that change project structure
-status: active
-supersedes: null
-superseded_by: null
 ---
 
 # Understand the product before choosing its layout

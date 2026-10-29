@@ -2,11 +2,7 @@
 name: llm-credentials
 date: 2026-10-15
 source: Issue #23 (policy); Issue #27 (per-canonical-checkout decision by the template maintainer); Issue #31 (safe re-login); Issue #59 (no credentials in command-line arguments); Issue #70 (inventory, probes and credentials.yaml); Issue #87 (steps moved to credential-setup, formats to credential-inventory)
-scope: shared
 applies_to: repositories whose code, tools or agents call LLM providers with API keys, tokens or OAuth logins
-status: active
-supersedes: null
-superseded_by: null
 ---
 
 # Manage LLM credentials across projects

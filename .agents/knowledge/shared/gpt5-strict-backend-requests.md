@@ -2,12 +2,7 @@
 name: gpt5-strict-backend-requests
 date: 2026-10-15
 source: dated observation of backend error responses during a benchmark evaluation that sent GPT-5.x requests through an OpenAI-compatible relay (Issue #44)
-scope: shared
 applies_to: repositories whose code, agent CLIs or third-party tools (agent SDKs, LiteLLM, benchmark harnesses) send GPT-5.x requests to a Responses API backend, directly or through a relay
-status: active
-refresh_after: when a provider changes its request validation, or when a named client changes its default parameters or its routing of GPT-5.x models; otherwise recheck before the next batch against a backend not checked in the last 90 days
-supersedes: null
-superseded_by: null
 ---
 
 # GPT-5.x requests that strict Responses backends reject

@@ -22,3 +22,19 @@ Concrete historical cases stay outside shared packages.
 existing consistency audit; its `references/release-types.md` distinguishes
 product upgrades, results, milestones/archives and concise releases. Keep
 concrete project release examples outside shared packages.
+
+<!-- registry-index:start -->
+- [agent-communication](agent-communication/SKILL.md) — Resolve native addresses, reconcile backlog and record distinct delivery/receipt outcomes.
+- [asset-lifecycle](asset-lifecycle/SKILL.md) — Adapt asset classes, storage roots and migration evidence.
+- [cli-first-operations](cli-first-operations/SKILL.md) — Use the project's public CLI instead of ad-hoc wrappers.
+- [credential-setup](credential-setup/SKILL.md) — Set up declared project credentials without copying logins or exposing values.
+- [development-writing](development-writing/SKILL.md) — Write Issues, PRs, comments and commits around reader decisions and traceable evidence.
+- [issue-workflow](issue-workflow/SKILL.md) — Scope, dispatch, protect acceptance inputs, integrate and close an Issue with explicit ownership.
+- [long-running-supervision](long-running-supervision/SKILL.md) — Observe and recover long runs through the product public CLI.
+- [project-memory-governance](project-memory-governance/SKILL.md) — Classify, register and migrate development content without losing provenance or authority.
+- [release-doc-audit](release-doc-audit/SKILL.md) — Draft readable release narratives and audit rendered output, versions and upgrade paths.
+- [template-adoption](template-adoption/SKILL.md) — Adapt the target repository's rules, product paths and acceptance commands.
+- [template-feedback](template-feedback/SKILL.md) — Adapt the canonical template URL, labels and upstream Issue fields.
+- [template-upgrade](template-upgrade/SKILL.md) — Adapt current and target release tags, local conflicts and migration evidence.
+- [worktree-lifecycle](worktree-lifecycle/SKILL.md) — Create, verify and retire isolated worktrees after responsibility and state handoff.
+<!-- registry-index:end -->

@@ -471,7 +471,7 @@ distinguishes rule/fixture coverage from a real authorized handoff.
 - Commits, pushes and merges follow `AGENTS.md`: the PR merge needs the
   maintainer's review approval, and a conflict-resolution commit and its push need
   the maintainer's confirmation.
-- Initialize the dev checkout once with `bash .agents/scripts/setup-worktree.sh`
+- Initialize the dev checkout once with `bash .agents/scripts/shared/setup-worktree.sh`
   so `.project/home` exists and diagnostics pass there.
 - The dev checkout is shared by every coordinator:
   - `<BASE>` there moves only by `git pull --ff-only`. Never merge, rebase or
@@ -690,7 +690,7 @@ Input: Issue number `<N>` and a branch `<branch>` named per `DEV.md`
    coordinator's own shell:
 
    ```bash
-   (cd <worktree> && bash .agents/scripts/setup-worktree.sh)
+   (cd <worktree> && bash .agents/scripts/shared/setup-worktree.sh)
    ```
 
    Confirm the output's `root:` is `<worktree>` and `branch:` is `<branch>`. Asset
@@ -703,7 +703,7 @@ Input: Issue number `<N>` and a branch `<branch>` named per `DEV.md`
    started:
 
    ```bash
-   bash .agents/scripts/new-agent-prompt.sh <N> <branch> <TARGET_BASE> \
+   bash .agents/scripts/shared/new-agent-prompt.sh <N> <branch> <TARGET_BASE> \
      > <worktree>/.project/state/initial-prompt.md
    # Optional fourth argument: local coordinator handoff file (see below).
    # append the Issue-specific section from the template below
@@ -1245,7 +1245,7 @@ workspace, normally the dev checkout's.
    job):
 
    ```bash
-   (cd <worktree> && bash .agents/scripts/inspect-state.sh)
+   (cd <worktree> && bash .agents/scripts/shared/inspect-state.sh)
    ```
 
    Its `## containers mounting this worktree` section names every container,
@@ -1259,13 +1259,13 @@ workspace, normally the dev checkout's.
 6. Migrate local state and asset links to the dev checkout:
 
    ```bash
-   (cd <worktree> && bash .agents/scripts/teardown-worktree.sh --migrate-to <dev>)
+   (cd <worktree> && bash .agents/scripts/shared/teardown-worktree.sh --migrate-to <dev>)
    ```
 
    The script prints `inspect-state.sh` output (and exits 3 without migrating
    when step 5's container check fails), then `migrate-assets.sh` copies
    `.project/state`, `runs`, `artifacts`, `manifest` and the entries
-   `.agents/scripts/migrate-project.rules` marks `copy` (by name or by a
+   `.agents/scripts/project/migrate-project.rules` marks `copy` (by name or by a
    wildcard such as `plan-*.md`) into
    `<dev>/.project/migrations/<worktree-dir>-<UTC-timestamp>/`, and copies
    untracked `assets/` entries (asset links) into `<dev>/assets/`. Tracked files

@@ -2,11 +2,7 @@
 name: speed-and-parallelism-by-measurement
 date: 2026-10-23
 source: Issue #78, harvested from downstream adopters of this template
-scope: shared
 applies_to: repositories that dispatch Issues with the issue-workflow skill or run long product runs under the long-running-supervision skill
-status: active
-supersedes: null
-superseded_by: null
 ---
 
 # Default to the fastest safe way: parallel by independence, concurrency by measurement

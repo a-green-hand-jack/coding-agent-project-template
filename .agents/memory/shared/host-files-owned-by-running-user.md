@@ -2,11 +2,7 @@
 name: host-files-owned-by-running-user
 date: 2026-10-23
 source: Issue #79, harvested from two downstream adopters of this template
-scope: shared
 applies_to: repositories whose scripts, tests, containers, harnesses, logs, caches, releases or archives leave files on a host, especially a shared or nearly full machine without sudo
-status: active
-supersedes: null
-superseded_by: null
 ---
 
 # Files left on the host belong to the running user

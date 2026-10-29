@@ -2,11 +2,7 @@
 name: serve-the-coding-agent
 date: 2026-10-24
 source: Issue #85, from one downstream adopter of this template
-scope: shared
 applies_to: repositories that develop their own agent or workflow on top of an existing coding agent (Claude Code, Codex, Pi or similar)
-status: active
-supersedes: null
-superseded_by: null
 ---
 
 # Use the existing coding agent, and write what serves it

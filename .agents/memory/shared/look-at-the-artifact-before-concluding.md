@@ -2,11 +2,7 @@
 name: look-at-the-artifact-before-concluding
 date: 2026-10-23
 source: Issue #76, harvested from a downstream adopter of this template
-scope: shared
 applies_to: projects that produce generated artifacts (images, video, audio, text, data) and accept them with automatic metrics
-status: active
-supersedes: null
-superseded_by: null
 ---
 
 # Look at the artifact itself before reporting a result

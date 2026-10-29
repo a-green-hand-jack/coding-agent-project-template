@@ -8,28 +8,39 @@ description: Classify, register, update and clean shared project development kno
 Use this skill after a user decision, a correction, a repeatable procedure or a
 fact that future sessions would otherwise need to rediscover.
 
-1. Search the relevant `memory/` or `knowledge/` index and its `shared/` and
-   `project/` directories for an existing entry. `AGENTS.md` files are rules and
-   indexes only; never append record text to them.
-2. Classify the information:
-   - **memory**: a durable decision, principle or lesson and its reason;
-   - **knowledge**: a dated fact that may change and its source;
-   - **skill**: a repeatable procedure with commands, evidence and failure limits.
-3. Check the content registry and choose exactly one destination: `shared/` for
-   reusable content or `project/` for repository-owned content. Mark the entry
-   `shared` only if it does not depend on a product name, repository path,
-   machine, provider, benchmark or private decision. Otherwise keep it project-specific.
-4. Create one focused Markdown file from `memory/ENTRY_TEMPLATE.md` or
-   `knowledge/ENTRY_TEMPLATE.md`. Fill in front matter for `name`, `date`,
-   `source`, `scope`, `applies_to`, `status` and the relevant supersession or
-   refresh field.
-5. Add one short link and summary to the matching `shared/AGENTS.md` or
-   `project/AGENTS.md`, and update `content-registry.yaml` when the path is a
-   reusable entry. Do not duplicate the full record in an index.
-6. When cleaning up, find inbound links and competing rules first. Mark an old
-   entry `status: superseded` and link its replacement; remove it only when its
-   history is already preserved by Git and no current link depends on it.
-7. Review the resulting diff for secrets, private paths and duplicated rules.
+1. Read `.agents/AGENTS.md`, the registry and relevant inbound links before
+   choosing a destination. Its six-category contract covers execution, tests,
+   memory, knowledge, skills and scripts, each with shared/project governance
+   and relative CLAUDE links. Keep product/human/state/asset boundaries intact.
+2. Give each piece one authority: memory for decisions/reasons/history, knowledge
+   for current sourced facts, skills for procedures, AGENTS for routing/boundaries.
+   Retain unique evidence; filename similarity is never a deletion criterion.
+3. Choose physical shared/project separately from reuse scope. Template-only
+   maintenance remains `scope: template` even inside project/. Empty shared
+   groups are valid. Use the contract's kebab-case/Python snake_case/test_ naming;
+   date only evidence and preserve month-only dates. Register required standard,
+   lockfile or vendor names with reasons rather than silently exempting them.
+4. Register each independent document or package once, with a stable ID, path,
+   kind, scope, owner, summary, status, source and updated date (or explicit
+   unknown). Keep lifecycle/ownership/replacement IDs in registry; body
+   frontmatter owns content-specific sources/dates/applicability. Knowledge adds
+   refresh_after; adapted content adds adaptation guidance and keeps its trailing
+   local section. Never infer historical metadata without evidence.
+5. Before moving, merging, extracting or retiring content, freeze from/to arrays
+   of IDs/paths with action, rationale, source commit and verification in the
+   existing registry's migrations. Cover all prior entries and tracked paths,
+   including keep/empty/history dispositions. Preserve retired records, optional
+   rejection and adaptation decisions. Stable IDs survive rename; many-to-many
+   content reconciliation is reviewed explicitly. No competing ledger.
+6. Update callers/imports/CI/discovery and adoption/upgrade together. Generate
+   group indexes with `bash .agents/scripts/shared/check-development.sh
+   --write-indexes`; do not hand-maintain duplicate summaries. Check normalized
+   test discovery and all nested Shell scripts when paths change.
+7. Run the official check without write flags. It must reject unregistered or
+   ambiguously owned content, dangling entries, bad CLAUDE links/Git modes,
+   unjustified names, stale indexes and dangling/cyclic replacement chains.
+   Validate actual old-release migration and repeat-upgrade behavior for schema
+   changes. Keep original historical sources and report exact command exits.
 
 ## Migrating legacy single-file records
 

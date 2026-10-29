@@ -57,4 +57,4 @@ teardown) drops the link and never copies a login; a real copy of a login
 inside a worktree blocks the migration until someone checks it by hand. A
 project whose setup hook links further login directories into `.project/` (the
 home of another agent CLI, a proxy's tokens) gives each one a `login` rule in
-`.agents/scripts/migrate-project.rules`, so teardown treats it the same way.
+`.agents/scripts/project/migrate-project.rules`, so teardown treats it the same way.

@@ -2,11 +2,7 @@
 name: resolve-real-paths-before-moving
 date: 2026-10-19
 source: Issue #59, harvested from a downstream adopter of this template; Issue #87 (the checks moved to asset-lifecycle)
-scope: shared
 applies_to: any move, copy-then-delete, replacement or symlinking of a directory, by an agent or a script
-status: active
-supersedes: null
-superseded_by: null
 ---
 
 # Resolve real paths before moving a directory
