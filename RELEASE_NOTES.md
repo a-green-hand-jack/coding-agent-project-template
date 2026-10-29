@@ -1,8 +1,8 @@
 # Release notes
 
-## Unreleased
+## v0.1.26 — 2026-10-30
 
-**开发目录按用途分组，升级保留内容身份和项目决定。**（Issue #133 草稿，尚未发布。）
+**开发目录按用途分组，升级保留内容身份和项目决定。**
 
 Coding-Agent Project Template 为维护者和采用方提供开发规则、脚本与项目骨架。
 v0.1.25 的 memory/knowledge 已分组，但 scripts/tests 仍平铺，内容登记主要表达
@@ -42,6 +42,9 @@ v0.1.25 的 memory/knowledge 已分组，但 scripts/tests 仍平铺，内容登
 模块 `content_registry.py`，因此不能只下载一个 Shell 文件或沿用旧的 process-substitution
 启动例子。所有工具仍在开发面，不新增产品依赖或执行引擎。
 
+资产迁移校验现在按文件类型检查 FIFO 等特殊文件，避免把它们当成普通文件读取；
+工作树状态检查批量查询容器，查询失败时仍逐个检查，避免遗漏无法检查的容器。
+
 验收入口为 `check-development.sh`、递归 `check-shells.sh`、worktree setup、diagnose、
 inspect-state 和 `python3 -m unittest discover -s .agents/tests/project -p 'test_template_*.py'`。
 测试以旧 Git release 构建真实仓库夹具，调用正式升级命令，检查项目正文、适配段、
@@ -66,10 +69,9 @@ optional 拒绝和 retired 来源保留，以及升级后正式检查和重复�
    正式检查、递归 Shell 检查、setup、diagnose 和项目自己的验收。重复升级确认旧布局
    不会复活。保留项目自己的 release notes，不复制模板发布历史。
 
-草稿比较基线为 [v0.1.25](https://github.com/a-green-hand-jack/coding-agent-project-template/releases/tag/v0.1.25)，
-范围来源为 [Issue #133](https://github.com/a-green-hand-jack/coding-agent-project-template/issues/133)。
-候选尚未提交或发布；最终 review diff 与命令退出状态保存在该工作单元的本地验收记录。
-当前没有发布版 compare 链接，不以浮动分支代替固定候选证据。
+比较基线为 [v0.1.25](https://github.com/a-green-hand-jack/coding-agent-project-template/releases/tag/v0.1.25)；
+相关变更见 [PR #135](https://github.com/a-green-hand-jack/coding-agent-project-template/pull/135)
+和 [PR #134](https://github.com/a-green-hand-jack/coding-agent-project-template/pull/134)。
 
 ## v0.1.25 — 2026-10-28
 

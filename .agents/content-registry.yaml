@@ -2,7 +2,7 @@ schema_version: 2
 purpose: "Record which development-plane content is reusable across repositories and which content belongs to one concrete project."
 template:
   repository: https://github.com/a-green-hand-jack/coding-agent-project-template
-  version: v0.1.25
+  version: v0.1.26
 writing:
   language: "中文"
   issue_sections: "最终目标, 实现哲学, 现状和问题, 怎么办, 验收, 不做"
