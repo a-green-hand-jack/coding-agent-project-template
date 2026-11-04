@@ -20,11 +20,14 @@ Coding-Agent Project Template 帮助维护者组织 coding agent、代码与交�
 *表：工作方式和责任变化。选择直接开发不自动授予提交、推送或发布权限。*
 
 ```text
-任务开始 ──→ 直接在 dev 开发 ──────────────────→ 验证与交付
-       └──→ 需要隔离或并行 ─→ 确认 agent、模型、thinking level
-                              └→ 派出 worktree ─→ agent 完成 Issue
-                                                     ↓
-                                      协调者在 dev 负责集成
+任务开始
+  ├─ 直接在 dev 开发
+  │    └─ 验证与交付
+  └─ 需要隔离或并行
+       └─ 确认 agent、模型、thinking level
+            └─ 派出 worktree
+                 └─ agent 完成 Issue
+                      └─ 协调者在 dev 负责集成
 ```
 
 *图：开发方式与责任流转示意；是否需要 Issue、PR 和审阅仍按任务分别判断。*
