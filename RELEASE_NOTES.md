@@ -1,12 +1,41 @@
 # Release notes
 
-## Unreleased
+## v0.1.29 — 2026-11-04
 
-明确直接 dev 与按需派遣的边界，统一开发知识和流程入口；发布风险检查与完整下游经验采集分别记录范围、证据及未知。旧版本升级时保留项目适配和本地采集历史；模板专属记录改名不会移动下游项目自有的旧路径内容。
+**让工作流程有一个清晰的答案，也让检查和历史各归其位。**
+
+这个版本整理了模板长期积累的开发规则和状态。维护者与 coding agent 现在可以沿着同一套入口决定直接在 dev 工作还是派出会话；下游项目升级时，项目自有的旧记录也不会因为模板的内部改名被搬走。
+
+| 场景 | v0.1.28 的问题 | v0.1.29 的处理 |
+| --- | --- | --- |
+| 一个 Issue 直接在 dev 实施 | 文档一处允许直接工作，另一处仍要求 worktree | 按任务选择；只有派遣时才确认 agent、模型和 thinking level |
+| 重复的开发规则和索引 | 规则散落多处，容易互相漂移 | workflow 负责流程，memory 保存决定与理由，registry 生成分组索引 |
+| 准备发布时检查下游 | 本版风险检查与完整经验采集捆绑 | 两者使用可复用的固定证据，但分别记录覆盖、结果和未知 |
+| 升级旧项目 | 模板专属记录改名可能碰到项目自有同名文件 | 保留项目路径和内容，不把模板自用记录复制到下游 |
+
+```text
+选择工作方式
+├─ 直接在 dev → 验证并交付
+└─ 确认派遣选择
+   → 独立会话
+   → 协调者集成并验证
+```
+
+上图是工作方式示意。已授权的问题应持续处理；遇到无法自行决定的权限、安全、不可逆影响或实质性选择时，说明阻塞并继续其他不依赖该决定的工作。状态整理保留历史证据，不将无法确认的范围当成已检查。
 
 ### Upgrading a project from v0.1.28
 
-运行 `bash .agents/scripts/shared/upgrade-template.sh --check <TARGET_TAG>`，审阅共享规则及项目适配的差异后执行升级；保留项目本地状态，运行开发面检查和项目验收。模板维护专属 memory 改名不向下游复制。
+1. 运行 `bash .agents/scripts/shared/upgrade-template.sh --check v0.1.29`，审阅共享规则、registry 和项目自己的适配。
+2. 根据项目实际工作方式处理差异；保留本地历史、拒绝项和自有内容。应用升级后运行开发面检查及项目自己的验收，并再次运行升级确认幂等。
+
+### 验证和范围
+
+完整回归在实现候选上运行 129 项并通过；其后的升级边界修正以真实旧版项目夹具再次验证。发布前候选完整回归再次通过 129 项；下游风险检查覆盖 14 个可访问的固定提交，另一个记录无法访问。静态文档和 fixture 不等于真实下游产品运行；不可访问的历史、未推送或未合并的工作仍属未知。
+
+### 参考
+
+- [整理计划 #148](https://github.com/a-green-hand-jack/coding-agent-project-template/issues/148)；[上一版 v0.1.28](https://github.com/a-green-hand-jack/coding-agent-project-template/releases/tag/v0.1.28)。
+- [规则和状态整理](https://github.com/a-green-hand-jack/coding-agent-project-template/commit/770c6da)；[持续完成工作的指导](https://github.com/a-green-hand-jack/coding-agent-project-template/commit/98e0afb)；[完整变更](https://github.com/a-green-hand-jack/coding-agent-project-template/compare/v0.1.28...v0.1.29)。
 
 ## v0.1.28 — 2026-11-04
 
