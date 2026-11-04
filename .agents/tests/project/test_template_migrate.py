@@ -558,6 +558,14 @@ class HandoffPrompt(unittest.TestCase):
                          "including after bootstrap"):
             self.assertIn(boundary, flat)
 
+    def test_prompt_preserves_dispatch_confirmation_and_coordinator_integration(self) -> None:
+        flat = " ".join(self.prompt("").split())
+        self.assertIn("Do not dispatch until the maintainer explicitly confirms", flat)
+        self.assertIn("agent, concrete model and thinking level", flat)
+        self.assertIn("the coordinator resolves integration conflicts in dev", flat)
+        self.assertIn("reuse alone does not require another dispatch", flat)
+        self.assertNotIn("in this worktree, itself or through you", flat)
+
     def test_prompt_carries_the_issues_dispatch_record(self) -> None:
         body = (
             "## 最终目标\n\n做点事。\n\n## Dispatch\n\n"

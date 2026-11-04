@@ -23,6 +23,10 @@ workers, or create durable artifacts.
    `screen-with-scriptable-fakes`).
 5. Define checkpoint, stop, resume, retry and terminal-failure behavior. On
    restart, replay or reconcile durable results before starting duplicate work.
+   Distinguish an infrastructure failure before the agent starts from a failure
+   after task execution begins; retain the phase, cause and evidence. Whether a
+   failed start consumes an attempt, time or budget is defined by the product's
+   actual accounting, not inferred from the failure label.
 6. Report implementation, runtime acceptance and final artifact acceptance as
    separate verdicts.
 7. Judge health by progress, not by liveness. A driver that retries with backoff
@@ -38,6 +42,11 @@ workers, or create durable artifacts.
    When waiting for a process to end, bind the wait to its exit or a change of
    its state, never to "the process still exists": a watcher on a process that
    already ended runs until its timeout.
+   For a short wait, use an existing verified, interruptible wait for the
+   relevant completion or obligation change when available. If only a longer
+   wait remains, yield the session and resume at an actual event or active
+   checkpoint. Do not substitute repeated sleep/status polling or invent a
+   tool capability; record what the wait can and cannot observe.
 8. Schedule and size the concurrency (`speed-and-parallelism-by-measurement`).
    - Run independent work units concurrently; queue only a real dependency.
    - Start a downstream step (review, the next stage) when its upstream unit

@@ -11,8 +11,8 @@ the record's own text never contains that heading line.
 - [docker-objects-prefixed-and-removed.md](docker-objects-prefixed-and-removed.md) — Prefix project Docker objects and remove expired owned objects without force.
 - [host-files-owned-by-running-user.md](host-files-owned-by-running-user.md) — Keep host artifacts owned by the running user and stop at foreign ownership.
 - [issue-close-out.md](issue-close-out.md) — Complete or transfer outstanding duties before migrating and retiring an Issue worktree.
-- [issue-dispatch-by-difficulty.md](issue-dispatch-by-difficulty.md) — Record agent, provider, model and effort selected by difficulty and cost.
-- [issue-in-herdr-worktree.md](issue-in-herdr-worktree.md) — Implement each Issue in its own verified Herdr worktree and independent agent session.
+- [issue-dispatch-by-difficulty.md](issue-dispatch-by-difficulty.md) — Confirm each dispatch selection and record provider, model, effort and reason.
+- [issue-in-herdr-worktree.md](issue-in-herdr-worktree.md) — Choose direct development or a confirmed Herdr dispatch and keep issue ownership clear.
 - [llm-credentials.md](llm-credentials.md) — Keep stable shared credentials and project-owned refreshing logins behind local paths.
 - [look-at-the-artifact-before-concluding.md](look-at-the-artifact-before-concluding.md) — Inspect referenced artifacts before concluding from automated metrics.
 - [product-state-root.md](product-state-root.md) — Resolve worktree-local product state from the project marker.

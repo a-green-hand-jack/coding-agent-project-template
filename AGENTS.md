@@ -22,20 +22,16 @@
 
 ## 工作方式
 
-- 较大的工作单元（新功能、跨文件或架构改动、隔离与凭据、公共行为、会改变产品的长实验、
-  需要 review 的改动）先通过 Issue 收敛范围、设计和验收，再修改代码；小修小改（文档、
-  注释、memory/索引、拼写、单文件且没有设计决定的小修复，以及运行现有命令做验收而不改
-  产品代码）可以直接在 `dev` checkout 里做，不建 Issue、worktree 或 PR。拿不准时按大的
-  走；小改动变大或出现设计问题时停下来开 Issue；
-- 直接在 `dev` 里做的小改动同样不自动提交或推送；运行适用的检查，并报告证据；
-- 开始实现 Issue 时不要在当前 agent 窗口直接切分支。通过 Herdr 的原生
-  worktree 能力从声明的目标（默认 `dev`）创建 Issue worktree，在新 pane 启动独立
-  agent session，
-  运行 `bash .agents/scripts/shared/setup-worktree.sh`，再用
-  `bash .agents/scripts/shared/new-agent-prompt.sh <issue-number>` 生成交接 prompt。
-  简单 Issue 默认从 `dev` 开始并回到 `dev`；父任务需要联合验收时，可以按
-  `issue-workflow` 声明父集成分支、子 PR 目标和最终 dev PR，再从该目标创建子 worktree。
-  Herdr 不可用时报告阻塞，不回退到当前窗口直接实现。
+- 根据任务、用户意图、checkout 状态及并行活动选择直接在 `dev` 开发或隔离工作；
+  工作规模本身不强制创建 worktree。先检查并保留无关改动和运行中的任务；按风险和
+  用户要求分别决定 Issue、审阅和 PR，并执行相应验收；提交和推送仍需明确授权。
+- 需要派出 Herdr worktree 时，事先请维护者确认本次 coding agent、具体模型和 thinking
+  level 三项；已明确提供的选择不重复询问。未确认不得派遣或静默 fallback。
+  使用 Herdr 原生 worktree 能力创建，运行 `bash .agents/scripts/shared/setup-worktree.sh`，
+  并用 `bash .agents/scripts/shared/new-agent-prompt.sh <issue-number>` 生成交接。
+  Herdr 不可用时报告，不用原始 Git 创建替代 worktree。
+- issue agent 负责承接任务；多个 PR 的合并及 dev 与 worktree 的集成冲突由 dev 中的
+  协调者处理。相关新 Issue 可以由原 agent 在原 session/worktree 承接，明确范围和交付。
 - 先删掉不必要的规则，再考虑增加规则；
 - 不为特定角色、任务或 benchmark 写特例；
 - 不写与代码重复的长注释和文档；

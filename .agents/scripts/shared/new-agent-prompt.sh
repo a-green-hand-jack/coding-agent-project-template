@@ -98,15 +98,17 @@ Working rules for this session:
   plan says why. A cheap run is still a real provider-backed run and never
   stands in for the capability the acceptance must prove. A change of agent,
   provider, model or effort is recorded as a re-dispatch in the Issue's Dispatch
-  section.
+  section. The maintainer confirms changed agent, model or thinking level before
+  re-dispatch; never silently fall back.
 - Fix what you meet. A defect met on the way that blocks this Issue or is
   related to it is fixed here, verified and listed in the PR; that is part of
   the Issue, not an unrequested feature. Only an unrelated, larger problem is
   reported for a separate Issue.
 - Other worktrees are not your concern. Parallel worktrees may change the same
-  files; at merge the coordinator that claimed this Issue resolves conflicts
-  with the current $target_base in this worktree, itself or through you. Complete the
-  Issue fully and do not narrow the change to avoid conflicts.
+  files; the coordinator resolves integration conflicts in dev. Complete the
+  assigned Issue and report evidence. A related new Issue may be assigned to
+  this same session and worktree with explicit scope, owner and delivery; reuse
+  alone does not require another dispatch or model confirmation.
 - Merge implies close-out. Approval to merge the PR covers its close-out: after
   the verified merge, reconcile background acceptance, pending audits and
   promised follow-ups. Keep this worktree while it still owns those duties,
@@ -204,8 +206,9 @@ PROMPT
 else
   cat <<PROMPT
 
-The Issue has no Dispatch section yet. Before the first run, record the agent,
-provider, model and effort there, and append a re-dispatched line whenever any
-of them changes.
+The Issue has no Dispatch section yet. Do not dispatch until the maintainer
+explicitly confirms the agent, concrete model and thinking level. Record the
+agent, provider, model and effort there, and append a re-dispatched line whenever
+any of them changes; confirm changed selections before starting.
 PROMPT
 fi

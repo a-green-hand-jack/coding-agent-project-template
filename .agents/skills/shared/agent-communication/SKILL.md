@@ -235,6 +235,17 @@ background monitor.
 
 ## Message cadence
 
+Before generating a notification or waking a session, identify the recipient's
+unfulfilled duty or decision and whether the current event changes its next
+action. A covered milestone or routine approval with nothing left to do needs no
+new wake. Never suppress a new failure, blocker, dependency, responsibility
+transfer or changed decision. Prefer a verified native event or wait interface
+when it provides the needed semantics; client queue submission, pane state and
+the receiver's actual acknowledgement remain distinct. If support is unknown,
+do not promise suppression or add a poller; reconcile at the next active
+checkpoint. These are communication decisions, not controls over a provider's
+unexamined notification system.
+
 | Event | Send/confirm rule |
 | --- | --- |
 | Responsibility handoff, safety issue, blocker/failure, or change affecting the receiver's next action | Notify promptly with exact version, evidence and requested action. Explicitly ACK a handoff before its dependent action; do not wait for a later milestone. |

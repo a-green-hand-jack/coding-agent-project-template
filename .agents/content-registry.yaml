@@ -3815,7 +3815,7 @@ entries:
     kind: memory
     scope: template
     owner: template-maintainers
-    summary: "Template maintenance uses Codex first, with explicit capability and cost-based dispatch."
+    summary: "Confirm agent, model and thinking level for each template worktree dispatch."
     status: active
     source: {"commit": "d07f49d2f6e02ad531d920c8c8fb994f44e88971", "path": ".agents/memory/project/template-work-runs-on-codex.md"}
     updated: 2026-10-28
@@ -3885,7 +3885,7 @@ entries:
     kind: memory
     scope: shared
     owner: template-maintainers
-    summary: "Record agent, provider, model and effort selected by difficulty and cost."
+    summary: "Confirm each dispatch selection and record provider, model, effort and reason."
     status: active
     source: {"commit": "d07f49d2f6e02ad531d920c8c8fb994f44e88971", "path": ".agents/memory/shared/issue-dispatch-by-difficulty.md"}
     updated: 2026-10-15
@@ -3896,7 +3896,7 @@ entries:
     kind: memory
     scope: shared
     owner: template-maintainers
-    summary: "Implement each Issue in its own verified Herdr worktree and independent agent session."
+    summary: "Choose direct development or a confirmed Herdr dispatch and keep issue ownership clear."
     status: active
     source: {"commit": "d07f49d2f6e02ad531d920c8c8fb994f44e88971", "path": ".agents/memory/shared/issue-in-herdr-worktree.md"}
     updated: 2026-10-13

@@ -5,58 +5,31 @@ source: maintainer decision in the coordinating session, 2026-10-26; Issue #108;
 applies_to: this template repository's Issue dispatch
 ---
 
-# Template work runs on Codex first
+# Template dispatch requires a confirmed choice
 
 ## Decision
 
-Template maintenance is dispatched to Codex first, using the OpenAI/Codex
-model family. Choose the Issue's difficulty tier, then resolve the newest
-usable Codex model for that tier at dispatch time: list what the Codex CLI and
-account currently offer, discard models that are retired, unavailable, out of
-quota, incapable of the work or excluded, and record the concrete provider,
-model and effort in the Issue's Dispatch section. The tier and cost-routing
-rules remain in force: routine and mechanical work use the cheapest usable
-source and model, while harder or riskier work moves up a tier.
-
-Claude Code and Pi remain available as fallbacks, in that order, only when
-Codex or its provider is unavailable or no usable model remains for the tier.
-Any fallback or later change of agent, provider, model or effort is recorded as
-a re-dispatch. The generic `issue-workflow` preference order is therefore
-`codex, claude, pi`, while dynamic model resolution and the existing fallback
-rules remain the source of the concrete dispatch.
+Codex is a possible recommendation for template work, not an automatic dispatch.
+Before each new Herdr worktree, the maintainer confirms the coding agent, exact
+model and thinking level. Evaluate cost, task needs and current availability;
+never substitute another agent, model or level without confirmation. Reusing an
+existing session for a related Issue does not by itself require another choice.
+Record the provider and confirmed settings in the Issue's Dispatch section.
 
 ## Why
 
-Codex is the first default for maintaining this template, so the project
-memory must agree with the shared `issue-workflow` order instead of overriding
-it with a stale Pi-specific choice. Keeping the tier and cost rules means a
-small documentation or index change does not consume a stronger model than it
-needs, while a hard Issue can still move to a stronger tier or fallback agent.
-Resolving the model at dispatch time keeps the record current as the Codex
-model catalog, entitlements and quotas change; the Issue remains the audit
-record of what actually ran.
+Issue #137 replaces the earlier Codex-first automatic choice with the
+maintainer's decision for each dispatch, while keeping cost routing and explicit
+settings. Model availability and account capability change; use current
+sources and report unknown availability rather than guessing.
 
 ## Apply
 
-Start the Issue session with Codex and explicit provider, model and effort arguments.
-Resolve `<newest usable Codex model>` from the models the Codex CLI and account
-currently offer before starting, then record the resolved string in the Issue's
-Dispatch section. Apply the shared
-[caller identity and isolation procedure](../../skills/shared/issue-workflow/SKILL.md#codex-caller-identity-and-isolation)
-first: verify installed CLI support, use `--no-daemon` for this Herdr dispatch,
-and record the worker's actual startup arguments and identity ACK. An unsupported
-isolation flag is a capability gap, not permission to silently omit it. With the
-supported Codex config syntax:
-
-```bash
-herdr agent start tpl-issue-<N> --kind codex --pane <pane> -- \
-  --no-daemon --model <newest usable Codex model> \
-  -c 'model_provider="<provider>"' -c 'model_reasoning_effort="<effort>"'
-```
-
-Map the selected tier's effort onto the Codex CLI's accepted values. If Codex
-is unavailable, re-dispatch to Claude Code and then Pi with each fallback's
-own provider, model and effort arguments. Keep the existing `issue-workflow`
-model-series resolution, cost routing, difficulty tiers and re-dispatch
-history; do not pin a Codex model version or change provider client
-configuration.
+Follow `issue-workflow` for the confirmation, identity and
+[caller isolation](../../skills/shared/issue-workflow/SKILL.md#codex-caller-identity-and-isolation)
+checks. For Codex, verify CLI support for `--no-daemon` and record the actual startup mode;
+unsupported isolation is a capability gap, not permission to silently omit it.
+When Codex is confirmed, pass the confirmed model and settings explicitly using
+the supported `-c 'model_provider="<provider>"'` and
+`-c 'model_reasoning_effort="<effort>"'` syntax.
+Do not change provider client configuration.
