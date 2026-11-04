@@ -17,6 +17,22 @@ Adopters are inspected and contacted through GitHub only: discovery, pins and
 deltas come from `gh`, and requests to an adopter go to its Issues. No local
 checkout of an adopter is scanned, resolved or needed.
 
+## Choose the check
+
+A **release risk check** is required before each release: identify the release's
+changes and their affected adoption/upgrade seams, inspect relevant feedback,
+Issues, PRs and fixed downstream snapshots, and assess direct compatibility risks.
+Record the candidate version, scope, evidence, blockers and unknowns. Resolve a
+direct release risk or record a justified maintainer decision; unavailable data
+is unknown, not a pass. Do not treat an unrelated full-harvest backlog as covered.
+
+A **full experience harvest** is performed when requested: discover the declared
+adopter set, classify every in-scope development delta and assess reusable
+candidates as in steps 1–4. It has its own completion and watermark. Reuse fixed
+commits, complete classifications and evidence between the checks only for the
+same explicitly covered scope. Neither check implies completion of the other.
+Prior approvals and release results keep their original scope.
+
 ## Boundaries
 
 - This repository is public; the adopter set is not. A private decision, raw
@@ -66,30 +82,45 @@ Everything lives in this checkout's ignored `.project/`
   one run.
 
 ```yaml
+schema_version: 2
 owners: [<GitHub account or organization whose repositories are probed>]
-last_run: <UTC time of the last completed discovery>
+last_run: <UTC time of last completed discovery, or unknown>
 adopters:
-  - id: adopter-1            # local alias; the only name allowed in Issues and memory here
-    repo: <owner/name>       # the key; never a local path
+  - id: adopter-1
+    repo: <owner/name>       # local only
     kind: project | derived-template
     visibility: private | public
     state: settled | in-progress | unresolvable
     integration_branch: dev
-    scanned_commit: <sha>
+    scanned_commit: <sha or unknown>  # observation, not completion
     pin: <template tag> | needs-backfill
     pin_source: registry | upstream | DEV.md | commit-history
-    watermark: null          # integration-branch sha whose delta is fully classified
-    landing:                 # filled once a candidate becomes a template change
-      - { candidate: <template Issue>, release: <tag>, status: pending | landed }
-    requests:                # Issues opened in the adopter from step 5
-      - { issue: <number>, kind: upgrade | feedback, release: <tag>, status: open | closed }
+    watermark: <legacy full-classification SHA or null>
+    checks:
+      release_risk: {status: unknown, candidate: null, fixed_commit: null, scope: null, evidence: null, unknowns: []}
+      full_harvest: {status: unknown, fixed_commit: null, scope: null, evidence: null, unknowns: []}
+    landing: []             # references/last observation, not live GitHub truth
+    requests: []            # references/last observation, not live GitHub truth
 ```
 
 `owners` defaults to the authenticated account (`gh api user --jq .login`).
+For each check record `complete`, `partial` or `unknown`, exact candidate and
+fixed commits where applicable, evidence path, covered range, unknowns and next
+action. Preserve the old `watermark` as the last proven full-classification
+boundary; advance it only after every delta in that range is classified. A
+release-risk result must never advance it. Unavailable old SHAs or repositories
+remain unknown, even when a new first-run snapshot is classified. Check GitHub
+again for current Issue/PR status; a saved request is only a dated observation.
+
+For a legacy file preserve all records and watermarks. Map a later run only when
+its report, fixed SHA and classified coverage establish that exact record and
+check; otherwise leave the dimension unknown and link the relevant evidence.
+Do not infer lineage from a filename or the most recent timestamp. Preserve
+existing backups and roots until their provenance and references are understood.
 A record from the earlier local-path layout (`owner:` a path, `aliases`,
-`worktrees`) is converted on first use: its `scanned_commit` resolves with
-`gh api repos/<repo>/commits/<sha>` only in the repository that holds it. Keep
-`id`, `pin`, `watermark` and `landing`, set `repo`, and drop the path fields.
+`worktrees`) is converted only after its SHA resolves in its actual repository;
+keep id, pin, watermark and landing, set repo, and drop paths only after verified
+migration.
 
 The helpers below are used in steps 1 and 2. Define them in the shell of the
 run; they wrap `gh` and `git` and are not saved as a script.
@@ -226,14 +257,17 @@ records for that domain) is project-local unless it passes the generality gate
 without its domain. Its `## In this repository` sections are adaptation points
 like any adopter's.
 
-After the first run, review only the range from the watermark:
+For a full harvest after the first run, review the range from the proven full-classification watermark:
 
 ```bash
 gh api "repos/<repo>/compare/<watermark>...<scanned_commit>" \
   --jq '.status, (.commits[] | "\(.sha[0:7]) \(.commit.message | split("\n")[0])"), (.files[] | "\(.status)\t\(.filename)")'
 ```
 
-Keep the files under `.agents/`, `AGENTS.md`, `CLAUDE.md` and `DEV.md`, and read
+Use stable registry IDs, migration records and unique blob/path evidence to
+propose relocation pairs. A blob or filename match alone does not establish
+semantic equivalence; preserve ambiguous, many-to-many, missing and conflicting
+paths for review. Keep the files under `.agents/`, `AGENTS.md`, `CLAUDE.md` and `DEV.md`, and read
 each one's change with `--jq '.files[] | select(.filename == "<path>") | .patch'`.
 A `status` of `identical` means nothing changed; `ahead` is the normal case. A
 status of `behind` or `diverged` means the watermark is not an ancestor of the
@@ -283,7 +317,7 @@ For each shared candidate:
 
 1. Search this repository's Issues and PRs, open and closed, for the same change
    and reuse it when found.
-2. Confirm repository visibility (the template is public), then open one Issue
+2. With explicit authorization, confirm repository visibility (the template is public), then open one Issue
    per candidate with the templates in `.github/ISSUE_TEMPLATE/` (`feature.yml`:
    Problem, Scope and design, Acceptance evidence; `bug.yml` for a defect in a
    template script). State the generic practice, its parameters and adaptation
@@ -306,8 +340,9 @@ For each shared candidate:
    candidate and its reason, update
    `.agents/memory/project/harvest-decisions.md` using
    `project-memory-governance`, with counts and generic wording, never the
-   adopter list. Advance an adopter's `watermark` to its `scanned_commit` only
-   when every delta in range has a recorded class.
+   adopter list. Advance an adopter's full-harvest `watermark` to its fixed commit only
+   when every delta in that declared range has a recorded class; never infer
+   completion from a release-risk check.
 
 ## 5. Requests to adopters
 
@@ -340,13 +375,13 @@ classified as already upstream in step 3.
 
 ## 6. Release gate and report
 
-Run steps 1-5 before cutting every release (`DEV.md`, release section). If `gh`
-is not authenticated as the maintainer, or no adopter is found, say so; never
-infer adopters from repository names. The report in
-`.project/runs/harvest-<date>/` states the adopter set (local id, visibility,
-state, pin and its source, scanned commit), delta counts per category, each
-classification with its evidence, the Issues opened here and in adopters, and
-what was not examined. Show that adopters were only read: the commands were the
-allowed reads above, and the only writes to an adopter are the Issues and
-comments listed in `requests`. A dry run stops after step 3, opens no Issue and
-leaves every watermark unchanged.
+Before each release perform the release risk check above. Record candidate,
+fixed sources, relevant feedback, compatibility findings, direct risks and their
+disposition, evidence, inaccessible or unexamined scope and next owner/action.
+If authentication or relevant repositories are unavailable, say so; do not call
+unknown coverage a pass. Release notes summarize material findings and limits;
+the report keeps evidence and the local state points to it. Full harvest is
+separate and runs on request; its report contains the full declared set,
+classifications, provenance and exclusions. Only a fully classified range can
+advance the full-harvest watermark. Requests to adopters remain separately
+authorized. A read-only or dry run sends no Issues or comments.

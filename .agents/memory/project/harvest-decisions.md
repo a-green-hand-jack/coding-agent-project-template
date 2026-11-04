@@ -9,9 +9,9 @@ applies_to: this template repository's maintenance of its downstream adopters
 
 ## Decision
 
-`template-harvest` runs before every release. What one run found, counted and
-landed lives in its report, the release notes and `adopters.yaml`; this record
-keeps only the decisions a later run must not take again. Candidates that were
+Follow `template-harvest` for release risk checks and optional full harvests.
+Run evidence stays in its report; the local state points to its covered scope.
+This record keeps only decisions a later run must not take again. Candidates that were
 looked at and not taken up, with the class they received:
 
 - **"Plan the whole Issue, then implement it in steps."** Already upstream: it

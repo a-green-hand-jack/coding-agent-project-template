@@ -11,5 +11,7 @@ under `shared/` or `project/`; do not append facts to this index.
 - [`entry-template.md`](entry-template.md) — front matter and body structure for
   a new record.
 
-Search the relevant index before creating a record. Update the index link and
-`content-registry.yaml` in the same change when adding a reusable entry.
+Search the relevant index before creating a record. Register the entry in
+`content-registry.yaml`, then generate group index blocks with
+`bash .agents/scripts/shared/check-development.sh --write-indexes`. Maintain
+only the static group navigation above by hand.

@@ -9,16 +9,9 @@ applies_to: repositories that manage Issue worktrees with Herdr, develop from a 
 
 ## Decision
 
-The coordinator handles PR integration and conflicts in dev, protecting other
-writers, existing changes and live runs. Semantic choices needing the maintainer
-are escalated. After an authorized merge is verified and remaining duties are
-fulfilled or transferred, the coordinator migrates state and retires the
-worktree. Idle and merged do not establish completion of outstanding work.
-
-Results that cannot be rebuilt are archived before the merge rather than left in
-the migration directory. A live run in the dev checkout holds back a pull or
-merge there, and a live task in the worktree, including a container that mounts
-it, holds back its close-out; both go to the maintainer.
+Complete or explicitly transfer remaining duties before retiring an isolated
+worktree. The current workflow and lifecycle skill own integration, protection,
+archive and migration procedures; a merged PR or idle agent is not sufficient.
 
 ## Why
 

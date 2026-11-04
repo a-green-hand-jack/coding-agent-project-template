@@ -100,7 +100,7 @@ Issue 的 Dispatch 段记录派出这个 session 的 agent、provider、model �
 `.agents/memory/shared/provider-cost-routing.md`，派出步骤见
 `.agents/skills/shared/issue-workflow/` 的 “Dispatch by difficulty”。
 
-开始实现需要 Issue 的工作单元时，使用 Herdr 的原生 worktree 命令从声明目标
+选择派出 Issue worktree 时，使用 Herdr 的原生 worktree 命令从声明目标
 （默认 `dev`，子任务可用已声明的父集成目标）创建 Issue branch，并在新 pane
 启动独立的 coding-agent session。不要在当前 agent 窗口
 直接 `git switch -c`。新 session 的第一步是运行 setup；父 session 可用下面的命令
@@ -253,11 +253,10 @@ bash .agents/scripts/shared/inspect-state.sh
 python3 -m unittest discover -s .agents/tests/project -p 'test_template_*.py'
 ```
 
-合并和发布只看本地检查：上面这些命令就是本仓库的 `issue-workflow`
-`<LOCAL_CHECK>`（槽位默认值就是本节的验证策略），也是
-`.github/workflows/template-check.yml` 的步骤：`bash .agents/scripts/shared/check-shells.sh`、
-`setup-worktree.sh`、`diagnose-environment.sh`，以及（只在模板里）
-`test_template_*.py`。协调者在 PR 的 worktree 里、PR 最新的提交上跑它，把提交
+合并和发布以本地检查为门禁：上述检查和初始化 `setup-worktree.sh` 是本仓库的
+`issue-workflow` `<LOCAL_CHECK>`。CI 的实际步骤见 `.github/workflows/template-check.yml`：
+它安装检查依赖、检查 shell 与 registry、运行 setup、diagnose 和模板测试并获取 tags；
+本地还运行 `inspect-state.sh`。两者结果分别记录。有 PR 时协调者在适用的 checkout 对 PR 最新提交运行检查，把提交
 SHA、每条命令的结果和 CI 状态（通过、失败、没运行）写成 PR 评论；发布 PR（`dev`
 → `main`）也一样。本地检查全部通过并经维护者批准即可合并，CI 只在 PR 上标记，
 不等它，也不因它没运行（例如 Actions 因计费不能启动）而停下；CI 失败而本地通过
@@ -344,8 +343,8 @@ template:
 候选验证分别说明，保留 `### Upgrading ...` 和 **Command only.** / 编号手动步骤
 的机器读取协议；草稿不改历史 release、版本号或 registry 的模板版本。
 
-模板仓库发布前还要运行 `.agents/skills/project/template-harvest/`，收集下游已沉淀的通用
-实践，并把每个候选的分类与 Issue 记录下来；没有可访问的下游时在发布记录中写明。
+模板仓库发布前按 `.agents/skills/project/template-harvest/` 检查本版相关的下游反馈和
+兼容性风险，并记录范围、结果与未知；完整经验采集按需独立运行和记录。
 该 skill 只属于模板仓库，下游项目不复制，也不在自己的发布清单中引用。
 
 ## CLI 与长时运行监督

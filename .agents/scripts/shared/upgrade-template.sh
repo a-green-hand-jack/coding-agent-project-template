@@ -732,6 +732,14 @@ def reconcile_lifecycle(upgrade, entries, original, target, upstream_ids, pendin
                 # retained as historical metadata; they are not active edges.
                 historical = next((e.get('legacy_lifecycle', {}) for e in target['entries']
                                    if e['path'] == entry['path']), {})
+                if not historical:
+                    # Follow explicit upstream history even when the template-only
+                    # destination is not adopted and local ownership stays put.
+                    destination_ids = {dest['id'] for migration in target.get('migrations', [])
+                                       if any(src['path'] == entry['path'] for src in migration['from'])
+                                       for dest in migration.get('to', [])}
+                    historical = next((e.get('legacy_lifecycle', {}) for e in target['entries']
+                                       if e['id'] in destination_ids and e['scope'] == 'template'), {})
                 if not candidates and historical.get(key) == ref and entry['status'] == 'active':
                     entry.setdefault('legacy_lifecycle', {})[key] = ref
                     continue
@@ -809,7 +817,12 @@ def prepare_layout(upgrade, source_text, target_text, local_text):
         result["local_legacy_inventory"] = local["local_legacy_inventory"]
     for migration in target.get("migrations", []):
         if migration.get("entity") == "registration":continue
-        old, new = migration["from"], migration["to"]
+        old, new = migration["from"], migration.get("to", [])
+        # Template-only entries are not adopted. A legacy project can own a
+        # file at the old upstream path; never relocate it as template content.
+        target_by_id = {entry["id"]: entry for entry in target["entries"]}
+        if new and all(target_by_id.get(item["id"], {}).get("scope") == "template" for item in new):
+            continue
         if len(old) != 1 or len(new) != 1:
             affected={x['path'] for x in old+new}
             upgrade.manual_paths.update(affected)
@@ -928,6 +941,10 @@ def prepare_layout(upgrade, source_text, target_text, local_text):
         legacy = entry_of(path,parse_registry(local_text))
         if scope_in(legacy) == "template":continue
         e = complete_entry({"path":path,"scope":"project","source":{"version":upgrade.source,"path":path}},new_path)
+        # Schema1 project-owned content has no stable ID. Its path-derived ID
+        # can collide with a now-template-only upstream identity after a rename.
+        if local["schema_version"] == 1 and any(t["id"] == e["id"] and t["scope"] == "template" for t in target["entries"]):
+            e["id"] = "local-" + e["id"]
         entries.append(e)
         report.skipped(f"{new_path}: project-owned (preserved legacy content)")
     # Resolve the whole graph before removing any frontmatter or moving local

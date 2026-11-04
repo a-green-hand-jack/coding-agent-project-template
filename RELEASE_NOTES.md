@@ -1,5 +1,13 @@
 # Release notes
 
+## Unreleased
+
+明确直接 dev 与按需派遣的边界，统一开发知识和流程入口；发布风险检查与完整下游经验采集分别记录范围、证据及未知。旧版本升级时保留项目适配和本地采集历史；模板专属记录改名不会移动下游项目自有的旧路径内容。
+
+### Upgrading a project from v0.1.28
+
+运行 `bash .agents/scripts/shared/upgrade-template.sh --check <TARGET_TAG>`，审阅共享规则及项目适配的差异后执行升级；保留项目本地状态，运行开发面检查和项目验收。模板维护专属 memory 改名不向下游复制。
+
 ## v0.1.28 — 2026-11-04
 
 **让模板升级更安全，也让开发检查更可信。**

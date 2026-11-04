@@ -9,12 +9,9 @@ applies_to: repositories that manage Issue worktrees with Herdr and develop from
 
 ## Decision
 
-Direct development in dev is a normal choice. For isolation or parallel work,
-create a worktree with Herdr after the maintainer confirms the coding agent,
-concrete model and thinking level. A related new Issue can reuse the same
-session and worktree with explicit scope and ownership. The issue agent owns its
-assigned work; the coordinator handles integration and conflicts in dev.
-Preserve other work, dependencies, acceptance and delivery authorization.
+Choose direct dev or an isolated Herdr worktree according to the task and
+checkout state. The current workflow owns confirmation, reuse, ownership and
+integration details; see Apply.
 
 ## Why
 

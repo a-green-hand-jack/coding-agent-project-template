@@ -854,13 +854,21 @@ migrations: [
       "to": [
         {
           "id": "content-5e1742dff7120958",
-          "path": ".agents/memory/project/template-work-runs-on-codex.md"
+          "path": ".agents/memory/project/template-dispatch-decisions.md"
         }
       ],
-      "action": "keep",
-      "reason": "Retain authoritative content and history at its stable path.",
+      "action": "rename",
+      "reason": "Rename dispatch decision while preserving its stable identity and historical source.",
       "source_commit": "d07f49d2f6e02ad531d920c8c8fb994f44e88971",
       "verification": "check-development.sh; normalized test discovery; real-release upgrade fixtures"
+    },
+    {
+      "from": [{"id": "content-5e1742dff7120958", "path": ".agents/memory/project/template-work-runs-on-codex.md"}],
+      "to": [{"id": "content-5e1742dff7120958", "path": ".agents/memory/project/template-dispatch-decisions.md"}],
+      "action": "rename",
+      "reason": "Describe the current confirmed dispatch decision without implying a Codex default.",
+      "source_commit": "09039873a40daf330ecfd1f8fac70676f75f87c5",
+      "verification": "check-development.sh; old-release upgrade and idempotence fixtures"
     },
     {
       "from": [
@@ -2952,7 +2960,7 @@ migrations: [
         },
         {
           "id": "content-5e1742dff7120958",
-          "path": ".agents/memory/project/template-work-runs-on-codex.md"
+          "path": ".agents/memory/project/template-dispatch-decisions.md"
         }
       ],
       "action": "extract",
@@ -3810,7 +3818,7 @@ entries:
     updated: 2026-10-24
     supersedes: []
     superseded_by: []
-  - path: .agents/memory/project/template-work-runs-on-codex.md
+  - path: .agents/memory/project/template-dispatch-decisions.md
     id: content-5e1742dff7120958
     kind: memory
     scope: template

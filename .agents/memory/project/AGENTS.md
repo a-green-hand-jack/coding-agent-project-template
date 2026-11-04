@@ -6,5 +6,5 @@ record is a separate Markdown file with the fields in
 
 <!-- registry-index:start -->
 - [harvest-decisions.md](harvest-decisions.md) — Preserve lasting harvest decisions and reasons without repeating run reports.
-- [template-work-runs-on-codex.md](template-work-runs-on-codex.md) — Confirm agent, model and thinking level for each template worktree dispatch.
+- [template-dispatch-decisions.md](template-dispatch-decisions.md) — Confirm agent, model and thinking level for each template worktree dispatch.
 <!-- registry-index:end -->
