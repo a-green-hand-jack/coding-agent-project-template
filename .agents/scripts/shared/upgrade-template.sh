@@ -552,7 +552,7 @@ class Upgrade:
             here, base, theirs = (data.decode("utf-8") for data in (state[1], before, after))
         except UnicodeDecodeError:
             return self.conflict(path, f"{path}: changed here (not text)")
-        if self.path_mappings and path.endswith('/AGENTS.md'):
+        if path.endswith('/AGENTS.md') and all(catalog.BEGIN in text and catalog.END in text for text in (here, base, theirs)):
             expression = re.compile(re.escape(catalog.BEGIN) + r'.*?' + re.escape(catalog.END), re.S)
             placeholder = catalog.BEGIN + '\n' + catalog.END
             here, base, theirs = (expression.sub(placeholder, text) for text in (here, base, theirs))

@@ -338,7 +338,9 @@ class UpgradeFromAnOlderReleaseTests(unittest.TestCase):
         by_path={e['path']:e for e in actual['entries']}
         for e in expected['entries']:
             self.assertEqual(by_path[e['path']],e)
-        self.assertIn('local_legacy_inventory',actual)
+        source_registry = git('show', f'{self.old}:{REGISTRY}', cwd=self.template)
+        if not source_registry.startswith('schema_version: 2'):
+            self.assertIn('local_legacy_inventory',actual)
 
 
 class UpgradeLatestLayoutTests(UpgradeFromAnOlderReleaseTests):
