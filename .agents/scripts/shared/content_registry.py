@@ -12,6 +12,8 @@ import os
 import re
 import subprocess
 import sys
+import unicodedata
+from urllib.parse import unquote, urlsplit
 from pathlib import Path, PurePosixPath
 
 CATEGORIES = ('execution', 'tests', 'memory', 'knowledge', 'skills', 'scripts')
@@ -145,6 +147,95 @@ def git_files(root):
     return sorted(set(x for x in output.decode().split('\0') if x))
 
 
+def skill_frontmatter_errors(root, files, entries):
+    try:
+        import yaml
+    except ImportError:
+        return ['skill frontmatter validation requires PyYAML; install the development dependency']
+    class UniqueLoader(yaml.SafeLoader):
+        pass
+    def unique_mapping(loader, node, deep=False):
+        result = {}
+        for key_node, value_node in node.value:
+            key = loader.construct_object(key_node, deep=deep)
+            if key in result:
+                raise ValueError(f'duplicate YAML key: {key}')
+            result[key] = loader.construct_object(value_node, deep=deep)
+        return result
+    UniqueLoader.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, unique_mapping)
+    errors = []
+    for path in files:
+        if not path.endswith('/SKILL.md'):
+            continue
+        try:
+            entry = resolve(path, entries)
+        except RegistryError:
+            continue  # ownership validation reports this separately
+        if entry.get('kind') != 'skill':
+            continue
+        try:
+            text = (root/path).read_text(encoding='utf-8')
+            match = re.match(r'\A---\s*\n(.*?)\n---\s*(?:\n|\Z)', text, re.S)
+            if not match:
+                raise ValueError('missing YAML frontmatter delimiters')
+            front = yaml.load(match.group(1), Loader=UniqueLoader)
+            if not isinstance(front, dict):
+                raise ValueError('frontmatter must be a mapping')
+            for field in ('name', 'description'):
+                if not isinstance(front.get(field), str) or not front[field].strip():
+                    raise ValueError(f'{field} must be a nonempty string')
+            if front['name'] != Path(path).parent.name:
+                raise ValueError('name must match the skill directory')
+        except (ValueError, OSError, UnicodeError, yaml.YAMLError) as exc:
+            errors.append(f'invalid skill frontmatter: {path}: {exc}')
+    return errors
+
+
+def markdown_link_errors(root, files):
+    try:
+        from markdown_it import MarkdownIt
+    except ImportError:
+        return ['Markdown link validation requires markdown-it-py; install the development dependency']
+    parser = MarkdownIt('commonmark')
+    errors = []
+    headings = {}
+    def anchors(path):
+        if path in headings:
+            return headings[path]
+        seen, result = {}, set()
+        tokens = parser.parse(path.read_text(encoding='utf-8'))
+        for index, token in enumerate(tokens):
+            if token.type != 'heading_open':
+                continue
+            inline = tokens[index + 1]
+            label = ''.join(child.content for child in inline.children or [] if child.type in ('text', 'code_inline'))
+            slug = ''.join(c for c in label.lower() if c in ' -_' or unicodedata.category(c)[0] in ('L', 'N', 'M')).replace(' ', '-')
+            count = seen.get(slug, 0); seen[slug] = count + 1
+            result.add(slug if not count else f'{slug}-{count}')
+        headings[path] = result
+        return result
+    for name in files:
+        if not name.startswith('.agents/') or not name.endswith('.md') or name.endswith('/CLAUDE.md'):
+            continue
+        source = root/name
+        if not source.is_file():
+            continue
+        for token in parser.parse(source.read_text(encoding='utf-8')):
+            for child in token.children or []:
+                if child.type not in ('link_open', 'image'):
+                    continue
+                href = child.attrGet('href' if child.type == 'link_open' else 'src') or ''
+                parsed = urlsplit(href)
+                if parsed.scheme or parsed.netloc or href.startswith('/'):
+                    continue
+                target = (source.parent/unquote(parsed.path)).resolve() if parsed.path else source.resolve()
+                if not target.exists():
+                    errors.append(f'broken Markdown link: {name}: {href}')
+                elif parsed.fragment and target.is_file() and target.suffix.lower() == '.md' and unquote(parsed.fragment) not in anchors(target):
+                    errors.append(f'broken Markdown anchor: {name}: {href}')
+    return errors
+
+
 def generated_index(root, directory, entries):
     rows = []
     prefix = directory + '/'
@@ -269,8 +360,15 @@ def validate(root, data):
         if not exception.get('pattern') or not exception.get('reason', '').strip():
             fail('naming exception requires pattern and reason')
     files = git_files(root)
+    # Layout checks must use the same Git-visible set as ownership checks.
+    # A tracked file remains visible even if an ignore rule also matches it.
+    def visible(path):
+        relative = path.relative_to(root).as_posix()
+        return any(p == relative or p.startswith(relative + '/') for p in files)
     managed = [p for p in files if any(p.startswith(x) for x in data.get('managed', ['.agents/'])) or any(rank(p,e.get('path','')) for e in entries)]
     live = [p for p in managed if (root/p).exists() or (root/p).is_symlink()]
+    errors.extend(skill_frontmatter_errors(root, live, entries))
+    errors.extend(markdown_link_errors(root, live))
     for e in entries:
         if e.get('status') == 'active' and not any(rank(p,e['path']) for p in live) and not e.get('optional'):
             fail(f'dangling active entry: {e["path"]}')
@@ -294,7 +392,9 @@ def validate(root, data):
             pattern = r'[a-z][a-z0-9_]*' if python_name else r'[a-z0-9]+(?:-[a-z0-9]+)*'
             if not re.fullmatch(pattern, stem):
                 fail(f'naming violation: {p} ({name}); register a reasoned exception')
-        if p.endswith('.py') and '/tests/' in p and not PurePosixPath(p).name.startswith('test_') and PurePosixPath(p).name != '__init__.py':
+        if (p.endswith('.py') and '/tests/' in p and not PurePosixPath(p).name.startswith('test_')
+                and PurePosixPath(p).name != '__init__.py'
+                and not any(fnmatch.fnmatchcase(PurePosixPath(p).name, x.get('pattern','')) and x.get('reason') for x in exceptions)):
             fail(f'test module needs test_ prefix: {p}')
         if p.endswith('CLAUDE.md'):
             file = root/p
@@ -315,11 +415,11 @@ def validate(root, data):
                 path=base/group/file
                 if not path.exists():fail(f'missing governance: {path.relative_to(root)}')
         for child in base.iterdir() if base.exists() else []:
-            if child.name not in ('shared','project','AGENTS.md','CLAUDE.md',*policy.get('category_files',{}).get(category,[])):
+            if visible(child) and child.name not in ('shared','project','AGENTS.md','CLAUDE.md',*policy.get('category_files',{}).get(category,[])):
                 fail(f'misplaced category content: {child.relative_to(root)}; classify under shared/ or project/')
     root_allowed=set(policy.get('root_files',[]))|set(CATEGORIES)
     for child in (root/'.agents').iterdir():
-        if child.name not in root_allowed:
+        if visible(child) and child.name not in root_allowed:
             fail(f'undeclared development root entry: {child.name}')
     inventory=data.get('legacy_inventory',{})
     migrations=data.get('migrations',[])

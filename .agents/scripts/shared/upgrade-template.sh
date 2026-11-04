@@ -976,6 +976,22 @@ def main(arguments: list[str]) -> int:
     schema2 = re.search(r"^schema_version: 2$", target_registry, re.M) is not None
     local_v2 = None
     if schema2:
+        # Schema migrations describe upstream moves, not arbitrary adopter path
+        # mappings. Do not silently recreate an upstream path or overwrite a
+        # locally relocated identity when its mapping semantics are unknown.
+        local_data = legacy_data(registry_text)
+        source_data = legacy_data(source_registry)
+        target_data = catalog.loads(target_registry)
+        if local_data.get('schema_version') == 2 and source_data.get('schema_version') == 2:
+            before = {e['id']: e for e in source_data['entries']}
+            after = {e['id']: e for e in target_data['entries']}
+            for entry in local_data['entries']:
+                identity = entry.get('upstream_id', entry.get('id'))
+                if identity not in before or identity not in after:
+                    continue
+                local_path = entry['path']
+                if local_path not in (before[identity]['path'], after[identity]['path']):
+                    raise Failure(f'{identity}: locally relocated path {local_path}; automatic mapping is unsupported; reconcile the upgrade manually before advancing the version')
         local_v2 = prepare_layout(upgrade, source_registry, target_registry, registry_text)
         upgrade.local_entries = local_v2["entries"]
     changes = [] if upgrade.catalog_blocked else layout_changes(upgrade) if schema2 else raw_changes(upgrade)

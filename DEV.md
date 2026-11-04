@@ -224,6 +224,21 @@ GitHub CLI 环境中幂等创建并推送 `dev`，并把 GitHub 默认分支设�
 产品完成至少需要经过适用的 public entrypoint、真实构建或运行路径；局部测试
 通过不能替代产品验收。
 
+开发面检查使用 Python 3、PyYAML 6 和 markdown-it-py（
+`python3 -m pip install 'PyYAML>=6.0,<7' 'markdown-it-py>=3,<5'`）；
+在所选的 Python 环境安装依赖后运行检查。该静态检查解析已登记 skill 的 YAML
+前置段并检查名称和描述，不代表实际 agent 已成功加载该 skill。第三方 skill 同样
+检查，但不会自动改写其内容或许可。
+检查器以 Python 的隔离模式启动；应将依赖安装到所选虚拟环境或系统环境，不能
+依赖仅对用户 site-packages 可见的安装。
+检查器检查 Git 可见的 `.agents/` Markdown 中的相对链接和 Markdown 标题锚点；代码
+块及行内代码不作为链接，外部链接不检查网络可达性。示例和历史路径应写在代码中；
+第三方文档中的真实相对链接须能在采用项目中解析。registry 身份与迁移关系仍由
+registry 校验，项目专属占位符应保留为代码而不是损坏链接。
+Git 忽略的缓存不参与布局检查；已跟踪或未忽略的内容仍会检查。测试模块仍要求
+`test_` 前缀；本模板不使用 pytest 的 `conftest.py`，需要它的采用项目应通过现有
+命名例外机制声明原因，而不是放宽全部测试命名规则。
+
 ```bash
 bash .agents/scripts/shared/check-development.sh
 bash .agents/scripts/shared/check-shells.sh

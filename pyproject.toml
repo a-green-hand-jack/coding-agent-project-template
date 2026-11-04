@@ -9,6 +9,9 @@ description = "Replace this placeholder with the product description."
 requires-python = ">=3.10"
 dependencies = []
 
+[project.optional-dependencies]
+dev = ["PyYAML>=6.0,<7", "markdown-it-py>=3,<5"]
+
 [tool.setuptools.packages.find]
 where = ["src"]
 include = ["replace_with_project_name*"]

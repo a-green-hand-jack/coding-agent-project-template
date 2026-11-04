@@ -30,6 +30,14 @@ applies_to: repositories whose product calls a non-deterministic external bounda
 6. **The fake is a sieve, not acceptance.** It stays out of the product tree and
    the image, does not replace a real container, protocol or OCI run, and never
    counts as completion evidence.
+7. **Detect unexpected exits from the fake boundary.** For fake-only tests,
+   enumerate the project-controlled subprocess, library and network entrypoints
+   under test; default-deny unexpected calls and record each attempt before
+   raising. Assert the recorded attempts at teardown as well: product code may
+   catch the exception. Keep an explicitly selected integration test separate
+   and permit its named real boundaries under the user's authorization.
+   PATH shims or environment variables cover only the calls routed through them;
+   they are not OS isolation and do not protect unlisted libraries or endpoints.
 
 ## Why
 

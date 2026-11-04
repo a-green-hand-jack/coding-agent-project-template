@@ -203,6 +203,19 @@ report with its evidence.
 
 ## Schema 1 to 2 and layout migration
 
+The registry's stable IDs and upstream migration ledger describe identities and
+upstream moves; they do not define an arbitrary adopter directory mapping or
+rewrite every reference. Automatic support for local relocations is deferred:
+one adopter is insufficient evidence for safe general semantics, particularly
+for overlapping directories, collisions, deletion and references in prose.
+When a known upstream ID is registered at a different local path from both its
+source and target locations, the upgrade stops before changing tracked files or
+advancing the version. Review a per-path map, preserve local bytes and ownership,
+reconcile content and references manually, and verify registry identities,
+links and idempotence before advancing. Do not treat `--resolved` as a mapping.
+This conservative detection only covers identities retained in both upstream
+registries; unknown or newly added identities still require review of the plan.
+
 Use the target release command **and its sibling content_registry.py**, not the
 old flat script. Inspect `--check` first. The target registry maps source paths
 before comparing blobs, preserving their merge base and local trailing sections.

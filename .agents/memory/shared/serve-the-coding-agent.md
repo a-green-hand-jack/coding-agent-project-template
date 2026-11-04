@@ -86,3 +86,21 @@ Then:
    does not turn runs that could run together into a queue.
 
 A project not built on a coding agent needs nothing from this record.
+
+## Developing an agent
+
+When a project builds an agent, begin with a reproducible task failure and a
+baseline, then choose one falsifiable change to its architecture, context or
+tools. State who owns each tool and permission, the budget and the evidence
+needed for acceptance. Compare the same tasks and conditions before and after;
+record regressions and unresolved results, and keep an authorized real run
+separate from cheap fake screening. For example: compare routing choices on a
+fixed task set for an architecture change; record an unauthorized tool attempt
+for a tool-use defect; and retain a previously failing task when evaluating a
+regression. Ordinary code changes need not invoke this workflow.
+
+This guidance generalizes one adopter's practice, not a measured cross-project
+effect. If fixed-task comparisons cannot distinguish a change from normal run
+variation, or impose more cost than the decision warrants, adapt the method and
+record the limitation. Reuse existing project acceptance and cost rules rather
+than adding another runtime or requiring a particular provider.

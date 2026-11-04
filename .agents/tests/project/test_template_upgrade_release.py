@@ -110,7 +110,7 @@ class UpgradeFromAnOlderReleaseTests(unittest.TestCase):
         tags = sorted((tag for tag in git("tag", "-l", "v*", cwd=REPOSITORY).split()
                        if re.fullmatch(r"v\d+\.\d+\.\d+", tag) and number(tag) < number(self.candidate)), key=number)
         self.assertGreaterEqual(len(tags), 2, "the release tags are missing: git fetch --tags origin")
-        self.old = getattr(self, "source_tag", tags[-2])
+        self.old = tags[-1] if self._testMethodName == 'test_relocated_identity_stops_without_writes' else getattr(self, "source_tag", tags[-2])
 
         # A fixture template repository with the older release and the candidate as its two tags.
         self.template = self.base / "template"
@@ -160,6 +160,23 @@ class UpgradeFromAnOlderReleaseTests(unittest.TestCase):
                 (root / name).write_text(text, encoding="utf-8")
         git("init", "-q", cwd=root)
         return root
+
+    def test_relocated_identity_stops_without_writes(self) -> None:
+        project = self.project(self.old, own=True)
+        registry = project / REGISTRY
+        data = catalog.loads(registry.read_text())
+        entry = next(e for e in data['entries'] if e['path'] == '.agents/memory/shared/screen-with-scriptable-fakes.md')
+        original = project / entry['path']
+        moved = original.with_name('local-fake-guidance.md')
+        original.rename(moved)
+        entry['path'] = str(moved.relative_to(project))
+        registry.write_text(catalog.dumps(data))
+        before = files_of(project)
+        for arguments in (['--check'], []):
+            result = subprocess.run(['bash', str(SCRIPT), *arguments, self.candidate], cwd=project, capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('locally relocated path', result.stderr)
+            self.assertEqual(before, files_of(project))
 
     def test_the_upgrade_equals_a_project_made_from_the_candidate(self) -> None:
         upgraded = self.project(self.old, own=True)
@@ -226,7 +243,7 @@ class UpgradeLatestLayoutTests(UpgradeFromAnOlderReleaseTests):
         registry_path=root/REGISTRY
         registry_path.write_text(registry_path.read_text().replace('  - path: Dockerfile\n','  - path: Dockerfile\n    status: rejected\n    adoption: rejected-by-maintainer\n'))
         local_skill=root/'.agents/skills/local-tool/SKILL.md'
-        local_skill.parent.mkdir(parents=True);local_skill.write_text('# Local tool\n\nUnique project workflow.\n')
+        local_skill.parent.mkdir(parents=True);local_skill.write_text('---\nname: local-tool\ndescription: Local project workflow.\n---\n\n# Local tool\n\nUnique project workflow.\n')
         hook=root/'.agents/scripts/setup-project.sh';hook.write_text('#!/bin/sh\n# project-owned setup\n');hook.chmod(0o755)
         retired='  - path: .agents/memory/project/old-decision.md\n    scope: project\n    id: local-retired-decision\n    status: retired\n    source: historical-user-decision\n    updated: unknown\n'
         path=root/REGISTRY

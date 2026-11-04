@@ -390,6 +390,18 @@ output/log paths. For uncommitted work, save the diff and checksum, including
 staged changes and the content/identity of any untracked or ignored inputs the
 run consumes. HEAD or a clean tree alone does not identify those inputs.
 
+When a portable aggregate input manifest is useful, agree on the checkout-relative
+path base and a deterministic byte representation before hashing. One option is
+UTF-8 JSON with escaped control characters, fixed keys, no insignificant spaces,
+and entries sorted by the UTF-8 bytes of their relative paths (independent of
+locale). Record each entry's path, type, relevant executable mode, and regular
+file content digest or exact symlink target; include untracked or ignored inputs
+that the run actually consumes. Explicitly reject unsupported filename encodings
+or special types unless the parties agree how to represent them. Compare entries
+on a mismatch. Reuse an existing shared canonical format, or compare individual
+files directly, when no aggregate is needed. A digest identifies inputs; it is
+not a lock and cannot establish that no write occurred during acceptance.
+
 1. **Pause and acknowledge.** Request each relevant writer to pause mutations of
    those paths, including edits, formatting, generated inputs, checkout, pull,
    merge and rebase. A writer confirms the boundary/version and that its active
