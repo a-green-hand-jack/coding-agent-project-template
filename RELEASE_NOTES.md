@@ -36,6 +36,8 @@ Coding-Agent Project Template 帮助维护者组织 coding agent、代码与交�
 不静默 fallback。issue agent 继续负责自己的实现、验证和约定交付；协调者负责
 跨 PR 集成，并保护 dev 中已有工作。原会话承接相关新 Issue 本身不算新派遣，
 不必重复确认同一选择。
+生成的交接也明确说明分支和 worktree 已由协调者创建，issue agent 只需核对
+当前身份与分支，不会被提示再创建一次。
 
 ### 把注意力留给真正需要行动的事情
 
@@ -50,10 +52,10 @@ Coding-Agent Project Template 帮助维护者组织 coding agent、代码与交�
 
 ### 验证与边界
 
-实现候选 `69891f4` 的模板回归运行 112 项，全部通过；相关派遣、治理和 Codex 上下文
-检查、registry、递归 Shell 检查、setup 与环境诊断通过。回归运行期间还有两处说明性
-文字调整，随后对相关派遣、治理和 registry/Shell 检查进行了复核。测试证明文档与
-生成交接中的约定，不证明客户端会强制执行派遣确认或自动拦截通知。
+实现候选 `69891f4` 的模板回归运行 112 项，全部通过。修正交接提示后的源码
+（提交 `31ee3a6`）再次运行完整回归，112 项在 91.739 秒内全部通过；registry、
+递归 Shell 检查、setup 与环境诊断通过。测试证明文档与生成交接中的约定，不证明
+客户端会强制执行派遣确认或自动拦截通知。
 
 ### Upgrading a project from v0.1.26
 
@@ -68,6 +70,7 @@ Coding-Agent Project Template 帮助维护者组织 coding agent、代码与交�
 ### 参考资料
 
 - [Issue #137](https://github.com/a-green-hand-jack/coding-agent-project-template/issues/137)：维护者要求、范围与验收。
+- [Issue #146](https://github.com/a-green-hand-jack/coding-agent-project-template/issues/146)：交接提示中的已有分支说明。
 - [实现提交](https://github.com/a-green-hand-jack/coding-agent-project-template/commit/69891f48f61d9255f644c4abba3bca474bd13eef)。
 - [上一版 v0.1.26](https://github.com/a-green-hand-jack/coding-agent-project-template/releases/tag/v0.1.26)；[完整变化](https://github.com/a-green-hand-jack/coding-agent-project-template/compare/v0.1.26...v0.1.27)。
 
