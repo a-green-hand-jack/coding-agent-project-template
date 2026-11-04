@@ -38,7 +38,7 @@ cat <<PROMPT
 Work on Issue #$number: $title
 
 Issue: $url
-Branch: $branch (create it from $target_base through Herdr's native worktree command)
+Branch: $branch (already created from $target_base by the coordinator; verify it)
 PR target: $target_base (a parent integration target must be declared in the Issue)
 
 Start in the new worktree and run:

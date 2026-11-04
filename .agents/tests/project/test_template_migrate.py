@@ -534,9 +534,9 @@ class HandoffPrompt(unittest.TestCase):
         default = self.prompt("")
         self.assertIn("PR target: dev", default)
         declared = self.prompt("", "feat/issue-7-child", "integration/issue-6")
-        self.assertIn("Branch: feat/issue-7-child (create it from integration/issue-6", declared)
+        self.assertIn("Branch: feat/issue-7-child (already created from integration/issue-6", declared)
         self.assertIn("PR target: integration/issue-6", declared)
-        self.assertNotIn("create it from dev", declared)
+        self.assertNotIn("create it from", declared)
 
     def test_prompt_tells_the_session_where_its_files_go(self) -> None:
         flat = " ".join(self.prompt("").split())
