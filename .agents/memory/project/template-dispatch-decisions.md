@@ -1,5 +1,5 @@
 ---
-name: template-work-runs-on-codex
+name: template-dispatch-decisions
 date: 2026-10-28
 source: maintainer decision in the coordinating session, 2026-10-26; Issue #108; Issue #127 startup capability correction
 applies_to: this template repository's Issue dispatch
@@ -10,11 +10,8 @@ applies_to: this template repository's Issue dispatch
 ## Decision
 
 Codex is a possible recommendation for template work, not an automatic dispatch.
-Before each new Herdr worktree, the maintainer confirms the coding agent, exact
-model and thinking level. Evaluate cost, task needs and current availability;
-never substitute another agent, model or level without confirmation. Reusing an
-existing session for a related Issue does not by itself require another choice.
-Record the provider and confirmed settings in the Issue's Dispatch section.
+The shared `issue-workflow` owns dispatch confirmation and session reuse.
+This project has no automatic Codex default.
 
 ## Why
 

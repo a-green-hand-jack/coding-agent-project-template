@@ -9,12 +9,8 @@ applies_to: repositories that start Issue agents with the issue-workflow skill
 
 ## Decision
 
-For each new worktree dispatch, the maintainer explicitly confirms the coding
-agent, concrete model and thinking level before creation. Difficulty, current
-availability and cost inform a recommendation, never an automatic selection or
-fallback. Record the confirmed provider, model and effort. Confirm any changed
-selection before re-dispatch; reuse of the existing session for a related Issue
-does not itself require reconfirmation.
+Difficulty, availability and cost inform a recommendation; the current
+`issue-workflow` owns confirmation, fallback and recorded dispatch details.
 
 ## Why
 

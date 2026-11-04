@@ -19,11 +19,9 @@ applies_to: repositories whose tests, checks, coding agents or tools call LLM pr
    its request format, authentication or permissions, model capability, quota
    and error behavior, or other real behavior only it exercises. The plan names
    that reason when a run upgrades.
-4. **Agent, provider, model and effort are chosen in that order and passed
-   explicitly.** For a new worktree dispatch the maintainer confirms the agent,
-   model and thinking level first; never silently fall back. The choice is recorded in
-   the Issue's Dispatch section and, with what the run proves and why it must
-   run, in the plan and the PR.
+4. **Keep each provider-backed run reproducible.** Record the selected provider,
+   model and effort, what the run proves and why it is needed. Dispatch
+   confirmation and re-dispatch belong to `issue-workflow`.
 5. **Provider facts belong to the provider record, not to the plan.** Endpoint,
    scope, capability, quota and the date they were probed are kept in the device
    inventory or in a knowledge record and cited by name. Secret values never

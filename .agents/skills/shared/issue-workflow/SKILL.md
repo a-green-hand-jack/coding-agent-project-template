@@ -22,17 +22,19 @@ the pane, agent session and conversation/thread, selects Codex's native queue
 when its thread is known, and defines the confirmation and stalled-send
 evidence required by this workflow.
 
-Run **start** (which first claims the Issue) when an Issue is ready to
-implement, **merge** when its PR is approved, and **close-out** right after a
-verified merge. The approval to merge covers the close-out, so do not wait or ask
-again (exceptions are listed under Close-out).
+First establish scope, ownership, blockers and acceptance. Direct dev work follows
+[Choosing where to work](#choosing-where-to-work) without requiring Herdr, a
+branch, Dispatch fields, a worker or PR. Run **Start** only when dispatching a
+worktree, **Merge** only for an authorized PR, and **Close-out** only for an
+existing worktree after verified delivery. Merge approval covers its close-out
+subject to the listed exceptions; direct work has no worktree to retire.
 
 ## Several coordinators
 
 The dev checkout may host several coordinators at once, each in its own Herdr
 pane; their number is not limited. Each claims one Issue, with its sub-Issues,
-and runs it to the end: it dispatches the worktrees and sessions, follows their
-progress, reviews and merges the PRs and closes the worktrees out. Throughout
+and owns it to the end: directly or through any authorized dispatch, review,
+integration and worktree close-out that actually apply. Throughout
 this skill, *the coordinator* is the one that claimed the Issue at hand.
 
 - One claimant per Issue. A coordinator acts only on the worktrees, sessions,
@@ -49,6 +51,11 @@ this skill, *the coordinator* is the one that claimed the Issue at hand.
   [Shared boundaries](#shared-boundaries).
 
 ### Claim
+
+For direct dev work, identify the responsible owner and check for conflicting
+claims through the available Issue and checkout state; no Herdr name or Dispatch
+section is required. Resolve an existing claim before editing. The following
+steps apply when coordinating a Herdr dispatch.
 
 1. Have a name others can find in Herdr. If
    `herdr agent get "$HERDR_PANE_ID" | jq -r .result.agent.name` prints `null`,
@@ -97,6 +104,9 @@ not simply because a change spans files. When a running process consumes the
 checkout, observe `long-running-supervision` before changing its inputs. Run
 appropriate checks and report evidence; no path automatically authorizes Git
 delivery. When dispatching, follow Start and the maintainer confirmation below.
+In the canonical dev checkout, keep `.project/state/current-recovery.md` as a
+concise pointer to active duties and existing evidence, preserving concurrent
+owners' entries. It is a navigation index, not a second event or receipt store.
 
 ## Adaptation slots
 
@@ -125,7 +135,7 @@ project-neutral.
 | `<WORKSPACE_PREFIX>` | Display form of the same project prefix, optionally upper-case; preserve its mapping to the stable task key, not a second task identity. Workspace labels append the Issue number and short topic. | `<AGENT_PREFIX>` |
 | `<MERGE_METHOD>` | `gh pr merge` method flag. Close-out's ancestry check assumes a merge commit. | `--merge` |
 | `<CI>` | Whether the project adopts the template's optional `.github/workflows/template-check.yml`. `yes`: adopted; its result is read and noted on the PR, never waited for and never a condition (see Merge). `no`: that workflow is left out (`template-adoption` step 3). | project fact |
-| `<LOCAL_CHECK>` | The verification commands from `DEV.md`, always filled whatever `<CI>` is. They are the merge gate, run locally; when `<CI>` is `yes` they are the same steps the workflow runs. | `DEV.md` verification strategy |
+| `<LOCAL_CHECK>` | The verification commands from `DEV.md`, always filled whatever `<CI>` is. They are the local merge gate; record any differences from hosted CI. | `DEV.md` verification strategy |
 | `<PRE_MERGE_GATE>` | Optional read-only product command that must pass before merging, for example `<cmd> archive --check`. | none |
 | `<ARCHIVE_CMD>` | Product command that archives and registers non-rebuildable results before a worktree is retired. | none |
 | `<MONITOR_CMD>`, `<STOP_CMD>` | Product commands that list live runs started in a checkout (the dev checkout or a worktree) and stop one. Close-out stops every run the worktree started through `<STOP_CMD>`, and never through a generic process killer. | none |
@@ -229,10 +239,11 @@ with one sub-Issue per phase, so that progress is checked off phase by phase.
    recorded as blocked-by for implementation (step 3), with acceptance-only
    waits identified separately in the acceptance plan.
 2. Each phase is a sub-Issue with its own scope and acceptance, linked to the
-   parent with GitHub's sub-issue relation. It goes through [Start](#start),
-   [Merge](#merge) and [Close-out](#close-out) like any Issue, and its PR says
-   `Closes #<C>` and names the parent. A sub-Issue says who it belongs to
-   (sub-issue); blocked-by says what comes first.
+   parent with GitHub's sub-issue relation. Choose direct work, reuse or a
+   confirmed dispatch for each; apply [Start](#start), [Merge](#merge) and
+   [Close-out](#close-out) only when their worktree/PR exists. A PR says
+   `Closes #<C>` and names the parent. A sub-Issue says who it belongs to;
+   blocked-by says what comes first.
 3. Before splitting, decide for every two sub-Issues which relation holds, and
    record and dispatch it as the table says:
 
@@ -245,7 +256,7 @@ with one sub-Issue per phase, so that progress is checked off phase by phase.
 
 4. The coordinator that claimed the parent claims every sub-Issue and chooses
    direct work, an existing session or a confirmed worktree dispatch. A sub-Issue starts when it has no open blocker
-   ([Start](#start) step 1); it does not wait in arrival order
+   (check blocked-by as in [Start](#start)); it does not wait in arrival order
    ([Independent Issues run in parallel](#independent-issues-run-in-parallel)).
    Every sub-Issue starts from its latest declared PR target: normally `<BASE>`,
    or the parent's integration branch below, never an arbitrary sibling branch.
@@ -592,6 +603,10 @@ successful prompt or pane write is not hook approval. Re-review when the hook
 set, source, or requested side effect changes.
 
 ## Start
+
+This section applies only after choosing a new Herdr dispatch. Direct dev work
+does not run these worktree/branch/session steps; establish scope, owner,
+blockers, acceptance and safe checkout state using the available interfaces.
 
 Input: Issue number `<N>` and a branch `<branch>` named per `DEV.md`
 (`<type>/issue-<N>-<slug>`, with `<type>` one of `fix`, `feat`, `docs`, `chore`).
@@ -1003,7 +1018,12 @@ moved, go back to step 2.
    visible on the PR or the Issue; without it, do not merge and report.
    `mergeable` `UNKNOWN` means GitHub is still computing it; query again.
 
-   The gate is `<LOCAL_CHECK>`, not CI. Locate `<worktree>` as in Close-out
+   The gate is `<LOCAL_CHECK>`, not CI. If no issue worktree exists, inspect
+   the PR's exact latest head in an already authorized, safe checkout or an
+   independently immutable snapshot, protect its inputs as specified in
+   [Acceptance write responsibility](#acceptance-write-responsibility), and
+   run the same gate there. Do not create an unauthorized worktree merely for
+   review. When an issue worktree exists, locate `<worktree>` as in Close-out
    step 1, confirm it is at the PR's latest commit
    (`git -C <worktree> fetch origin` and compare `git -C <worktree> rev-parse HEAD`
    with `gh pr view <PR> --repo <REPO> --json headRefOid --jq .headRefOid`;
@@ -1020,24 +1040,27 @@ moved, go back to step 2.
      wait for it to finish.
 
    `<LOCAL_CHECK>` all passing and the maintainer's approval are enough to
-   merge; if it fails, do not merge, and the Issue session fixes it. A CI
+   merge; if it fails, do not merge, and the responsible implementer fixes it. A CI
    failure with a passing `<LOCAL_CHECK>` does not block: say so in the PR
    comment and in the report to the maintainer, who decides whether to open an
    Issue to look into the difference. A new head after a push needs this step
    again.
-3. Run the pre-merge gate when `<PRE_MERGE_GATE>` is defined. Locate `<worktree>`
-   as in Close-out step 1, then `(cd <worktree> && <PRE_MERGE_GATE>)`.
+3. Run `<PRE_MERGE_GATE>` when defined against the same protected checkout or
+   immutable snapshot used for the PR head. If a worktree exists, locate it as
+   in Close-out step 1 and run `(cd <worktree> && <PRE_MERGE_GATE>)`.
    - Passing: continue.
-   - Failing: **do not merge.** Report the output. Fixing it is implementation
-     work for the Issue session: ask the maintainer to have that session fix it
-     and push to the PR branch, then re-check from step 2.
+   - Failing: **do not merge.** Report the output. Arrange a fix with the
+     responsible implementer under current authorization, then re-check the
+     resulting PR head from step 2.
    - Continue past a failing gate only on the maintainer's explicit decision. Record
      what was deferred; Close-out handles it.
    - A gate command that itself errors (missing tool, missing worktree) is a
      failure to report, not a pass.
 4. Merge. When `mergeable` is `MERGEABLE`, run
-   `gh pr merge <PR> --repo <REPO> <MERGE_METHOD>` without `--delete-branch`;
-   Close-out deletes the branch. Then do step 5 and Close-out before the next PR.
+   `gh pr merge <PR> --repo <REPO> <MERGE_METHOD>` without `--delete-branch`.
+   Then do step 5; Close-out removes a branch only when an associated worktree
+   exists and its safeguards pass. Otherwise handle branch retirement separately
+   under the applicable authorization before the next PR.
 
    When `mergeable` is `CONFLICTING`, the coordinator handles integration in
    dev, not by assigning the conflict to the issue agent. First verify repository,
@@ -1064,7 +1087,8 @@ moved, go back to step 2.
    gh run list --repo <REPO> --branch <TARGET_BASE> --commit "$sha"
    ```
 
-6. Close out the PR's worktree (below) right away.
+6. If the PR has a worktree, close it out (below) right away. Otherwise record
+   the integration result and remaining duties without inventing a worktree.
 
 ## Close-out
 

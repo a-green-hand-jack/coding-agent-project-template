@@ -5,8 +5,10 @@ description: Create, initialize, migrate and retire one isolated project worktre
 
 # Worktree lifecycle
 
-Use this skill when starting parallel work, handing an Issue to another coding
-agent, or preparing a merged branch for removal.
+Use this skill only when an isolated worktree is actually chosen or being retired.
+Direct dev work does not require a Herdr worktree, branch or separate session.
+When dispatching, confirm agent, concrete model and thinking level with the
+maintainer first as specified by `issue-workflow`.
 
 1. Create the worktree through Herdr's native worktree command from the
    Issue's declared target and with the Issue branch name: normally `dev`, or

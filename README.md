@@ -8,8 +8,8 @@
 
 模板提供可复用的开发控制面：coding agent 可以自行读懂仓库，human 不需要反复
 讲述上下文，每个 worktree 有自己的状态和环境，大资产有可见的仓库内入口。
-较大的工作单元由 Issue/branch/PR 构成可追溯的交付单元；小修小改直接在 `dev`
-里做，不建 Issue、worktree 或 PR。
+根据风险和实际需要选择 Issue、审阅和 PR；可以直接在 `dev` 工作，也可以按需
+派出隔离 worktree。具体流程和派遣确认见 `DEV.md`。
 
 它服务于维护项目的人和参与开发的 coding agent，交付可采用、可升级的规则、
 skills、脚本和项目骨架。核心概念是产品、开发、human 三个平面，以及承载变更的

@@ -160,7 +160,7 @@ class CodexContextScenarios(unittest.TestCase):
                 self.assertIn(marker, text)
         self.assertIn("--timeout 60000 -- --no-daemon --model", WORKFLOW)
         self.assertIn("#codex-caller-identity-and-isolation", COMMUNICATION)
-        project_dispatch = (ROOT / ".agents/memory/project/template-work-runs-on-codex.md").read_text()
+        project_dispatch = (ROOT / ".agents/memory/project/template-dispatch-decisions.md").read_text()
         for marker in ("--no-daemon", "model_reasoning_effort", "model_provider",
                        "#codex-caller-identity-and-isolation"):
             self.assertIn(marker, project_dispatch)

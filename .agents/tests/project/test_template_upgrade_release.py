@@ -336,6 +336,16 @@ class UpgradeFromAnOlderReleaseTests(unittest.TestCase):
         self.assertEqual(actual['template'],expected['template'])
         self.assertEqual(actual['schema_version'],2)
         by_path={e['path']:e for e in actual['entries']}
+        if self.old == 'v0.1.25':
+            # A schema1 project may own the former template-maintainer memory.
+            # The template-only rename must not move or overwrite that file.
+            old = '.agents/memory/project/template-work-runs-on-codex.md'
+            new = '.agents/memory/project/template-dispatch-decisions.md'
+            self.assertIn(old, after)
+            self.assertNotIn(new, after)
+            self.assertEqual(by_path[old]['scope'], 'project')
+            upstream = next(e for e in catalog.loads((REPOSITORY / REGISTRY).read_text())['entries'] if e['path'] == new)
+            self.assertNotEqual(by_path[old]['id'], upstream['id'])
         for e in expected['entries']:
             self.assertEqual(by_path[e['path']],e)
         source_registry = git('show', f'{self.old}:{REGISTRY}', cwd=self.template)
