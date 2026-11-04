@@ -1,7 +1,7 @@
 ---
 name: issue-dispatch-by-difficulty
 date: 2026-10-15
-source: Issue #26, harvested from a downstream adopter of this template; Issue #87 (steps left to issue-workflow)
+source: Issue #26, harvested from a downstream adopter of this template; Issue #87 (steps left to issue-workflow); Issue #137 (maintainer workflow revision)
 applies_to: repositories that start Issue agents with the issue-workflow skill
 ---
 
@@ -9,14 +9,12 @@ applies_to: repositories that start Issue agents with the issue-workflow skill
 
 ## Decision
 
-Each Issue agent is started with an agent kind, provider, model and reasoning
-effort chosen for the Issue's difficulty and passed explicitly, never the CLI's
-default, and the choice is recorded in the Issue. The cheapest source and model
-that can judge the work is the default for mechanical and routine Issues; an
-expensive provider is used only when the change concerns that provider itself
-(see [`provider-cost-routing.md`](provider-cost-routing.md)). A fallback agent
-stands in only when the primary one is unavailable, and every re-dispatch is
-recorded with its reason.
+For each new worktree dispatch, the maintainer explicitly confirms the coding
+agent, concrete model and thinking level before creation. Difficulty, current
+availability and cost inform a recommendation, never an automatic selection or
+fallback. Record the confirmed provider, model and effort. Confirm any changed
+selection before re-dispatch; reuse of the existing session for a related Issue
+does not itself require reconfirmation.
 
 ## Why
 
@@ -31,6 +29,5 @@ Issue record makes the choice reviewable when its outcome is judged.
 Follow Start and Dispatch by difficulty in
 [`../../skills/shared/issue-workflow/SKILL.md`](../../skills/shared/issue-workflow/SKILL.md),
 after filling its agent-kind, provider, model-selection, tier, effort and
-fallback slots: the four tiers, when to go a tier up, how a tier's series is
-resolved to a model that is usable now, the Dispatch section and the fallback
-and re-dispatch lines.
+recommendation slots and the Dispatch section; availability and fallback are
+checked before asking, not substituted for the maintainer's decision.

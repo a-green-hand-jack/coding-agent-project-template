@@ -1,5 +1,79 @@
 # Release notes
 
+## v0.1.27 — 2026-11-04
+
+**按任务选择工作方式，把派遣决定交还维护者。**
+
+Coding-Agent Project Template 帮助维护者组织 coding agent、代码与交付。此前模板要求
+较大的 Issue 一律进入独立 Herdr worktree，也按预设顺序自动选择 agent；这与维护者
+经常直接在 dev 开发、并希望参与每次派遣选型的实际工作不一致。
+
+### 开发和协作有了更合适的选择
+
+| 场景 | v0.1.26 | v0.1.27 |
+| --- | --- | --- |
+| 较大 Issue | 固定派出独立 worktree | 可直接在 dev 工作；检查并保护已有改动、并行活动和运行中的任务 |
+| 新派 Herdr worktree | 根据预设顺序和难度选择 | 派遣前由维护者确认 agent、具体模型和 thinking level 三项；推荐不能代替答复 |
+| agent 发现相关新 Issue | 容易为每个 Issue 新建 worktree | 可复用已有 session 和 worktree，明确新范围、责任和交付 |
+| 多个 PR 和集成冲突 | 可交给 issue agent 在其 worktree 解决 | dev checkout 的协调者负责集成，需维护者取舍时交由维护者决定 |
+
+*表：工作方式和责任变化。选择直接开发不自动授予提交、推送或发布权限。*
+
+```text
+任务开始
+  ├─ 直接在 dev 开发
+  │    └─ 验证与交付
+  └─ 需要隔离或并行
+       └─ 确认 agent、模型、thinking level
+            └─ 派出 worktree
+                 └─ agent 完成 Issue
+                      └─ 协调者在 dev 负责集成
+```
+
+*图：开发方式与责任流转示意；是否需要 Issue、PR 和审阅仍按任务分别判断。*
+
+选型前仍应核实当前工具、模型可用性和成本；选择不可用或需要更换时重新确认，
+不静默 fallback。issue agent 继续负责自己的实现、验证和约定交付；协调者负责
+跨 PR 集成，并保护 dev 中已有工作。原会话承接相关新 Issue 本身不算新派遣，
+不必重复确认同一选择。
+生成的交接也明确说明分支和 worktree 已由协调者创建，issue agent 只需核对
+当前身份与分支，不会被提示再创建一次。
+
+### 把注意力留给真正需要行动的事情
+
+新规则根据收件人是否有新义务决定通知或唤醒；新的失败、阻塞和职责转移仍须及时
+报告。短等待优先考虑已核实的原生等待能力，长时间没有独立工作时让出会话；同时
+区分 agent 尚未启动的基础设施故障和执行后的失败。具体重试、计费和运行限制仍由
+项目自身定义。
+
+这些是供 agent 遵循的工作规则，并非强制拦截器，也不修改 Codex 或 Herdr 的消息
+队列。Linux 本地 CLI 帮助显示 Herdr 0.9.4 可等待 agent 状态、Codex 0.166.0 可
+提交队列消息；状态等待不证明任务完成，提交也不证明接收。未开展新的跨会话实测。
+
+### 验证与边界
+
+实现候选 `69891f4` 的模板回归运行 112 项，全部通过。修正交接提示后的源码
+（提交 `31ee3a6`）再次运行完整回归，112 项在 91.739 秒内全部通过；registry、
+递归 Shell 检查、setup 与环境诊断通过。测试证明文档与生成交接中的约定，不证明
+客户端会强制执行派遣确认或自动拦截通知。
+
+### Upgrading a project from v0.1.26
+
+1. 在目标项目运行 `bash .agents/scripts/shared/upgrade-template.sh --check v0.1.27`，
+   阅读逐路径升级计划，保留项目已有规则和适配段；有冲突时先确定项目自己的处理方式。
+2. 将 dev 直接开发、派遣三项确认、协调者负责集成与可复用 session 的规则同项目
+   现有权限和运行方式对齐。检查本地 `AGENTS.md`、`DEV.md`、agent 启动说明和
+   自有交接提示，避免保留相反的自动选型或每个 Issue 强制 worktree 规则。
+3. 按 `template-upgrade` 应用经审阅的变更，并运行项目自己的开发检查与验收；继续
+   保留自身 release notes，不复制模板的发布历史。
+
+### 参考资料
+
+- [Issue #137](https://github.com/a-green-hand-jack/coding-agent-project-template/issues/137)：维护者要求、范围与验收。
+- [Issue #146](https://github.com/a-green-hand-jack/coding-agent-project-template/issues/146)：交接提示中的已有分支说明。
+- [实现提交](https://github.com/a-green-hand-jack/coding-agent-project-template/commit/69891f48f61d9255f644c4abba3bca474bd13eef)。
+- [上一版 v0.1.26](https://github.com/a-green-hand-jack/coding-agent-project-template/releases/tag/v0.1.26)；[完整变化](https://github.com/a-green-hand-jack/coding-agent-project-template/compare/v0.1.26...v0.1.27)。
+
 ## v0.1.26 — 2026-10-30
 
 **开发目录按用途分组，升级保留内容身份和项目决定。**

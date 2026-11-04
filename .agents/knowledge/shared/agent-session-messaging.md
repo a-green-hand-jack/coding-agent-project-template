@@ -38,6 +38,16 @@ fallback successfully bootstrapped the first turn. A known thread ID therefore
 did not alone prove the native queue was ready. This is one observed bootstrap
 failure, not a universal restriction on Codex versions.
 
+## Local CLI help observation (2026-11-04)
+
+On Linux, installed Herdr 0.9.4 `herdr agent wait --help` describes waiting
+for agent states with an optional timeout. It does not establish that a
+particular task, run or obligation completed. Installed Codex CLI 0.166.0
+`codex queue --help` accepts a thread and message; its help does not establish
+receiver acknowledgement or suppression of queued notifications. These are
+help-surface observations, not a live delivery or cancellation test. Recheck
+the installed version and its help when choosing a wait or transport.
+
 ## Evidence
 
 The [official Claude documentation](https://code.claude.com/docs/en/cross-session-messaging),

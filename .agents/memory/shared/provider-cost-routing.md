@@ -1,7 +1,7 @@
 ---
 name: provider-cost-routing
 date: 2026-10-25
-source: Issue #101 (maintainer decision on provider cost, agent dispatch and evidence)
+source: Issue #101 (maintainer decision on provider cost, agent dispatch and evidence); Issue #137 (maintainer workflow revision)
 applies_to: repositories whose tests, checks, coding agents or tools call LLM providers
 ---
 
@@ -20,7 +20,8 @@ applies_to: repositories whose tests, checks, coding agents or tools call LLM pr
    and error behavior, or other real behavior only it exercises. The plan names
    that reason when a run upgrades.
 4. **Agent, provider, model and effort are chosen in that order and passed
-   explicitly.** The CLI's default is never relied on. The choice is recorded in
+   explicitly.** For a new worktree dispatch the maintainer confirms the agent,
+   model and thinking level first; never silently fall back. The choice is recorded in
    the Issue's Dispatch section and, with what the run proves and why it must
    run, in the plan and the PR.
 5. **Provider facts belong to the provider record, not to the plan.** Endpoint,
@@ -49,8 +50,8 @@ judged later or repeated by another session.
 Follow Dispatch by difficulty and Start step 4 in
 [`../../skills/shared/issue-workflow/SKILL.md`](../../skills/shared/issue-workflow/SKILL.md)
 and the Issue session rules it prints: choose the agent first, then the provider
-and model, then the effort, resolve a series to its newest usable member at
-dispatch time, and record the result with its fallback or re-dispatch history.
+and model, then the effort; check current availability and recommend a concrete
+choice, obtain the required confirmation, and record re-dispatch history.
 
 The formats of the device inventory and the project's `credentials.yaml`, and
 what a read-only probe checks, are in

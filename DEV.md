@@ -21,24 +21,17 @@ tracked source，也不写到未知的全局目录。
 
 ## Issue、branch 和 PR
 
-较大的工作单元先有 Issue，Issue 先收敛问题、范围、验收方式和风险，再开始实现。
-小修小改可以直接在 `dev` checkout 里做，不建 Issue、worktree 或 PR；这类改动包括
-文档、注释、memory/索引、拼写、单文件且没有设计决定的小修复，以及运行现有命令做
-验收而不改产品代码。拿不准时按大的走；小改动变大或出现设计问题时停下来开 Issue。
-小改动同样不自动提交或推送；运行适用的检查，并报告证据。
+根据任务、checkout 状态及并行活动选择直接在 `dev` 开发或使用隔离 worktree；
+任务规模本身不要求派出新会话。开始前检查已有改动和正在运行的任务，保留他人的工作。
+Issue、审阅和 PR 的需要分别按风险、用户要求及项目规则判断；直接开发不自动授予
+提交或推送权限。
 
-需要 Issue 的工作单元，从 `dev` 创建 `fix/issue-<N>-<slug>`、`feat/issue-<N>-<slug>`、
-`docs/issue-<N>-<slug>` 或 `chore/issue-<N>-<slug>` branch。实现和验证完成后
-提交 PR 回 `dev`；`main` 只承载已发布状态。复杂父任务可以显式采用父集成分支：
-在父 Issue 登记目标、负责人、子 PR base、最终 dev PR、联合验收与清理责任，
-仍通过 Herdr 创建隔离 worktree。子 PR 合入集成分支不等于父任务交付，简单 Issue
-仍直接目标 `dev`；完整流程见 `issue-workflow` 的 “Optional parent integration branch”。
-
-分阶段的工作开一个父 Issue，每个阶段一个子 Issue（GitHub sub-issue 关系，父 Issue
-列出阶段清单），每个阶段照常走 Issue、worktree 和 PR；做法和 `gh` 命令见
-`.agents/skills/shared/issue-workflow/` 的 “Phased work”。Issue、PR 和 human 文档的
-工作语言与 Issue 开头段落在 registry 的 `writing:` 声明（同一 skill 的 “Writing
-conventions”）；本仓库声明为中文。
+需要派出 Herdr worktree 时，派遣前请维护者确认本次 coding agent、具体模型和
+thinking level；已明确提供的选择不重复询问，缺少任何一项时等待答复。选择不可用或
+需要更换时重新确认受影响的选择，不静默 fallback。按 `issue-workflow` 使用 Herdr
+创建 worktree 和生成交接；相关新 Issue 可以交给原 session 在原 worktree 继续处理，
+明确范围、责任和交付，不因单纯复用重复确认。子 Issue、依赖和可选父集成分支的
+验收与交付关系见该 skill。
 
 Issue、PR、评论与 commit 的阅读职责、正文维护和证据边界统一见
 [`development-writing`](.agents/skills/shared/development-writing/SKILL.md)，
@@ -51,8 +44,8 @@ Conventional Commits 前缀；下游可在该 skill 的末尾适配段声明自�
 
 实现依赖与验收依赖分开记录。接口固定且可以独立推进的部分可以提前开发，
 但须在上游合并后同步目标分支并完成集成验收；真实 blocked-by 不得绕过，混合
-范围需要拆成依赖准确的子任务。执行者负责自己 worktree 的实现、冲突修复和
-证据回报；认领 Issue 的协调者负责交付后的依赖重评估、通知、审阅与复核。
+范围需要拆成依赖准确的子任务。执行者负责所承接 Issue 的实现、验证和证据回报；
+协调者在 dev checkout 负责跨 PR 的合并及集成冲突，并负责依赖重评估、通知与复核。
 等待记录写明事件、责任人、关联 head/run、未完事项和后续动作。通信的提交、
 接收确认与任务完成分别记录，具体传输与权限边界见 `agent-communication`。
 

@@ -1,35 +1,20 @@
 ---
 name: issue-in-herdr-worktree
 date: 2026-10-13
-source: Issue #18, harvested from downstream adopters of this template; Issue #34; Issue #87 (steps left to issue-workflow); Issue #89 (several coordinators); Issue #93 (dependencies)
+source: Issue #18, harvested from downstream adopters of this template; Issue #34; Issue #87 (steps left to issue-workflow); Issue #89 (several coordinators); Issue #93 (dependencies); Issue #137 (maintainer workflow revision)
 applies_to: repositories that manage Issue worktrees with Herdr and develop from a dev integration branch
 ---
 
-# Implement each Issue in its own Herdr worktree and agent session
+# Choose direct development or a Herdr worktree for Issue work
 
 ## Decision
 
-Each Issue is implemented in its own worktree, created from its declared target
-(normally `dev`, optionally a parent's integration branch) with Herdr's
-native worktree command, by its own coding-agent session in that worktree's
-pane. The maintainer talks to that session there, and that session opens the PR.
-Several coordinator sessions may share the dev checkout, each claiming one Issue
-with its sub-Issues in the Issue's Dispatch section and dispatching its
-worktrees; an Issue another coordinator claimed is left alone. A coordinator
-never implements an Issue by switching branches in its own window, and when
-Herdr is unavailable it reports the blocker instead of falling back. An Issue
-starts only when it has no open implementation blocker; real blockers are
-recorded as GitHub's blocked-by, also across coordinators. Fixed interfaces may
-allow independently scoped implementation while integrated acceptance waits;
-split mixed blocked scope rather than bypassing a blocked-by. Every Issue starts
-from its latest declared target, never an arbitrary sibling's unmerged branch.
-Child merges into integration do not deliver the parent's final goal to `dev`.
-
-The handoff gives the Issue session working rules that do not narrow: it
-verifies to completion, fixes the defects it meets that block or relate to the
-Issue, does not narrow its change to avoid conflicts with parallel worktrees
-(the claiming coordinator resolves them at merge, in this worktree), and knows
-that the merge approval covers the close-out.
+Direct development in dev is a normal choice. For isolation or parallel work,
+create a worktree with Herdr after the maintainer confirms the coding agent,
+concrete model and thinking level. A related new Issue can reuse the same
+session and worktree with explicit scope and ownership. The issue agent owns its
+assigned work; the coordinator handles integration and conflicts in dev.
+Preserve other work, dependencies, acceptance and delivery authorization.
 
 ## Why
 
