@@ -20,6 +20,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v5
+      - name: Install development checker dependency
+        run: python3 -m pip install 'PyYAML>=6.0,<7' 'markdown-it-py>=3,<5'
       - name: Check shell syntax
         run: bash .agents/scripts/shared/check-shells.sh
       - name: Check development registry

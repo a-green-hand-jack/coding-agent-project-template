@@ -110,7 +110,7 @@ class UpgradeFromAnOlderReleaseTests(unittest.TestCase):
         tags = sorted((tag for tag in git("tag", "-l", "v*", cwd=REPOSITORY).split()
                        if re.fullmatch(r"v\d+\.\d+\.\d+", tag) and number(tag) < number(self.candidate)), key=number)
         self.assertGreaterEqual(len(tags), 2, "the release tags are missing: git fetch --tags origin")
-        self.old = getattr(self, "source_tag", tags[-2])
+        self.old = tags[-1] if self._testMethodName in ('test_relocated_identity_stops_without_writes', 'test_declared_mapping_preserves_location', 'test_bad_mapping_never_changes_checkout', 'test_mapping_content_conflict_is_atomic', 'test_mapped_deletion_preserves_registry_consistency') else getattr(self, "source_tag", tags[-2])
 
         # A fixture template repository with the older release and the candidate as its two tags.
         self.template = self.base / "template"
@@ -134,6 +134,23 @@ class UpgradeFromAnOlderReleaseTests(unittest.TestCase):
             path = self.template / "RELEASE_NOTES.md"
             path.write_text(re.sub(r"^## Unreleased\b.*$", f"## {self.candidate}", path.read_text(encoding="utf-8"),
                                    count=1, flags=re.M), encoding="utf-8")
+        if self._testMethodName == 'test_declared_mapping_preserves_location':
+            reference = self.template/'.agents/skills/shared/long-running-supervision/SKILL.md'
+            reference.write_text(reference.read_text() + '\n[Fake boundary](../../../memory/shared/screen-with-scriptable-fakes.md)\n')
+            added = self.template/'.agents/skills/shared/development-writing/references/new-guidance.md'
+            added.write_text('# Additional guidance\n')
+        if self._testMethodName == 'test_mapping_content_conflict_is_atomic':
+            changed = self.template/'.agents/memory/shared/screen-with-scriptable-fakes.md'
+            changed.write_text(changed.read_text().replace('# Screen failure paths with a scriptable fake before the real run', '# Changed upstream heading'))
+        if self._testMethodName == 'test_mapped_deletion_preserves_registry_consistency':
+            path='.agents/memory/shared/screen-with-scriptable-fakes.md'
+            data=catalog.loads((self.template/REGISTRY).read_text())
+            entry=next(e for e in data['entries'] if e['path']==path)
+            data['entries'].remove(entry)
+            data.setdefault('omitted',[]).append({'id':entry['id'],'path':path,'reason':'Removed upstream.'})
+            (self.template/path).unlink()
+            (self.template/REGISTRY).write_text(catalog.dumps(data))
+            catalog.indexes(self.template,data,write=True)
         self.commit(self.candidate)
 
     def commit(self, tag: str) -> None:
@@ -160,6 +177,116 @@ class UpgradeFromAnOlderReleaseTests(unittest.TestCase):
                 (root / name).write_text(text, encoding="utf-8")
         git("init", "-q", cwd=root)
         return root
+
+    def test_mapped_deletion_preserves_registry_consistency(self) -> None:
+        project=self.project(self.old,own=True)
+        registry=project/REGISTRY;data=catalog.loads(registry.read_text())
+        source='.agents/memory/shared/screen-with-scriptable-fakes.md'
+        destination='.agents/memory/shared/local-fake-guidance.md'
+        entry=next(e for e in data['entries'] if e['path']==source)
+        (project/source).rename(project/destination);entry['path']=destination
+        data['path_mappings']=[{'from':source,'to':destination}]
+        registry.write_text(catalog.dumps(data));catalog.indexes(project,data,write=True)
+        file=project/destination;original=file.read_text();file.write_text(original+'\nLocal content.\n')
+        before=files_of(project)
+        conflict=subprocess.run(['bash',str(SCRIPT),'--resolved','.agents/memory/project/AGENTS.md',self.candidate],cwd=project,text=True,capture_output=True)
+        self.assertNotEqual(conflict.returncode,0)
+        self.assertEqual(before,files_of(project))
+        file.write_text(original)
+        result=subprocess.run(['bash',str(SCRIPT),'--resolved','.agents/memory/project/AGENTS.md',self.candidate],cwd=project,text=True,capture_output=True)
+        self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+        self.assertFalse((project/destination).exists())
+        check=subprocess.run(['bash','.agents/scripts/shared/check-development.sh'],cwd=project,text=True,capture_output=True)
+        self.assertEqual(check.returncode,0,check.stdout+check.stderr)
+
+    def test_mapping_content_conflict_is_atomic(self) -> None:
+        project = self.project(self.old, own=True)
+        registry = project / REGISTRY
+        data = catalog.loads(registry.read_text())
+        source = '.agents/memory/shared/screen-with-scriptable-fakes.md'
+        destination = '.agents/memory/shared/local-fake-guidance.md'
+        entry = next(e for e in data['entries'] if e['path'] == source)
+        (project/source).rename(project/destination)
+        file = project/destination
+        file.write_text(file.read_text().replace('# Screen failure paths with a scriptable fake before the real run', '# Different local heading'))
+        entry['path'] = destination
+        data['path_mappings'] = [{'from':source, 'to':destination}]
+        registry.write_text(catalog.dumps(data));catalog.indexes(project, data, write=True)
+        before = files_of(project)
+        result = subprocess.run(['bash', str(SCRIPT), '--resolved', '.agents/memory/project/AGENTS.md', self.candidate], cwd=project, capture_output=True, text=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('mapped upgrade preflight failed', result.stderr)
+        self.assertEqual(before, files_of(project))
+
+    def test_bad_mapping_never_changes_checkout(self) -> None:
+        project = self.project(self.old, own=True)
+        registry = project / REGISTRY
+        data = catalog.loads(registry.read_text())
+        source = '.agents/memory/shared/screen-with-scriptable-fakes.md'
+        for mappings in (
+            [{'from':source,'to':'../escape.md'}],
+            [{'from':source,'to':'.agents/memory/shared/serve-the-coding-agent.md'}],
+            [{'from':source,'to':'.agents/memory/shared/local.md'}, {'from':source,'to':'.agents/memory/shared/other.md'}],
+        ):
+            data['path_mappings'] = mappings
+            registry.write_text(catalog.dumps(data))
+            before = files_of(project)
+            result = subprocess.run(['bash', str(SCRIPT), self.candidate], cwd=project, capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual(before, files_of(project))
+
+    def test_declared_mapping_preserves_location(self) -> None:
+        project = self.project(self.old, own=True)
+        registry = project / REGISTRY
+        data = catalog.loads(registry.read_text())
+        source = '.agents/memory/shared/screen-with-scriptable-fakes.md'
+        destination = '.agents/memory/shared/local-fake-guidance.md'
+        entry = next(e for e in data['entries'] if e['path'] == source)
+        (project/source).rename(project/destination)
+        entry['path'] = destination
+        data['path_mappings'] = [{'from': source, 'to': destination}]
+        references = '.agents/skills/shared/development-writing/references/'
+        local_references = '.agents/skills/shared/development-writing/local-references/'
+        cases = references + 'four-cases.md'
+        local_cases = '.agents/skills/shared/development-writing/local-four-cases.md'
+        (project/cases).rename(project/local_cases)
+        (project/references).rmdir()
+        data['path_mappings'] += [{'from': references, 'to': local_references}, {'from': cases, 'to': local_cases}]
+        registry.write_text(catalog.dumps(data))
+        catalog.indexes(project, data, write=True)
+        result = subprocess.run(['bash', str(SCRIPT), '--resolved', '.agents/memory/project/AGENTS.md', self.candidate], cwd=project, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertFalse((project/source).exists())
+        self.assertTrue((project/destination).exists())
+        self.assertTrue((project/local_cases).exists())
+        self.assertTrue((project/local_references/'new-guidance.md').exists())
+        self.assertIn('(local-four-cases.md)', (project/'.agents/skills/shared/development-writing/SKILL.md').read_text())
+        self.assertIn('../../../memory/shared/local-fake-guidance.md', (project/'.agents/skills/shared/long-running-supervision/SKILL.md').read_text())
+        after = catalog.loads(registry.read_text())
+        self.assertEqual(next(e for e in after['entries'] if e['id'] == entry['id'])['path'], destination)
+        check=subprocess.run(['bash','.agents/scripts/shared/check-development.sh'],cwd=project,text=True,capture_output=True)
+        self.assertEqual(check.returncode,0,check.stdout+check.stderr)
+        before=files_of(project)
+        again=subprocess.run(['bash',str(SCRIPT),self.candidate],cwd=project,text=True,capture_output=True)
+        self.assertEqual(again.returncode,0,again.stdout+again.stderr)
+        self.assertEqual(before,files_of(project))
+
+    def test_relocated_identity_stops_without_writes(self) -> None:
+        project = self.project(self.old, own=True)
+        registry = project / REGISTRY
+        data = catalog.loads(registry.read_text())
+        entry = next(e for e in data['entries'] if e['path'] == '.agents/memory/shared/screen-with-scriptable-fakes.md')
+        original = project / entry['path']
+        moved = original.with_name('local-fake-guidance.md')
+        original.rename(moved)
+        entry['path'] = str(moved.relative_to(project))
+        registry.write_text(catalog.dumps(data))
+        before = files_of(project)
+        for arguments in (['--check'], []):
+            result = subprocess.run(['bash', str(SCRIPT), *arguments, self.candidate], cwd=project, capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('locally relocated path', result.stderr)
+            self.assertEqual(before, files_of(project))
 
     def test_the_upgrade_equals_a_project_made_from_the_candidate(self) -> None:
         upgraded = self.project(self.old, own=True)
@@ -211,7 +338,9 @@ class UpgradeFromAnOlderReleaseTests(unittest.TestCase):
         by_path={e['path']:e for e in actual['entries']}
         for e in expected['entries']:
             self.assertEqual(by_path[e['path']],e)
-        self.assertIn('local_legacy_inventory',actual)
+        source_registry = git('show', f'{self.old}:{REGISTRY}', cwd=self.template)
+        if not source_registry.startswith('schema_version: 2'):
+            self.assertIn('local_legacy_inventory',actual)
 
 
 class UpgradeLatestLayoutTests(UpgradeFromAnOlderReleaseTests):
@@ -226,7 +355,7 @@ class UpgradeLatestLayoutTests(UpgradeFromAnOlderReleaseTests):
         registry_path=root/REGISTRY
         registry_path.write_text(registry_path.read_text().replace('  - path: Dockerfile\n','  - path: Dockerfile\n    status: rejected\n    adoption: rejected-by-maintainer\n'))
         local_skill=root/'.agents/skills/local-tool/SKILL.md'
-        local_skill.parent.mkdir(parents=True);local_skill.write_text('# Local tool\n\nUnique project workflow.\n')
+        local_skill.parent.mkdir(parents=True);local_skill.write_text('---\nname: local-tool\ndescription: Local project workflow.\n---\n\n# Local tool\n\nUnique project workflow.\n')
         hook=root/'.agents/scripts/setup-project.sh';hook.write_text('#!/bin/sh\n# project-owned setup\n');hook.chmod(0o755)
         retired='  - path: .agents/memory/project/old-decision.md\n    scope: project\n    id: local-retired-decision\n    status: retired\n    source: historical-user-decision\n    updated: unknown\n'
         path=root/REGISTRY

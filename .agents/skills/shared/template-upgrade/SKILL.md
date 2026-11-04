@@ -203,6 +203,30 @@ report with its evidence.
 
 ## Schema 1 to 2 and layout migration
 
+The registry's optional `path_mappings` list records reviewed upstream-to-local
+paths, for example `[{"from":".agents/memory/shared/old.md",
+"to":".agents/memory/shared/local.md"}]` as a JSON flow value. Both ends are
+repository-relative within `.agents/`; matching trailing slashes denote a
+directory prefix. Exact file mappings win over directory mappings; among
+directories the longest prefix wins. Sources must exist in a crossed release,
+destinations must not overlap or collide with another upstream or local owner,
+and symlink parents and unsafe paths are rejected. A mapping declares an
+already-reviewed local placement: the command does not move project assets to
+create it. A known relocated upstream ID without a mapping stops the upgrade.
+
+For mapped upgrades the command first runs a complete no-write preflight and
+only applies if it succeeds. It retains the local ID and mapped path, updates
+registry destination paths and generated indexes, and rewrites unambiguous
+inline relative Markdown links and images in inherited Markdown. Ambiguous
+syntax or repeated matching text stops for manual review. Code, shell strings,
+absolute or external URLs and project-owned documents are not rewritten;
+review them and any references outside the development plane yourself. A removed
+shared file is deleted only if its mapped content still matches the source;
+otherwise the command reports a conflict. Repeating an applied target is a
+no-op. Check the plan, affected links and project tests: `--resolved` is not a
+mapping or permission to overwrite local assets. This opt-in design generalizes
+one adopter's need, not evidence that every relocation is safely automatic.
+
 Use the target release command **and its sibling content_registry.py**, not the
 old flat script. Inspect `--check` first. The target registry maps source paths
 before comparing blobs, preserving their merge base and local trailing sections.

@@ -65,6 +65,13 @@ class DevelopmentContractTests(unittest.TestCase):
         result=self.check('--write-indexes');self.assertEqual(result.returncode,0,result.stderr)
         self.assertEqual(self.check().returncode,0)
 
+    def test_conftest_requires_reasoned_exception(self):
+        file=self.root/'.agents/tests/project/conftest.py';file.write_text('# pytest hook\n')
+        self.data['entries'].append({'path':'.agents/tests/project/conftest.py','id':'local-conftest','kind':'code','scope':'project','owner':'project','summary':'Pytest hook.','status':'active','source':'fixture','updated':'unknown'})
+        self.rejected('test module needs test_ prefix')
+        self.data['policy']['naming_exceptions'].append({'pattern':'conftest.py','reason':'pytest discovery hook'})
+        result=self.check('--write-indexes');self.assertEqual(result.returncode,0,result.stderr)
+
     def test_misplaced_shell_and_recursive_shell_failure(self):
         file=self.root/'.agents/scripts/wrong.sh';file.write_text('if then\n')
         self.rejected('misplaced category content')
@@ -73,6 +80,56 @@ class DevelopmentContractTests(unittest.TestCase):
         result=subprocess.run(['bash','.agents/scripts/shared/check-shells.sh'],cwd=self.root,text=True,capture_output=True)
         self.assertNotEqual(result.returncode,0)
         self.assertIn('wrong.sh',result.stderr)
+
+    def test_ignored_layout_entries_do_not_hide_visible_or_tracked_files(self):
+        ignore=self.root/'.gitignore'
+        ignore.write_text(ignore.read_text()+'\n.agents/memory/__pycache__/\n.agents/cache.tmp\n')
+        cache=self.root/'.agents/memory/__pycache__';cache.mkdir()
+        item=cache/'artifact.pyc';item.write_bytes(b'cache')
+        (self.root/'.agents/cache.tmp').write_text('cache')
+        result=self.check();self.assertEqual(result.returncode,0,result.stderr)
+        subprocess.run(['git','add','-f',str(item)],cwd=self.root,check=True)
+        self.rejected('misplaced category content')
+        subprocess.run(['git','rm','--cached','-q',str(item)],cwd=self.root,check=True)
+        (self.root/'.agents/memory/illegal.txt').write_text('not ignored')
+        self.rejected('misplaced category content')
+
+    def test_skill_frontmatter_yaml_and_directory_identity(self):
+        file=self.root/'.agents/skills/shared/cli-first-operations/SKILL.md'
+        original=file.read_text()
+        file.write_text('---\nname: cli-first-operations\ndescription: |\n  Valid: a multiline description.\n---\n\n# Body\n')
+        result=self.check();self.assertEqual(result.returncode,0,result.stderr)
+        for front in ('name: cli-first-operations\ndescription: bad: value',
+                      'name: cli-first-operations', 'name: wrong\ndescription: Good',
+                      'name: cli-first-operations\ndescription: first\ndescription: second'):
+            file.write_text('---\n'+front+'\n---\n# Body\n')
+            self.rejected('invalid skill frontmatter: .agents/skills/shared/cli-first-operations/SKILL.md')
+        file.write_text('# No frontmatter\n');self.rejected('missing YAML frontmatter')
+        file.write_text(original)
+
+    def test_registered_third_party_skill_frontmatter(self):
+        folder=self.root/'.agents/skills/project/vendor-skill';folder.mkdir()
+        file=folder/'SKILL.md'
+        file.write_text('---\nname: vendor-skill\ndescription: "A quoted: description"\n---\n\n# Vendor skill\n')
+        self.data['entries'].append({'path':'.agents/skills/project/vendor-skill/','id':'vendor-skill','kind':'skill','scope':'project','owner':'project','summary':'Vendored skill.','status':'active','source':'third-party fixture','updated':'unknown'})
+        result=self.check('--write-indexes');self.assertEqual(result.returncode,0,result.stderr)
+        file.write_text('---\nname: vendor-skill\ndescription: Invalid: unquoted\n---\n')
+        self.rejected('invalid skill frontmatter: .agents/skills/project/vendor-skill/SKILL.md')
+
+    def test_relative_markdown_links_and_anchors(self):
+        file=self.root/'.agents/skills/shared/cli-first-operations/SKILL.md'
+        original=file.read_text()
+        file.write_text(original+'\n[good](#cli-first-operations)\n`[historical](missing.md)`\n```md\n[x](old.md)\n```\n')
+        result=self.check();self.assertEqual(result.returncode,0,result.stderr)
+        file.write_text(original+'\n[bad](not-here.md)\n')
+        self.rejected('broken Markdown link: .agents/skills/shared/cli-first-operations/SKILL.md')
+        file.write_text(original+'\n[bad](#not-a-heading)\n')
+        self.rejected('broken Markdown anchor: .agents/skills/shared/cli-first-operations/SKILL.md')
+        target=file.parent/'destination.md';target.write_text('# Destination\n')
+        file.write_text(original+'\n[moved](destination.md#destination)\n')
+        result=self.check();self.assertEqual(result.returncode,0,result.stderr)
+        target.rename(file.parent/'new-location.md')
+        self.rejected('broken Markdown link: .agents/skills/shared/cli-first-operations/SKILL.md')
 
     def test_conflicting_ownership_dangling_entries_and_naming_exceptions(self):
         self.data['entries'].append(copy.deepcopy(self.data['entries'][0]))

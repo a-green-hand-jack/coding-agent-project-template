@@ -162,3 +162,8 @@ packages with stable IDs and explicit unknown history. Use the naming, metadata
 and many-to-many migration contract in `.agents/AGENTS.md`; preserve adoption or
 rejection decisions in the same registry. Regenerate group indexes after excluding
 template-only packages, then run check-development and recursive check-shells.
+The development checker needs Python 3, PyYAML 6 and markdown-it-py 3 or 4;
+install them in the project's chosen virtual or system development environment
+before invoking it; isolated Python does not load user site-packages.
+Its skill and relative-link checks are static, not evidence of agent loading or
+external network availability.
