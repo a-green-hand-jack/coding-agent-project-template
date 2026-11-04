@@ -1,5 +1,33 @@
 # Release notes
 
+## v0.1.30 — 2026-11-04
+
+**把开发背景留在 agent 能持续查找的位置。**
+
+这个版本调整了代码注释的默认约定：coding agent 编写或修改代码时，默认不添加解释性注释，包括技术选型、设计理由和实现说明。需要长期保留的信息按用途进入项目知识，而不是散落在代码中。
+
+| 信息 | 记录位置 |
+| --- | --- |
+| 长期决策及其理由 | 项目 memory |
+| 有来源、需要更新的事实 | 项目 knowledge |
+| 可重复的操作流程 | 项目 skill |
+| 当前任务状态和验收证据 | 当前 checkout 的 `.project/` |
+
+语言或工具要求的指令（如 shebang、编码声明和类型检查指令）以及许可证要求保留的内容仍然保留；这次变更不要求批量删除已有注释。代码本身继续承担清晰表达行为的职责。
+
+### Upgrading a project from v0.1.29
+
+1. 运行 `bash .agents/scripts/shared/upgrade-template.sh --check v0.1.30`，审阅根 `AGENTS.md` 与项目自身规则的差异。
+2. 在不覆盖项目已有适配的前提下采用适用约定，运行开发面检查和项目自己的验收。已有注释无需因为本版本批量删除。
+
+### 验证与范围
+
+这是开发指导的变更，不改变产品运行行为。发布候选的 129 项模板回归通过，registry 和脚本检查通过。下游风险检查核对了 14 个可访问的固定提交及其开放反馈；另一个历史记录无法访问。历史记录、外部仓库的未推送工作和实际 agent 遵循情况不由静态文档检查证明。
+
+### 参考
+
+- [上一版 v0.1.29](https://github.com/a-green-hand-jack/coding-agent-project-template/releases/tag/v0.1.29)；[规则变更](https://github.com/a-green-hand-jack/coding-agent-project-template/commit/f8e9957)；[版本比较](https://github.com/a-green-hand-jack/coding-agent-project-template/compare/v0.1.29...v0.1.30)。
+
 ## v0.1.29 — 2026-11-04
 
 **让工作流程有一个清晰的答案，也让检查和历史各归其位。**
