@@ -1,5 +1,42 @@
 # Release notes
 
+## v0.1.28 — 2026-11-04
+
+**让模板升级更安全，也让开发检查更可信。**
+
+这个版本整理了下游项目在升级、测试和交接中遇到的问题。维护者现在可以在 registry 中声明经审阅的模板路径映射，让升级保留项目自己的位置；检查器也能区分被 Git 忽略的缓存、无效 skill 和失效的相对链接。
+
+| 场景 | 之前 | 现在 |
+| --- | --- | --- |
+| 项目把模板内容放到自己的路径 | 旧路径可能被重新生成，或只能人工处理 | 可声明文件或目录映射；预检碰撞和冲突，保留身份并更新可识别的相对链接 |
+| Git 忽略的缓存留在开发目录 | 布局检查可能误报 | 忽略缓存；已跟踪和未忽略的非法内容仍报错 |
+| skill 无法解析或文档链接失效 | 文件存在不代表 agent 可以发现它 | 正式检查解析 skill frontmatter，并检查开发文档相对链接和标题锚点 |
+| fake 测试与跨会话验收 | 遗漏的真实出口或清单编码差异容易被误判 | 指导记录意外出口、在 teardown 复核，并给出可重现的清单格式 |
+
+```text
+声明已审阅的路径映射
+        ↓
+只读预检：身份、路径、碰撞与内容冲突
+        ↓
+更新映射后的文件与 registry → 重建索引 → 检查引用
+```
+
+映射不会替项目搬迁资产；复杂或有歧义的 Markdown 链接需要人工处理，代码和项目自有文档中的引用也需要项目自行核对。fake 是筛选，不是安全沙箱；清单摘要也不是写入锁。静态 skill 检查不证明真实 agent 成功加载，外部链接网络可达性未在此检查。
+
+### Upgrading a project from v0.1.27
+
+从 v0.1.27 升级时，先在目标项目的开发环境安装 `PyYAML>=6.0,<7` 与 `markdown-it-py>=3,<5`；隔离模式不会加载 user site-packages。运行 `bash .agents/scripts/shared/upgrade-template.sh --check v0.1.28`，审阅冲突和可选映射后再应用，保留项目自己的适配、产品与发布记录；运行开发面检查和项目自己的验收。
+
+### 验证与范围
+
+源码提交 `c90d41b` 的完整回归运行 129 项，全部通过；最终修正提交 `1b1f224` 的旧版升级回归 18 项全部通过。验收包括真实 Git 夹具中旧版升级、文件与目录映射优先级、冲突不写入、删除和重复升级，以及开发检查、fake 和清单的反例。测试不代表真实 provider 或下游产品运行。下游检查使用固定提交；不可访问的历史范围仍未知。
+
+### 参考
+
+- [#139 缓存检查](https://github.com/a-green-hand-jack/coding-agent-project-template/issues/139) · [#140 自定义路径](https://github.com/a-green-hand-jack/coding-agent-project-template/issues/140) · [#141 skill frontmatter](https://github.com/a-green-hand-jack/coding-agent-project-template/issues/141) · [#142 文档链接](https://github.com/a-green-hand-jack/coding-agent-project-template/issues/142)
+- [#143 agent 研发](https://github.com/a-green-hand-jack/coding-agent-project-template/issues/143) · [#144 fake 边界](https://github.com/a-green-hand-jack/coding-agent-project-template/issues/144) · [#145 验收清单](https://github.com/a-green-hand-jack/coding-agent-project-template/issues/145) · [v0.1.27](https://github.com/a-green-hand-jack/coding-agent-project-template/releases/tag/v0.1.27)
+- [检查与验收指导代码](https://github.com/a-green-hand-jack/coding-agent-project-template/commit/dd909c1c81fb2e690ea7c1c3edb8f4bc9329c3a5) · [路径映射代码](https://github.com/a-green-hand-jack/coding-agent-project-template/commit/c90d41b64989e78513214eb11714a72d2e82a66e) · [索引冲突修正](https://github.com/a-green-hand-jack/coding-agent-project-template/commit/1b1f2240e4bae1eb2672df395d0e282425ecd8db) · [自 v0.1.27 的变更](https://github.com/a-green-hand-jack/coding-agent-project-template/compare/v0.1.27...v0.1.28)
+
 ## v0.1.27 — 2026-11-04
 
 **按任务选择工作方式，把派遣决定交还维护者。**
