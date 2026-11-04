@@ -39,6 +39,7 @@
 set -euo pipefail
 exec python3 -I -B - "$(dirname "${BASH_SOURCE[0]}")" "$@" <<'PY'
 import os
+import posixpath
 import hashlib
 import json
 import re
@@ -47,6 +48,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from urllib.parse import quote, unquote, urlsplit, urlunsplit
 
 sys.path.insert(0, sys.argv.pop(1))
 import content_registry as catalog
@@ -390,14 +392,50 @@ class Upgrade:
         self.catalog_blocked = False
         self.proposals = clone.parent / "proposals"
         self.report = Report()
+        self.path_mappings = []
+
+    def physical(self, path: str) -> str:
+        matches = [(source, dest) for source, dest in self.path_mappings
+                   if path == source or (source.endswith('/') and path.startswith(source))]
+        if not matches:
+            return path
+        source, dest = max(matches, key=lambda item: (not item[0].endswith('/'), len(item[0])))
+        return dest + path[len(source):]
 
     def blob(self, sha: str) -> bytes:
         return git("cat-file", "blob", sha, cwd=self.clone, raw=True)
 
+    def mapped_markdown(self, path: str, data: bytes) -> bytes:
+        if not self.path_mappings or not path.endswith('.md'):
+            return data
+        from markdown_it import MarkdownIt
+        text = data.decode('utf-8')
+        replacements = {}
+        for token in MarkdownIt('commonmark').parse(text):
+            for child in token.children or []:
+                if child.type not in ('link_open', 'image'):
+                    continue
+                href = child.attrGet('href' if child.type == 'link_open' else 'src') or ''
+                parsed = urlsplit(href)
+                if parsed.scheme or parsed.netloc or parsed.path.startswith('/') or not parsed.path:
+                    continue
+                linked = posixpath.normpath(posixpath.join(posixpath.dirname(path), unquote(parsed.path)))
+                mapped = self.physical(linked)
+                if posixpath.normpath(posixpath.join(posixpath.dirname(self.physical(path)), unquote(parsed.path))) == mapped:
+                    continue
+                relative = posixpath.relpath(mapped, posixpath.dirname(self.physical(path)))
+                replacements[href] = urlunsplit(('', '', quote(relative, safe='/._-~'), parsed.query, parsed.fragment))
+        for old, new in replacements.items():
+            old_syntax = '](' + old
+            if text.count(old_syntax) != 1:
+                raise Failure(f'mapped Markdown reference needs manual reconciliation: {path}: {old}')
+            text = text.replace(old_syntax, '](' + new, 1)
+        return text.encode('utf-8')
+
     def local(self, path: str):
-        file = self.root / path
+        file = self.root / self.physical(path)
         if not file.exists() and not file.is_symlink() and path in self.aliases:
-            file = self.root / self.aliases[path]
+            file = self.root / self.physical(self.aliases[path])
         if file.is_symlink():
             return "120000", os.readlink(file).encode()
         if file.is_file():
@@ -411,7 +449,7 @@ class Upgrade:
     def write(self, path: str, mode: str, data: bytes) -> None:
         if self.check:
             return
-        file = self.root / path
+        file = self.root / self.physical(path)
         file.parent.mkdir(parents=True, exist_ok=True)
         if file.is_symlink() or file.exists():
             file.unlink()
@@ -421,13 +459,13 @@ class Upgrade:
             file.write_bytes(data)
             file.chmod(0o755 if mode == "100755" else 0o644)
         old = self.aliases.get(path)
-        if old and old != path and ((self.root/old).exists() or (self.root/old).is_symlink()):
+        if old and self.physical(old) != self.physical(path) and ((self.root/self.physical(old)).exists() or (self.root/self.physical(old)).is_symlink()):
             self.remove(old)
 
     def remove(self, path: str) -> None:
         if self.check:
             return
-        file = self.root / path
+        file = self.root / self.physical(path)
         file.unlink()
         for parent in file.parents:
             if parent == self.root or any(parent.iterdir()):
@@ -465,7 +503,7 @@ class Upgrade:
     def path(self, old_mode: str, new_mode: str, old_sha: str, new_sha: str, status: str, path: str,
              entry: dict) -> None:
         report, state, scope = self.report, self.local(path), scope_in(entry)
-        local_entry = next((e for e in self.local_entries if catalog.rank(path,e["path"])), {})
+        local_entry = next((e for e in self.local_entries if catalog.rank(self.physical(path),e["path"])), {})
         if local_entry.get("status") in ("retired", "superseded", "rejected"):
             return report.skipped(f"{path}: local lifecycle {local_entry['status']} retained")
         if scope == "template":
@@ -485,7 +523,7 @@ class Upgrade:
         if "160000" in (old_mode, new_mode) or (state and state[0] == "other"):
             return report.manual(f"{path}: not a file here or in the template; compare it by hand")
         if status == "A":
-            data = self.blob(new_sha)
+            data = self.mapped_markdown(path, self.blob(new_sha))
             if state is None:
                 self.write(path, new_mode, data)
                 return report.applied(f"{path}: added")
@@ -496,11 +534,11 @@ class Upgrade:
             data = self.blob(old_sha)
             if state is None:
                 return report.applied(f"{path}: already removed")
-            if self.same(state, old_mode, data):
+            if self.same(state, old_mode, data) or self.same(state, old_mode, self.mapped_markdown(path, data)):
                 self.remove(path)
                 return report.applied(f"{path}: removed")
             return self.conflict(path, f"{path}: removed in {self.target}, changed here")
-        before, after = self.blob(old_sha), self.blob(new_sha)
+        before, after = self.blob(old_sha), self.mapped_markdown(path, self.blob(new_sha))
         if state is None:
             return self.conflict(path, f"{path}: changed in {self.target}, missing here")
         if self.same(state, new_mode, after):
@@ -514,6 +552,10 @@ class Upgrade:
             here, base, theirs = (data.decode("utf-8") for data in (state[1], before, after))
         except UnicodeDecodeError:
             return self.conflict(path, f"{path}: changed here (not text)")
+        if self.path_mappings and path.endswith('/AGENTS.md'):
+            expression = re.compile(re.escape(catalog.BEGIN) + r'.*?' + re.escape(catalog.END), re.S)
+            placeholder = catalog.BEGIN + '\n' + catalog.END
+            here, base, theirs = (expression.sub(placeholder, text) for text in (here, base, theirs))
         if "120000" in (state[0], new_mode):
             return self.conflict(path, f"{path}: changed here (a link)")
         mine, source, target = parts(here), parts(base), parts(theirs)
@@ -573,7 +615,9 @@ def layout_changes(upgrade):
     changes = []
     for path in sorted(remapped.keys() | after.keys()):
         old, new = remapped.get(path), after.get(path)
-        if old == new and path not in upgrade.aliases:
+        rewritten = bool(new and path.endswith('.md') and upgrade.path_mappings and
+                         upgrade.mapped_markdown(path, upgrade.blob(new[1])) != upgrade.blob(new[1]))
+        if old == new and path not in upgrade.aliases and not rewritten:
             continue
         changes.append((old[0] if old else "000000", new[0] if new else "000000",
                         old[1] if old else "0"*40, new[1] if new else "0"*40,
@@ -744,9 +788,14 @@ def prepare_layout(upgrade, source_text, target_text, local_text):
     source = legacy_data(source_text)
     report = upgrade.report
     result = json.loads(json.dumps(target))
+    if upgrade.path_mappings:
+        result['path_mappings'] = local['path_mappings']
     pending_writes = {}
     upstream_ids = {}
     result['omitted'] = list(local.get('omitted',[]))
+    for omitted in target.get('omitted', []):
+        if omitted not in result['omitted']:
+            result['omitted'].append(omitted)
     for e in target['entries']:
         if e['scope']=='template' and not any(x['id']==e['id'] for x in result['omitted']):
             result['omitted'].append({'id':e['id'],'path':e['path'],'reason':'Upstream template-only content; not adopted.'})
@@ -817,7 +866,7 @@ def prepare_layout(upgrade, source_text, target_text, local_text):
             continue
         path = e["path"]
         old_path = upgrade.aliases.get(path, path)
-        mine = original.get(old_path) or original.get(path)
+        mine = original.get(upgrade.physical(old_path)) or original.get(upgrade.physical(path))
         if mine: used.add(mine["path"])
         new = dict(e)
         if mine:
@@ -830,13 +879,24 @@ def prepare_layout(upgrade, source_text, target_text, local_text):
                     new[key] = val
             if local["schema_version"] == 1:
                 new.pop("legacy_record", None)
-        entry = complete_entry(new, path)
+        entry = complete_entry(new, upgrade.physical(path))
         entries.append(entry)
         if e["id"] != entry["id"]:
             upstream_ids[e["id"]] = entry["id"]
     target_paths = {e["path"] for e in entries}
+    source_by_id = {e.get('id'): e for e in source['entries']}
+    target_ids = {e.get('id') for e in target['entries']}
+    removed_local = []
     for e in local["entries"]:
         if e["path"] in used: continue
+        identity = e.get('upstream_id', e.get('id'))
+        # A mapped upstream deletion is handled by the file conflict check;
+        # do not leave an active registration for an unchanged deleted file.
+        if (upgrade.path_mappings and identity in source_by_id and identity not in target_ids
+                and source_by_id[identity].get('scope') in SHARED
+                and upgrade.physical(source_by_id[identity]['path']) == e['path']):
+            removed_local.append(e['path'])
+            continue
         path = mapped(e["path"])
         if e["scope"] == "template": continue
         # Schema1 inherited defaults are historical classification, not units.
@@ -857,6 +917,8 @@ def prepare_layout(upgrade, source_text, target_text, local_text):
     # upstream project content that was never reusable template payload.
     for path in local_files:
         new_path = inverse.get(path,path)
+        if any(catalog.rank(path, removed) for removed in removed_local):
+            continue
         if not new_path.startswith(".agents/") or new_path == REGISTRY:
             continue
         if any(catalog.rank(new_path,e["path"]) for e in entries):
@@ -881,6 +943,7 @@ def prepare_layout(upgrade, source_text, target_text, local_text):
             if item not in result["migrations"]:result["migrations"].append(item)
     for migration in result.get('migrations', []):
         for destination in migration.get('to', []):
+            destination['path'] = upgrade.physical(destination['path'])
             old_id = destination['id']
             if old_id in upstream_ids:
                 destination.setdefault('upstream_id', old_id)
@@ -982,6 +1045,66 @@ def main(arguments: list[str]) -> int:
         local_data = legacy_data(registry_text)
         source_data = legacy_data(source_registry)
         target_data = catalog.loads(target_registry)
+        mappings = local_data.get('path_mappings', [])
+        if not isinstance(mappings, list):
+            raise Failure('path_mappings must be a list of from/to records')
+        seen_sources, seen_destinations = set(), set()
+        for mapping in mappings:
+            if not isinstance(mapping, dict) or set(mapping) != {'from', 'to'}:
+                raise Failure('each path mapping must contain only from and to')
+            source_path, destination = mapping['from'], mapping['to']
+            if not catalog.safe_path(source_path) or not catalog.safe_path(destination) or not source_path.startswith('.agents/') or not destination.startswith('.agents/') or source_path.endswith('/') != destination.endswith('/'):
+                raise Failure('unsafe path mapping; use matching file or directory paths within .agents/')
+            if source_path == REGISTRY or destination == REGISTRY:
+                raise Failure('the registry cannot be relocated')
+            if source_path in seen_sources or destination in seen_destinations or source_path == destination:
+                raise Failure('ambiguous or duplicate path mapping')
+            if source_path.startswith(destination) or destination.startswith(source_path):
+                raise Failure('overlapping source and destination mapping')
+            for parent in (root/destination.rstrip('/')).parents:
+                if parent == root: break
+                if parent.is_symlink(): raise Failure('mapping destination contains a symbolic-link parent')
+            seen_sources.add(source_path); seen_destinations.add(destination)
+            upgrade.path_mappings.append((source_path, destination))
+        for i, (source_path, destination) in enumerate(upgrade.path_mappings):
+            for other_source, other_destination in upgrade.path_mappings[i + 1:]:
+                if destination.startswith(other_destination) or other_destination.startswith(destination):
+                    raise Failure('overlapping mapping destinations are ambiguous')
+                if source_path.startswith(other_destination) or other_source.startswith(destination):
+                    raise Failure('mapping destination overlaps another source')
+        if mappings:
+            upstream_files = set(tree(upgrade, source)) | set(tree(upgrade, target))
+            for source_path, _ in upgrade.path_mappings:
+                if not any(p == source_path or source_path.endswith('/') and p.startswith(source_path) for p in upstream_files):
+                    raise Failure(f'mapping source not present in either release: {source_path}')
+            local_ids = {e.get('upstream_id', e.get('id')): e for e in local_data.get('entries', [])}
+            upstream_entries = target_data.get('entries', []) + source_data.get('entries', [])
+            mapped_destinations = {}
+            for upstream_path in upstream_files:
+                local_path = upgrade.physical(upstream_path)
+                if local_path == upstream_path:
+                    continue
+                if local_path in mapped_destinations and mapped_destinations[local_path] != upstream_path:
+                    raise Failure(f'mapping collision at {local_path}')
+                if local_path in upstream_files and upgrade.physical(local_path) == local_path:
+                    raise Failure(f'mapping collides with an unmapped upstream path: {local_path}')
+                mapped_destinations[local_path] = upstream_path
+                original_path, mapped_path = root/upstream_path, root/local_path
+                if original_path.exists() or original_path.is_symlink():
+                    raise Failure(f'both mapped and original locations require review: {upstream_path}')
+                if mapped_path.exists() or mapped_path.is_symlink():
+                    owners = [e for e in upstream_entries if catalog.rank(upstream_path, e.get('path', ''))]
+                    if not any(e.get('id') in local_ids and catalog.rank(local_path, local_ids[e['id']]['path']) for e in owners):
+                        raise Failure(f'mapped destination is not owned by the upstream identity: {local_path}')
+            try:
+                from markdown_it import MarkdownIt
+            except ImportError:
+                raise Failure('mapped upgrades require markdown-it-py for reference preflight')
+        if mappings and not check:
+            # Preflight every mapped operation before touching the checkout.
+            status = main(['--check', *sum((['--resolved', p] for p in sorted(resolved)), []), target])
+            if status:
+                raise Failure('mapped upgrade preflight failed; no source files or registry were changed')
         if local_data.get('schema_version') == 2 and source_data.get('schema_version') == 2:
             before = {e['id']: e for e in source_data['entries']}
             after = {e['id']: e for e in target_data['entries']}
@@ -990,7 +1113,8 @@ def main(arguments: list[str]) -> int:
                 if identity not in before or identity not in after:
                     continue
                 local_path = entry['path']
-                if local_path not in (before[identity]['path'], after[identity]['path']):
+                expected = (upgrade.physical(before[identity]['path']), upgrade.physical(after[identity]['path']))
+                if local_path not in expected:
                     raise Failure(f'{identity}: locally relocated path {local_path}; automatic mapping is unsupported; reconcile the upgrade manually before advancing the version')
         local_v2 = prepare_layout(upgrade, source_registry, target_registry, registry_text)
         upgrade.local_entries = local_v2["entries"]

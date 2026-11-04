@@ -203,18 +203,29 @@ report with its evidence.
 
 ## Schema 1 to 2 and layout migration
 
-The registry's stable IDs and upstream migration ledger describe identities and
-upstream moves; they do not define an arbitrary adopter directory mapping or
-rewrite every reference. Automatic support for local relocations is deferred:
-one adopter is insufficient evidence for safe general semantics, particularly
-for overlapping directories, collisions, deletion and references in prose.
-When a known upstream ID is registered at a different local path from both its
-source and target locations, the upgrade stops before changing tracked files or
-advancing the version. Review a per-path map, preserve local bytes and ownership,
-reconcile content and references manually, and verify registry identities,
-links and idempotence before advancing. Do not treat `--resolved` as a mapping.
-This conservative detection only covers identities retained in both upstream
-registries; unknown or newly added identities still require review of the plan.
+The registry's optional `path_mappings` list records reviewed upstream-to-local
+paths, for example `[{"from":".agents/memory/shared/old.md",
+"to":".agents/memory/shared/local.md"}]` as a JSON flow value. Both ends are
+repository-relative within `.agents/`; matching trailing slashes denote a
+directory prefix. Exact file mappings win over directory mappings; among
+directories the longest prefix wins. Sources must exist in a crossed release,
+destinations must not overlap or collide with another upstream or local owner,
+and symlink parents and unsafe paths are rejected. A mapping declares an
+already-reviewed local placement: the command does not move project assets to
+create it. A known relocated upstream ID without a mapping stops the upgrade.
+
+For mapped upgrades the command first runs a complete no-write preflight and
+only applies if it succeeds. It retains the local ID and mapped path, updates
+registry destination paths and generated indexes, and rewrites unambiguous
+inline relative Markdown links and images in inherited Markdown. Ambiguous
+syntax or repeated matching text stops for manual review. Code, shell strings,
+absolute or external URLs and project-owned documents are not rewritten;
+review them and any references outside the development plane yourself. A removed
+shared file is deleted only if its mapped content still matches the source;
+otherwise the command reports a conflict. Repeating an applied target is a
+no-op. Check the plan, affected links and project tests: `--resolved` is not a
+mapping or permission to overwrite local assets. This opt-in design generalizes
+one adopter's need, not evidence that every relocation is safely automatic.
 
 Use the target release command **and its sibling content_registry.py**, not the
 old flat script. Inspect `--check` first. The target registry maps source paths
