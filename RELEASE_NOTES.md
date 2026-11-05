@@ -1,5 +1,34 @@
 # Release notes
 
+## v0.1.31 — 2026-11-05
+
+**让 coding agent 在修改代码时有一套按需使用的工程方法。**
+
+本版新增共享 skill `engineering-change`。它从 [ub-mode](https://github.com/unclebob/ub-mode) 中吸收适合本模板的原则，独立整理为简短流程：面对代码变更、缺陷或重构时，agent 可以按需加载，而不必把整份外部规则放进每次会话。
+
+| 场景 | 新的指导 |
+| --- | --- |
+| 修复缺陷 | 尽可能复现并确定原因，修复后验证原场景；无法复现时说明证据边界。 |
+| 验证变更 | 从使用者相关的接口检查可观察行为，避免只重复实现细节的测试。 |
+| 重构与设计 | 先确定要保留的行为；根据实际风险处理输入、状态所有权、重试与恢复。 |
+
+流程保留项目选择工具和验证方式的空间，不强制固定复杂度分数、全面变异测试、自动提交或逐动作日志。它不改变产品运行行为。
+
+模板自身的 FIFO 迁移测试也隔离了容器查询，避免宿主机容器数量影响这一测试；实际回收时的容器检查保持不变。
+
+### Upgrading a project from v0.1.30
+
+1. 运行 `bash .agents/scripts/shared/upgrade-template.sh --check v0.1.31`，检查新 skill 与项目现有开发指导是否冲突。
+2. 保留项目自己的规则和适配，完成升级后运行开发面检查及适用于项目的验证。
+
+### 验证与范围
+
+本版是开发指导更新。发布前检查包括 skill 格式、开发内容 registry 和从旧版本升级的回归；这些检查不证明下游 agent 在真实任务中的行为。下游风险检查核对 14 个可访问固定提交和开放反馈，未发现新 skill 路径冲突；另一个历史仓库无法访问，其中一个变更比较达到 GitHub 文件数上限，未覆盖的差异仍未知。这不是完整经验采集，也未运行下游项目。
+
+### 参考
+
+- [上一版 v0.1.30](https://github.com/a-green-hand-jack/coding-agent-project-template/releases/tag/v0.1.30)；[skill 变更](https://github.com/a-green-hand-jack/coding-agent-project-template/commit/b340471)；[版本比较](https://github.com/a-green-hand-jack/coding-agent-project-template/compare/v0.1.30...v0.1.31)。
+
 ## v0.1.30 — 2026-11-04
 
 **把开发背景留在 agent 能持续查找的位置。**

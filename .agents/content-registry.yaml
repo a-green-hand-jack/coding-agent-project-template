@@ -2,7 +2,7 @@ schema_version: 2
 purpose: "Record which development-plane content is reusable across repositories and which content belongs to one concrete project."
 template:
   repository: https://github.com/a-green-hand-jack/coding-agent-project-template
-  version: v0.1.30
+  version: v0.1.31
 writing:
   language: "中文"
   issue_sections: "最终目标, 实现哲学, 现状和问题, 怎么办, 验收, 不做"
@@ -4352,6 +4352,17 @@ entries:
     source: {"commit": "d07f49d2f6e02ad531d920c8c8fb994f44e88971", "path": ".agents/skills/shared/development-writing/SKILL.md"}
     updated: unknown
     adaptation: "Keep local adaptations in the trailing In this repository section for skills/memory; review other files per template-upgrade."
+    supersedes: []
+    superseded_by: []
+  - path: .agents/skills/shared/engineering-change/
+    id: content-engineering-change
+    kind: skill
+    scope: shared
+    owner: template-maintainers
+    summary: "Implement, debug and refactor code with behavior-focused evidence."
+    status: active
+    source: {"url": "https://github.com/unclebob/ub-mode", "note": "Independently written selective adaptation"}
+    updated: 2026-11-05
     supersedes: []
     superseded_by: []
   - path: .agents/skills/shared/issue-workflow/
