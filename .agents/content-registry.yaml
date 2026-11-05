@@ -4354,6 +4354,17 @@ entries:
     adaptation: "Keep local adaptations in the trailing In this repository section for skills/memory; review other files per template-upgrade."
     supersedes: []
     superseded_by: []
+  - path: .agents/skills/shared/engineering-change/
+    id: content-engineering-change
+    kind: skill
+    scope: shared
+    owner: template-maintainers
+    summary: "Implement, debug and refactor code with behavior-focused evidence."
+    status: active
+    source: {"url": "https://github.com/unclebob/ub-mode", "note": "Independently written selective adaptation"}
+    updated: 2026-11-05
+    supersedes: []
+    superseded_by: []
   - path: .agents/skills/shared/issue-workflow/
     id: content-8759e65e941a5603
     kind: skill

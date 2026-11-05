@@ -29,6 +29,7 @@ concrete project release examples outside shared packages.
 - [cli-first-operations](cli-first-operations/SKILL.md) — Use the project's public CLI instead of ad-hoc wrappers.
 - [credential-setup](credential-setup/SKILL.md) — Set up declared project credentials without copying logins or exposing values.
 - [development-writing](development-writing/SKILL.md) — Write Issues, PRs, comments and commits around reader decisions and traceable evidence.
+- [engineering-change](engineering-change/SKILL.md) — Implement, debug and refactor code with behavior-focused evidence.
 - [issue-workflow](issue-workflow/SKILL.md) — Scope, dispatch, protect acceptance inputs, integrate and close an Issue with explicit ownership.
 - [long-running-supervision](long-running-supervision/SKILL.md) — Observe and recover long runs through the product public CLI.
 - [project-memory-governance](project-memory-governance/SKILL.md) — Classify, register and migrate development content without losing provenance or authority.
