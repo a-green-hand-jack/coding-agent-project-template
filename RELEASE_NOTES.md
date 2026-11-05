@@ -14,6 +14,8 @@
 
 流程保留项目选择工具和验证方式的空间，不强制固定复杂度分数、全面变异测试、自动提交或逐动作日志。它不改变产品运行行为。
 
+模板自身的 FIFO 迁移测试也隔离了容器查询，避免宿主机容器数量影响这一测试；实际回收时的容器检查保持不变。
+
 ### Upgrading a project from v0.1.30
 
 1. 运行 `bash .agents/scripts/shared/upgrade-template.sh --check v0.1.31`，检查新 skill 与项目现有开发指导是否冲突。

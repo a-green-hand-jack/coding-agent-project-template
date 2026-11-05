@@ -178,9 +178,16 @@ class MigrateRules(unittest.TestCase):
         (self.worktree / ".agents/scripts/shared").mkdir()
         for script in (MIGRATE, TEARDOWN, MIGRATE.with_name("inspect-state.sh")):
             shutil.copy2(script, self.worktree / ".agents/scripts/shared" / script.name)
+        bin_dir = self.temp / "bin"
+        bin_dir.mkdir()
+        for runtime in ("docker", "podman"):
+            executable = bin_dir / runtime
+            executable.write_text("#!/bin/sh\n[ \"$1\" = ps ] && [ \"$2\" = -aq ]\n")
+            executable.chmod(0o755)
         result = subprocess.run(
             ["bash", ".agents/scripts/shared/teardown-worktree.sh", "--migrate-to", str(self.destination)],
             cwd=self.worktree, text=True, capture_output=True, timeout=20,
+            env={**os.environ, "PATH": f"{bin_dir}:{os.environ['PATH']}"},
         )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("ready for managed worktree removal; no source directory was deleted", result.stdout)
