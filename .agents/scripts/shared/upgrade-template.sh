@@ -653,7 +653,7 @@ def legacy_data(text):
 def complete_entry(entry, path):
     result = dict(entry)
     result["path"] = path
-    result.setdefault("id", "content-" + hashlib.sha256(entry["path"].encode()).hexdigest()[:16])
+    result.setdefault("id", "content-" + hashlib.sha256(path.encode()).hexdigest()[:16])
     result.setdefault("kind", "skill" if path.endswith("/") and "/skills/" in path else
                       "memory" if "/memory/" in path and path.endswith(".md") else
                       "knowledge" if "/knowledge/" in path and path.endswith(".md") else "code" if path.endswith((".sh", ".py")) else "document")
@@ -947,6 +947,44 @@ def prepare_layout(upgrade, source_text, target_text, local_text):
             e["id"] = "local-" + e["id"]
         entries.append(e)
         report.skipped(f"{new_path}: project-owned (preserved legacy content)")
+    if local['schema_version'] == 2:
+        legacy = local.get('local_legacy_inventory', {}).get('entries', [])
+        by_id = {}
+        for entry in entries:
+            by_id.setdefault(entry['id'], []).append(entry)
+        for identity, group in by_id.items():
+            projects = [e for e in group if e.get('scope') == 'project']
+            shared = [e for e in group if e.get('scope') in SHARED]
+            omitted_template = [e for e in target['entries'] if e.get('id') == identity and e.get('scope') == 'template']
+            if len(projects) != 1 or not ((len(group) == 2 and len(shared) == 1) or
+                                          (len(group) == 1 and len(omitted_template) == 1 and
+                                           omitted_template[0]['path'] != projects[0]['path'])):
+                continue
+            project = projects[0]
+            matches = [e for e in legacy if e.get('scope') == 'project' and not e.get('id')
+                       and identity == 'content-' + hashlib.sha256(e['path'].encode()).hexdigest()[:16]
+                       and (e['path'] == project['path'] or
+                            '/'.join((*Path(e['path']).parts[:2], 'project', *Path(e['path']).parts[2:])) == project['path'])]
+            source = project.get('source')
+            if not matches and isinstance(source, dict) and source.get('path') == project['path'] and source.get('version') == local.get('local_legacy_inventory', {}).get('version'):
+                if identity == 'content-' + hashlib.sha256(project['path'].encode()).hexdigest()[:16]:
+                    owners = [e for e in legacy if catalog.rank(project['path'], e['path'])]
+                    owner = max(owners, key=lambda e: catalog.rank(project['path'], e['path'])) if owners else {}
+                    if owner.get('scope') == 'project' and not owner.get('id'):
+                        matches.append(source)
+            referenced = any(identity in e.get(key, []) for e in local['entries']
+                             for key in ('supersedes', 'superseded_by'))
+            replacement = 'local-' + identity
+            if len(matches) == 1 and not referenced and replacement not in by_id:
+                project['id'] = replacement
+                project['legacy_generated_id'] = identity
+                for migration in result.get('migrations', []):
+                    for destination in migration.get('to', []):
+                        if destination.get('id') == identity and destination.get('path') == project['path']:
+                            destination['id'] = replacement
+            elif len(group) == 1:
+                report.refused(f"{identity}: project identity collides with omitted upstream content; provenance or references need review")
+                upgrade.catalog_blocked = True
     # Resolve the whole graph before removing any frontmatter or moving local
     # files. A failed preflight preserves source bytes and the source registry.
     reconcile_lifecycle(upgrade, entries, original, target, upstream_ids, pending_writes)
@@ -979,7 +1017,8 @@ def prepare_layout(upgrade, source_text, target_text, local_text):
     else:
         for path, (mode, data) in pending_writes.items():
             upgrade.write(path, mode, data)
-    report.applied(f"{REGISTRY}: explicit schema {local['schema_version']} -> 2 and identity/path migration")
+    if not upgrade.catalog_blocked:
+        report.applied(f"{REGISTRY}: explicit schema {local['schema_version']} -> 2 and identity/path migration")
     return result
 
 
@@ -1056,6 +1095,10 @@ def main(arguments: list[str]) -> int:
     schema2 = re.search(r"^schema_version: 2$", target_registry, re.M) is not None
     local_v2 = None
     if schema2:
+        try:
+            from markdown_it import MarkdownIt
+        except ImportError:
+            raise Failure('schema 2 upgrades require markdown-it-py; install it before retrying')
         # Schema migrations describe upstream moves, not arbitrary adopter path
         # mappings. Do not silently recreate an upstream path or overwrite a
         # locally relocated identity when its mapping semantics are unknown.
