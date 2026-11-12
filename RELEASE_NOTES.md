@@ -1,5 +1,30 @@
 # Release notes
 
+## v0.1.32 — 2026-11-12
+
+**让旧项目跨越开发面目录和 registry 格式的升级边界。**
+
+从 v0.1.25 及更早版本升级时，项目可能同时跨越 registry schema 1 → 2 和开发目录分组。旧命令不了解新格式，可能写出无法解析的混合 registry；此前的迁移还可能让项目文件和新共享文件获得相同身份。本版改进目标版本升级命令，使项目可以在保留本地内容的同时迁移，并对不明确的身份冲突继续拒绝自动处理。
+
+| 情况 | 本版处理 |
+| --- | --- |
+| 缺少 Markdown 解析依赖 | 在输出升级计划或修改项目文件之前报错，说明需要安装 `markdown-it-py`。 |
+| 新迁移的项目文件 | 为没有既有身份的文件按其最终路径生成身份，避免与旧路径对应的上游身份冲突。 |
+| 旧迁移已生成碰撞身份 | 仅在保留的旧 registry 证明身份由旧路径自动生成且不存在引用歧义时修复；其他冲突仍须人工判断。 |
+
+### Upgrading a project from v0.1.31
+
+1. 使用目标版本完整的 `.agents/scripts/shared/` 命令目录执行 `upgrade-template.sh --check v0.1.32`；跨 schema 边界时不要使用项目自带的旧命令。安装 `markdown-it-py` 后再运行检查。
+2. 审阅计划并处理实际冲突，再执行升级与项目自己的检查。保留项目本地内容与已有身份；无法确认来源的身份碰撞不会自动解决。
+
+### 验证与范围
+
+验收覆盖真实旧 release 的单次升级与历史 v0.1.26 命令参与的两步升级，检查 registry、项目内容和重复执行；缺依赖与不明身份冲突分别验证拒绝及源文件不变。历史版本的命令无法被本次发布追溯修改，下游需要改用目标版本命令目录。发布前检查核对了 14 个可访问的下游固定提交和开放反馈；一个历史仓库无法访问，三个变更比较达到 GitHub 文件数上限，未覆盖部分仍未知。这不是完整经验采集，也没有运行下游项目。
+
+### 参考
+
+- [问题 #152](https://github.com/a-green-hand-jack/coding-agent-project-template/issues/152)；[上一版 v0.1.31](https://github.com/a-green-hand-jack/coding-agent-project-template/releases/tag/v0.1.31)；[版本比较](https://github.com/a-green-hand-jack/coding-agent-project-template/compare/v0.1.31...v0.1.32)。
+
 ## v0.1.31 — 2026-11-05
 
 **让 coding agent 在修改代码时有一套按需使用的工程方法。**

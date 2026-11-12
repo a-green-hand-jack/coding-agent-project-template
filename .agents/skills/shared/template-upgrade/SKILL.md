@@ -51,8 +51,13 @@ target's change counts as applied, and a file resolved by hand in another way
 is accepted with `--resolved <path>` (the registry too) once no conflict marker
 is left. Never edit the followed version by hand.
 
-A repository without the command yet runs the target release's copy, cloning
-the followed template's repository (the URL from step 1):
+When the local registry is schema 1 and the target uses schema 2, run the
+target release's complete command directory, including `content_registry.py`,
+even when the repository already has an older command. Old commands cannot
+recognize the newer registry format and can write an unreadable mixture. Install
+the target command's declared `markdown-it-py` dependency before planning. A
+repository without the command also runs the target copy, cloning the followed
+template's repository (the URL from step 1):
 
 ```bash
 clone=.project/state/template-upgrade/coding-agent-project-template.git

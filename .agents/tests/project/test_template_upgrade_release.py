@@ -4,6 +4,7 @@ equal a project made from the candidate, except the project's own files."""
 from __future__ import annotations
 
 import fnmatch
+import hashlib
 import os
 import re
 import shutil
@@ -332,6 +333,7 @@ class UpgradeFromAnOlderReleaseTests(unittest.TestCase):
                 original=(original[0],re.sub(rb'^(scope|status|supersedes|superseded_by|refresh_after):[^\n]*\n',b'',original[1],flags=re.M))
             self.assertEqual(actual, original, f"{path}: preserve project body and source evidence")
         actual=catalog.loads(after[REGISTRY][1].decode())
+        self.assertFalse(any('note' in entry for entry in actual['entries']))
         expected=catalog.loads(fresh[REGISTRY][1].decode())
         self.assertEqual(actual['template'],expected['template'])
         self.assertEqual(actual['schema_version'],2)
@@ -355,6 +357,105 @@ class UpgradeFromAnOlderReleaseTests(unittest.TestCase):
 
 class UpgradeLatestLayoutTests(UpgradeFromAnOlderReleaseTests):
     source_tag='v0.1.25'
+
+    def test_missing_markdown_dependency_refuses_before_plan_or_source_writes(self):
+        root = self.project(self.old, own=True)
+        before = files_of(root)
+        bin_dir = self.base / 'no-site-packages'
+        bin_dir.mkdir()
+        python = bin_dir / 'python3'
+        python.write_text('#!/bin/sh\nexec /usr/bin/python3 -S "$@"\n')
+        python.chmod(0o755)
+        env = {**os.environ, 'PATH': f'{bin_dir}:{os.environ["PATH"]}'}
+        for arguments in (['--check'], []):
+            result = subprocess.run(['bash', str(SCRIPT), *arguments, self.candidate], cwd=root,
+                                    capture_output=True, text=True, env=env)
+            self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+            self.assertIn('markdown-it-py', result.stderr)
+            self.assertNotIn('Applied:', result.stdout)
+            self.assertEqual(files_of(root), before)
+
+    def test_previously_generated_project_identity_does_not_collide_with_shared_addition(self):
+        old_path = '.agents/tests/test_agent_content.py'
+        shared_path = '.agents/tests/shared/test_agent_content.py'
+        project_path = '.agents/tests/project/test_agent_content.py'
+        identity = 'content-' + hashlib.sha256(old_path.encode()).hexdigest()[:16]
+        intermediate = self.base / 'intermediate'
+        intermediate.mkdir()
+        subprocess.run(['tar', '-x', '-C', str(intermediate)],
+                       input=git('archive', 'v0.1.26', cwd=REPOSITORY, raw=True), check=True)
+        intermediate_registry = intermediate / REGISTRY
+        intermediate_registry.write_text(re.sub(r'^(template:\n  repository: ).*$',
+                                                lambda m: m.group(1) + str(self.template),
+                                                intermediate_registry.read_text(), count=1, flags=re.M))
+        git('init', '-q', cwd=intermediate)
+        git('add', '-A', cwd=intermediate)
+        git(*IDENTITY, 'commit', '-qm', 'intermediate release', cwd=intermediate)
+        git('fetch', '-q', str(intermediate), 'HEAD:refs/tags/v0.1.26', cwd=self.template)
+        target_registry = self.template / REGISTRY
+        target = catalog.loads(target_registry.read_text())
+        target['entries'].append({'id': identity, 'path': shared_path, 'kind': 'code',
+                                  'scope': 'shared', 'owner': 'test', 'summary': 'Shared test.',
+                                  'status': 'active', 'source': 'unknown', 'updated': 'unknown',
+                                  'supersedes': [], 'superseded_by': []})
+        shared = self.template / shared_path
+        shared.parent.mkdir(parents=True, exist_ok=True)
+        shared.write_text('SHARED = True\n')
+        target_registry.write_text(catalog.dumps(target))
+        catalog.indexes(self.template, target, write=True)
+        git('add', '-A', cwd=self.template)
+        git(*IDENTITY, 'commit', '-qm', 'shared fixture', cwd=self.template)
+        git('tag', '-f', self.candidate, cwd=self.template)
+        root = self.project(self.old, own=True)
+        registry = root / REGISTRY
+        legacy_file = root / old_path
+        legacy_file.parent.mkdir(parents=True, exist_ok=True)
+        legacy_file.write_text('LOCAL = True\n')
+        registry.write_text(registry.read_text() + f'  - path: {old_path}\n    scope: project\n')
+        first = subprocess.run(['bash', str(intermediate / '.agents/scripts/shared/upgrade-template.sh'),
+                                'v0.1.26'], cwd=root, capture_output=True, text=True)
+        self.assertEqual(first.returncode, 0, first.stdout + first.stderr)
+        local = catalog.loads(registry.read_text())
+        local_file = root / project_path
+        self.assertEqual(local_file.read_text(), 'LOCAL = True\n')
+        self.assertEqual(next(e for e in local['entries'] if e['path'] == project_path)['id'], identity)
+        legacy_entry = next(e for e in local['local_legacy_inventory']['entries'] if e['path'] == old_path)
+        owner = next(e for e in local['local_legacy_inventory']['entries'] if e['path'] == '.agents/memory/project/')
+        owner['id'] = 'maintainer-explicit-id'
+        registry.write_text(catalog.dumps(local))
+        before = files_of(root)
+        uncertain = subprocess.run(['bash', str(SCRIPT), self.candidate], cwd=root, capture_output=True, text=True)
+        self.assertNotEqual(uncertain.returncode, 0)
+        self.assertIn('collides with omitted upstream content', uncertain.stdout + uncertain.stderr)
+        self.assertEqual(before, files_of(root))
+        del owner['id']
+        legacy_entry['id'] = identity
+        registry.write_text(catalog.dumps(local))
+        before = files_of(root)
+        conflict = subprocess.run(['bash', str(SCRIPT), self.candidate], cwd=root, capture_output=True, text=True)
+        self.assertNotEqual(conflict.returncode, 0)
+        self.assertIn('duplicate stable identity after migration', conflict.stdout + conflict.stderr)
+        self.assertNotIn('explicit schema 2 -> 2 and identity/path migration', conflict.stdout)
+        self.assertEqual(before, files_of(root))
+        del legacy_entry['id']
+        registry.write_text(catalog.dumps(local))
+        result = subprocess.run(['bash', str(SCRIPT), self.candidate], cwd=root, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        result_data = catalog.loads(registry.read_text())
+        entries = {e['path']: e for e in result_data['entries']}
+        self.assertEqual(entries[shared_path]['id'], identity)
+        self.assertEqual(entries[project_path]['id'], 'local-' + identity)
+        self.assertEqual(entries[project_path]['legacy_generated_id'], identity)
+        self.assertEqual(local_file.read_text(), 'LOCAL = True\n')
+        self.assertEqual((root / shared_path).read_text(), 'SHARED = True\n')
+        self.assertFalse(catalog.relationship_errors(result_data['entries']))
+        check = subprocess.run(['bash', '.agents/scripts/shared/check-development.sh'], cwd=root,
+                               capture_output=True, text=True)
+        self.assertEqual(check.returncode, 0, check.stdout + check.stderr)
+        after = files_of(root)
+        again = subprocess.run(['bash', str(SCRIPT), self.candidate], cwd=root, capture_output=True, text=True)
+        self.assertEqual(again.returncode, 0, again.stdout + again.stderr)
+        self.assertEqual(after, files_of(root))
 
     def test_keeps_project_adaptations_optional_rejection_and_retired_history(self):
         root=self.project(self.old,own=True)
