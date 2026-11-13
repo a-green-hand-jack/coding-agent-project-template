@@ -36,7 +36,13 @@ does the mechanical part of steps 1, 2 and 5:
   `scope: template` entries or the template's `writing:` block, keeps this
   repository's `writing:` block and the repository and version values of its
   `template` block, and sets the followed version to the target only when
-  nothing conflicts.
+  nothing conflicts. A target entry whose path or ID is in the local
+  `omitted:` records stays out while the path is absent (`kept out: <path>`,
+  reason kept, files untouched); when the path is present the omission is
+  dropped and the entry registered (`adopted: <path>`). A local
+  retired/rejected/superseded entry wins over a redundant omission, whose
+  reason the plan prints (`kept <status>: <path>`); with the file still
+  present it is a conflict. A path is never both omitted and live.
 - A local edit that the release's change overlaps is a conflict: it is never
   overwritten, a `git merge-file` proposal is written under
   `.project/state/template-upgrade/proposals/`, and the command exits 1. A

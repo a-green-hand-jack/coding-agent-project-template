@@ -111,7 +111,7 @@ class UpgradeFromAnOlderReleaseTests(unittest.TestCase):
         tags = sorted((tag for tag in git("tag", "-l", "v*", cwd=REPOSITORY).split()
                        if re.fullmatch(r"v\d+\.\d+\.\d+", tag) and number(tag) < number(self.candidate)), key=number)
         self.assertGreaterEqual(len(tags), 2, "the release tags are missing: git fetch --tags origin")
-        self.old = tags[-1] if self._testMethodName in ('test_relocated_identity_stops_without_writes', 'test_declared_mapping_preserves_location', 'test_bad_mapping_never_changes_checkout', 'test_mapping_content_conflict_is_atomic', 'test_mapped_deletion_preserves_registry_consistency') else getattr(self, "source_tag", tags[-2])
+        self.old = tags[-1] if self._testMethodName in ('test_relocated_identity_stops_without_writes', 'test_declared_mapping_preserves_location', 'test_bad_mapping_never_changes_checkout', 'test_mapping_content_conflict_is_atomic', 'test_mapped_deletion_preserves_registry_consistency') or self._testMethodName.startswith('test_local_omission') else getattr(self, "source_tag", tags[-2])
 
         # A fixture template repository with the older release and the candidate as its two tags.
         self.template = self.base / "template"
@@ -152,6 +152,9 @@ class UpgradeFromAnOlderReleaseTests(unittest.TestCase):
             (self.template/path).unlink()
             (self.template/REGISTRY).write_text(catalog.dumps(data))
             catalog.indexes(self.template,data,write=True)
+        if self._testMethodName.startswith('test_local_omission'):
+            dockerfile = self.template/'Dockerfile'
+            dockerfile.write_text(dockerfile.read_text() + '# changed upstream\n')
         self.commit(self.candidate)
 
     def commit(self, tag: str) -> None:
@@ -199,6 +202,79 @@ class UpgradeFromAnOlderReleaseTests(unittest.TestCase):
         self.assertFalse((project/destination).exists())
         check=subprocess.run(['bash','.agents/scripts/shared/check-development.sh'],cwd=project,text=True,capture_output=True)
         self.assertEqual(check.returncode,0,check.stdout+check.stderr)
+
+    def omission_project(self, omitted: dict, live: dict, absent: tuple) -> tuple:
+        project=self.project(self.old,own=True)
+        registry=project/REGISTRY;data=catalog.loads(registry.read_text())
+        for path,reason in omitted.items():
+            entry=next(e for e in data['entries'] if e['path']==path)
+            if path in live: entry.update(live[path])
+            else: data['entries'].remove(entry)
+            data['omitted'].append({'id':entry['id'],'path':path,'reason':reason})
+        for path in absent: (project/path).unlink()
+        registry.write_text(catalog.dumps(data));catalog.indexes(project,data,write=True)
+        return project,registry
+
+    def assert_plan_lines(self, project, expected: dict) -> None:
+        plan=subprocess.run(['bash',str(SCRIPT),'--check',self.candidate],cwd=project,text=True,capture_output=True)
+        self.assertEqual(plan.returncode,0,plan.stdout+plan.stderr)
+        for path,line in expected.items():
+            mentions=[x.strip() for x in plan.stdout.splitlines() if re.search(r'(^|\s)'+re.escape(path)+r'[\s:]',x)]
+            self.assertEqual(mentions,[line],plan.stdout)
+
+    def assert_upgraded_without_duplicates(self, project, registry) -> dict:
+        result=subprocess.run(['bash',str(SCRIPT),self.candidate],cwd=project,text=True,capture_output=True)
+        self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+        merged=catalog.loads(registry.read_text())
+        live={e['path'] for e in merged['entries']}|{e['id'] for e in merged['entries']}
+        self.assertFalse([x for x in merged['omitted'] if x['path'] in live or x['id'] in live])
+        check=subprocess.run(['bash','.agents/scripts/shared/check-development.sh'],cwd=project,text=True,capture_output=True)
+        self.assertEqual(check.returncode,0,check.stdout+check.stderr)
+        return merged
+
+    def test_local_omissions_are_kept_out_or_adopted_never_both(self) -> None:
+        reasons={'Dockerfile':'This project does not adopt the container skeleton.',
+                 'install.sh':'Left out once; the project now ships its own installer.'}
+        project,registry=self.omission_project(reasons,{},('Dockerfile',))
+        self.assert_plan_lines(project,{'Dockerfile':'kept out: Dockerfile (omitted locally)',
+                                        'install.sh':'adopted: install.sh (omission dropped; file present)'})
+        merged=self.assert_upgraded_without_duplicates(project,registry)
+        self.assertFalse((project/'Dockerfile').exists())
+        omitted={x['path']:x for x in merged['omitted']}
+        self.assertEqual(omitted['Dockerfile']['reason'],reasons['Dockerfile'])
+        self.assertNotIn('install.sh',omitted)
+        self.assertIn('install.sh',{e['path'] for e in merged['entries']})
+
+    def test_local_omission_with_a_live_duplicate_is_cleaned_up(self) -> None:
+        reason='Template-only content this project does not adopt.'
+        project,registry=self.omission_project({'USER.md':reason},{'USER.md':{}},('USER.md',))
+        broken=subprocess.run(['bash','.agents/scripts/shared/check-development.sh'],cwd=project,text=True,capture_output=True)
+        self.assertIn('dangling active entry: USER.md',broken.stdout+broken.stderr)
+        self.assert_plan_lines(project,{'USER.md':'kept out: USER.md (omitted locally)'})
+        merged=self.assert_upgraded_without_duplicates(project,registry)
+        self.assertNotIn('USER.md',{e['path'] for e in merged['entries']})
+        self.assertEqual([x['reason'] for x in merged['omitted'] if x['path']=='USER.md'],[reason])
+        self.assertFalse((project/'USER.md').exists())
+
+    def test_local_omission_beside_a_local_lifecycle_is_dropped(self) -> None:
+        reason='Rejected container skeleton.'
+        lifecycle={'status':'rejected','adoption':'rejected-by-maintainer'}
+        project,registry=self.omission_project({'Dockerfile':reason},{'Dockerfile':lifecycle},('Dockerfile',))
+        self.assert_plan_lines(project,{'Dockerfile':f'kept rejected: Dockerfile (redundant omission dropped: {reason})'})
+        merged=self.assert_upgraded_without_duplicates(project,registry)
+        entry=next(e for e in merged['entries'] if e['path']=='Dockerfile')
+        self.assertEqual((entry['status'],entry['adoption']),('rejected','rejected-by-maintainer'))
+        self.assertNotIn('Dockerfile',{x['path'] for x in merged['omitted']})
+        self.assertFalse((project/'Dockerfile').exists())
+
+    def test_local_omission_beside_a_retired_present_file_is_refused(self) -> None:
+        project,registry=self.omission_project({'Dockerfile':'Retired skeleton.'},{'Dockerfile':{'status':'retired'}},())
+        before=files_of(project)
+        result=subprocess.run(['bash',str(SCRIPT),self.candidate],cwd=project,text=True,capture_output=True)
+        self.assertEqual(result.returncode,1,result.stdout+result.stderr)
+        self.assertIn('Dockerfile: local status retired and omitted, but the file is present; reconcile by hand',result.stdout)
+        self.assertEqual(files_of(project),before)
+        self.assertIn('version: '+self.old,registry.read_text())
 
     def test_mapping_content_conflict_is_atomic(self) -> None:
         project = self.project(self.old, own=True)

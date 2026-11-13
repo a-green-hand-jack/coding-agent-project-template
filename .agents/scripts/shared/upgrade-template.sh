@@ -393,6 +393,7 @@ class Upgrade:
         self.proposals = clone.parent / "proposals"
         self.report = Report()
         self.path_mappings = []
+        self.kept_out = set()
 
     def physical(self, path: str) -> str:
         matches = [(source, dest) for source, dest in self.path_mappings
@@ -502,6 +503,8 @@ class Upgrade:
 
     def path(self, old_mode: str, new_mode: str, old_sha: str, new_sha: str, status: str, path: str,
              entry: dict) -> None:
+        if any(catalog.rank(self.physical(path), kept) for kept in self.kept_out):
+            return
         report, state, scope = self.report, self.local(path), scope_in(entry)
         local_entry = next((e for e in self.local_entries if catalog.rank(self.physical(path),e["path"])), {})
         if local_entry.get("status") in ("retired", "superseded", "rejected"):
@@ -881,6 +884,24 @@ def prepare_layout(upgrade, source_text, target_text, local_text):
         old_path = upgrade.aliases.get(path, path)
         mine = original.get(upgrade.physical(old_path)) or original.get(upgrade.physical(path))
         if mine: used.add(mine["path"])
+        omissions = [x for x in result['omitted'] if x.get('path') == path or x.get('id') == e['id']]
+        if omissions:
+            if mine and mine.get('status', 'active') != 'active':
+                if upgrade.local(path) is not None:
+                    report.refused(f"{path}: local status {mine['status']} and omitted, but the file is present; reconcile by hand")
+                    upgrade.catalog_blocked = True
+                    continue
+                result['omitted'] = [x for x in result['omitted'] if x not in omissions]
+                dropped = '; '.join(x.get('reason', '') for x in omissions)
+                upgrade.kept_out.add(upgrade.physical(path))
+                report.skipped(f"kept {mine['status']}: {path} (redundant omission dropped: {dropped})")
+            elif upgrade.local(path) is None:
+                upgrade.kept_out.add(upgrade.physical(path))
+                report.skipped(f"kept out: {path} (omitted locally)")
+                continue
+            else:
+                result['omitted'] = [x for x in result['omitted'] if x not in omissions]
+                report.applied(f"adopted: {path} (omission dropped; file present)")
         new = dict(e)
         if mine:
             # Keep explicit local decisions and source identities. Unchanged
