@@ -7,17 +7,17 @@ applies_to: repositories whose code, tools or agents call LLM providers with API
 
 # Manage LLM credentials across projects
 
-The steps that apply these decisions are in
-[`../../skills/shared/credential-setup/SKILL.md`](../../skills/shared/credential-setup/SKILL.md);
-the formats of `inventory.yaml` and `credentials.yaml` and what
-`probe-credentials.sh` checks are in
-[`../../knowledge/shared/credential-inventory.md`](../../knowledge/shared/credential-inventory.md).
+The steps that apply these decisions are in the optional skill `credential-setup`
+(`.agents/skills/shared/credential-setup/SKILL.md`); the formats of
+`inventory.yaml` and `credentials.yaml` and what `probe-credentials.sh` checks are
+in the optional knowledge record `credential-inventory`
+(`.agents/knowledge/shared/credential-inventory.md`). Each is adopted separately.
 
-Related: [`third-party-llm-compat-patches.md`](third-party-llm-compat-patches.md)
+Related: the optional memory record `third-party-llm-compat-patches` (`.agents/memory/shared/third-party-llm-compat-patches.md`, when adopted)
 (compatibility changes to third-party LLM tools),
 [`provider-cost-routing.md`](provider-cost-routing.md) (which source, provider
 and model a check uses) and
-[`../../knowledge/shared/gpt5-strict-backend-requests.md`](../../knowledge/shared/gpt5-strict-backend-requests.md)
+the optional knowledge record `gpt5-strict-backend-requests` (`.agents/knowledge/shared/gpt5-strict-backend-requests.md`, when adopted)
 (request shapes strict backends reject). Read them together when a project
 calls an LLM provider or relay.
 

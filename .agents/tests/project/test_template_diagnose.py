@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -91,6 +92,32 @@ class BranchModelWhileAdoptingTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1, result.stdout)
         for line in BRANCH_LINES:
             self.assertIn(f"FAIL {line} (run .agents/scripts/shared/init-branches.sh)", result.stdout)
+
+    def test_python_dependencies_are_checked_for_the_selected_interpreter(self) -> None:
+        bare = self.root.parent / "bin" / "bare-python"
+        bare.write_text(f"#!/bin/sh\nexec {shutil.which('python3', path=self.env['PATH'])} -S \"$@\"\n", encoding="utf-8")
+        bare.chmod(0o755)
+        self.env["AGENTS_PYTHON"] = str(bare)
+        missing = self.run_script("diagnose-environment.sh")
+        self.assertEqual(missing.returncode, 1, missing.stdout)
+        self.assertIn(f'FAIL {bare} -I -c "import yaml, markdown_it": PyYAML or markdown-it-py is missing', missing.stdout)
+        self.assertIn("export AGENTS_PYTHON=<venv>/bin/python", missing.stdout)
+        self.env["AGENTS_PYTHON"] = shutil.which("python3", path=self.env["PATH"])
+        present = self.run_script("diagnose-environment.sh")
+        self.assertIn(f'ok   {self.env["AGENTS_PYTHON"]} -I -c "import yaml, markdown_it"', present.stdout)
+
+    def test_template_backfill_hint_names_no_fixed_repository(self) -> None:
+        registry = self.root / ".agents/content-registry.yaml"
+        text = registry.read_text(encoding="utf-8")
+        registry.write_text(re.sub(r"^template:\n(?:  .*\n)+", "", text, count=1, flags=re.M), encoding="utf-8")
+        result = self.run_script("diagnose-environment.sh")
+        self.assertIn("has no `template:` block", result.stdout)
+        self.assertNotIn("coding-agent-project-template", result.stdout)
+        command = next(line.strip() for line in result.stdout.splitlines() if line.strip().startswith("awk "))
+        command = command.replace("<TAG>", "v9.9.9").replace("<TEMPLATE_URL>", "https://example.invalid/derived-template")
+        subprocess.run(["bash", "-c", command], cwd=self.root, check=True)
+        block = re.search(r"^template:\n((?:  .*\n)+)", registry.read_text(encoding="utf-8"), re.M).group(1)
+        self.assertEqual(block, "  repository: https://example.invalid/derived-template\n  version: v9.9.9\n")
 
 
 if __name__ == "__main__":

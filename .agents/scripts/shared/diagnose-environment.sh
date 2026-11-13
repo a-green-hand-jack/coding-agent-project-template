@@ -10,6 +10,17 @@ check() {
 
 check git --version
 check bash --version
+python="${AGENTS_PYTHON:-python3}"
+if "$python" -I -c 'import yaml, markdown_it' >/dev/null 2>&1; then
+  printf 'ok   %s -I -c "import yaml, markdown_it"\n' "$python"
+else
+  printf 'FAIL %s -I -c "import yaml, markdown_it": PyYAML or markdown-it-py is missing for this interpreter\n' "$python"
+  echo '     The development commands run Python in isolated mode (-I), which ignores user site-packages and PYTHONPATH.'
+  echo "     Install both packages into that interpreter (python3 -m pip install 'PyYAML>=6.0,<7' 'markdown-it-py>=3,<5'),"
+  echo '     or, where pip refuses an externally managed interpreter, create a virtual environment with them and'
+  echo '     export AGENTS_PYTHON=<venv>/bin/python before running the commands. See DEV.md.'
+  fail=1
+fi
 [[ -d .agents ]] && printf 'ok   .agents directory\n' || { echo 'FAIL .agents directory'; fail=1; }
 [[ -f .env.example ]] && printf 'ok   .env.example\n' || { echo 'FAIL .env.example'; fail=1; }
 [[ -f assets/MANIFEST.yaml ]] && printf 'ok   assets manifest\n' || { echo 'FAIL assets manifest'; fail=1; }
@@ -58,8 +69,11 @@ else
      1. Read the adopted tag from the adoption commit or the developer docs:
           git log --reverse --format='%h %s' -- .agents/content-registry.yaml
           grep -nE 'v[0-9]+\.[0-9]+\.[0-9]+' DEV.md
-     2. With no `template:` block, insert one, replacing <TAG> (for example v0.1.1):
-          awk -v tag=<TAG> '/^(default_scope|matching|classes|entries):/ && !done { print "template:"; print "  repository: https://github.com/a-green-hand-jack/coding-agent-project-template"; print "  version: " tag; done = 1 } { print }' .agents/content-registry.yaml > .agents/content-registry.yaml.new && mv .agents/content-registry.yaml.new .agents/content-registry.yaml
+     2. With no `template:` block, insert one, replacing <TAG> (for example v0.1.1) and <TEMPLATE_URL>,
+        the URL of the template repository this one was made from and follows (for a project made
+        from a derived template, the derived template, not its upstream; GitHub shows it as
+        "generated from", otherwise take it from the adoption commit or DEV.md):
+          awk -v tag=<TAG> -v url=<TEMPLATE_URL> '/^(default_scope|matching|classes|entries):/ && !done { print "template:"; print "  repository: " url; print "  version: " tag; done = 1 } { print }' .agents/content-registry.yaml > .agents/content-registry.yaml.new && mv .agents/content-registry.yaml.new .agents/content-registry.yaml
      See .agents/skills/shared/template-upgrade/SKILL.md ("Backfill a missing template record").
 HINT
   fi

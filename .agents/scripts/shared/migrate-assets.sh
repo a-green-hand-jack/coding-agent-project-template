@@ -21,7 +21,7 @@ usage() {
 }
 [[ "${1:-}" == '--to' && -n "${2:-}" ]] || usage
 # Resolve links and missing destination components without GNU-only realpath -m.
-destination=$(python3 -I -c 'import os, sys; print(os.path.realpath(sys.argv[1]))' "$2")
+destination=$("${AGENTS_PYTHON:-python3}" -I -c 'import os, sys; print(os.path.realpath(sys.argv[1]))' "$2")
 shift 2
 also_list=
 skip_list=
@@ -269,7 +269,7 @@ printf '%s' "$report" > "$migration/migration-report.txt"
 
 # -- verify the copy ---------------------------------------------------------------------------
 same() { # SOURCE COPY
-  python3 -I - "$1" "$2" <<'PY'
+  "${AGENTS_PYTHON:-python3}" -I - "$1" "$2" <<'PY'
 import os
 import stat
 import sys

@@ -8,7 +8,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-SCRIPT = Path(__file__).resolve().parents[2] / "scripts/shared/upgrade-template.sh"
+COMMANDS = Path(os.environ.get("TEMPLATE_COMMAND_DIR") or Path(__file__).resolve().parents[2] / "scripts/shared")
+SCRIPT = COMMANDS.resolve() / "upgrade-template.sh"
 IDENTITY = ["-c", "user.name=Test", "-c", "user.email=test@example.invalid"]
 
 REGISTRY = """schema_version: 1

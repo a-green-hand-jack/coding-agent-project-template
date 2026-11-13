@@ -15,8 +15,9 @@ import unittest
 from pathlib import Path
 
 REPOSITORY = Path(__file__).resolve().parents[3]
-SCRIPT = REPOSITORY / ".agents/scripts/shared/upgrade-template.sh"
-sys.path.insert(0, str(REPOSITORY / ".agents/scripts/shared"))
+COMMANDS = Path(os.environ.get("TEMPLATE_COMMAND_DIR") or REPOSITORY / ".agents/scripts/shared").resolve()
+SCRIPT = COMMANDS / "upgrade-template.sh"
+sys.path.insert(0, str(COMMANDS))
 import content_registry as catalog
 
 REGISTRY = ".agents/content-registry.yaml"
@@ -111,7 +112,7 @@ class UpgradeFromAnOlderReleaseTests(unittest.TestCase):
         tags = sorted((tag for tag in git("tag", "-l", "v*", cwd=REPOSITORY).split()
                        if re.fullmatch(r"v\d+\.\d+\.\d+", tag) and number(tag) < number(self.candidate)), key=number)
         self.assertGreaterEqual(len(tags), 2, "the release tags are missing: git fetch --tags origin")
-        self.old = tags[-1] if self._testMethodName in ('test_relocated_identity_stops_without_writes', 'test_declared_mapping_preserves_location', 'test_bad_mapping_never_changes_checkout', 'test_mapping_content_conflict_is_atomic', 'test_mapped_deletion_preserves_registry_consistency') or self._testMethodName.startswith('test_local_omission') else getattr(self, "source_tag", tags[-2])
+        self.old = tags[-1] if getattr(self, 'latest_source', False) or self._testMethodName in ('test_relocated_identity_stops_without_writes', 'test_declared_mapping_preserves_location', 'test_bad_mapping_never_changes_checkout', 'test_mapping_content_conflict_is_atomic', 'test_mapped_deletion_preserves_registry_consistency') or self._testMethodName.startswith('test_local_omission') else getattr(self, "source_tag", tags[-2])
 
         # A fixture template repository with the older release and the candidate as its two tags.
         self.template = self.base / "template"
@@ -155,6 +156,12 @@ class UpgradeFromAnOlderReleaseTests(unittest.TestCase):
         if self._testMethodName.startswith('test_local_omission'):
             dockerfile = self.template/'Dockerfile'
             dockerfile.write_text(dockerfile.read_text() + '# changed upstream\n')
+        candidate = getattr(self, 'candidate_' + self._testMethodName[len('test_'):], None)
+        if candidate:
+            data = catalog.loads((self.template/REGISTRY).read_text())
+            candidate(data)
+            (self.template/REGISTRY).write_text(catalog.dumps(data))
+            catalog.indexes(self.template, data, write=True)
         self.commit(self.candidate)
 
     def commit(self, tag: str) -> None:
@@ -169,8 +176,8 @@ class UpgradeFromAnOlderReleaseTests(unittest.TestCase):
         git(*IDENTITY, "commit", "-qm", tag, cwd=self.template)
         git("tag", tag, cwd=self.template)
 
-    def project(self, tag: str, own: bool) -> Path:
-        root = self.base / f"project-{tag}"
+    def project(self, tag: str, own: bool, name: str = "") -> Path:
+        root = self.base / (name or f"project-{tag}")
         root.mkdir()
         archive = git("archive", tag, cwd=self.template, raw=True)
         subprocess.run(["tar", "-x", "-C", str(root)], input=archive, check=True)
@@ -429,6 +436,231 @@ class UpgradeFromAnOlderReleaseTests(unittest.TestCase):
         source_registry = git('show', f'{self.old}:{REGISTRY}', cwd=self.template)
         if not source_registry.startswith('schema_version: 2'):
             self.assertIn('local_legacy_inventory',actual)
+
+
+def unit(path: str, identity: str, kind: str, scope: str = 'project', **fields) -> dict:
+    return {'path': path, 'id': identity, 'kind': kind, 'scope': scope, 'owner': 'project-maintainers',
+            'summary': 'Fixture unit.', 'status': 'active', 'source': 'unknown', 'updated': 'unknown',
+            'supersedes': [], 'superseded_by': [], **fields}
+
+
+def migration(action: str, sources: list, destinations: list) -> dict:
+    return {'from': sources, 'to': destinations, 'action': action, 'reason': 'Fixture migration.',
+            'source_commit': 'fixture', 'verification': 'upgrade regression'}
+
+
+class TemplateCommandSyncTests(unittest.TestCase):
+    """Generic fixes first carried by a derived template, from the latest release to the candidate."""
+    latest_source = True
+    setUp = UpgradeFromAnOlderReleaseTests.setUp
+    commit = UpgradeFromAnOlderReleaseTests.commit
+    project = UpgradeFromAnOlderReleaseTests.project
+    omission_project = UpgradeFromAnOlderReleaseTests.omission_project
+    assert_plan_lines = UpgradeFromAnOlderReleaseTests.assert_plan_lines
+    assert_upgraded_without_duplicates = UpgradeFromAnOlderReleaseTests.assert_upgraded_without_duplicates
+
+    def run_command(self, root, *arguments):
+        return subprocess.run(['bash', str(SCRIPT), *arguments, self.candidate], cwd=root, text=True, capture_output=True)
+
+    def check(self, root):
+        return subprocess.run(['bash', '.agents/scripts/shared/check-development.sh'], cwd=root, text=True, capture_output=True)
+
+    def save(self, root, data):
+        (root/REGISTRY).write_text(catalog.dumps(data))
+        catalog.indexes(root, data, write=True)
+
+    def derived(self, name, upstream=True, harvest=True):
+        root = self.project(self.old, own=True, name=name)
+        data = catalog.loads((root/REGISTRY).read_text())
+        if upstream:
+            data['template'] = {'repository': 'https://example.invalid/derived-template', 'version': 'v0.0.1',
+                                'upstream': {'repository': str(self.template), 'version': self.old}}
+        maintenance = '.agents/memory/project/derived-maintenance.md'
+        (root/maintenance).write_text('# Derived maintenance\n\nHow this derived template is released.\n')
+        data['entries'].append(unit(maintenance, 'derived-maintenance', 'memory', 'template'))
+        if not harvest:
+            self.save(root, data)
+            return root, None
+        harvest = next(e for e in catalog.loads((self.template/REGISTRY).read_text())['entries']
+                       if e['path'] == '.agents/memory/project/harvest-renamed.md')
+        harvest = {**harvest, 'path': '.agents/memory/project/harvest-decisions.md'}
+        (root/harvest['path']).write_text('# Derived harvest decisions\n')
+        data['entries'].append(unit(harvest['path'], harvest['id'], 'memory', 'template'))
+        data['omitted'] = [x for x in data['omitted'] if x['id'] != harvest['id']]
+        references = root/'.agents/references/sources.md'
+        references.parent.mkdir()
+        references.write_text('# Sources\n')
+        data['entries'].append(unit('.agents/references/sources.md', 'derived-sources', 'document'))
+        data['policy']['root_files'].append('references')
+        self.save(root, data)
+        return root, harvest['id']
+
+    def candidate_derived_template_keeps_its_template_entries_and_roots(self, data):
+        old, new = '.agents/memory/project/harvest-decisions.md', '.agents/memory/project/harvest-renamed.md'
+        entry = next(e for e in data['entries'] if e['path'] == old)
+        entry['path'] = new
+        data['migrations'].append(migration('rename', [{'id': entry['id'], 'path': old}], [{'id': entry['id'], 'path': new}]))
+        (self.template/old).rename(self.template/new)
+
+    def test_derived_template_keeps_its_template_entries_and_roots(self):
+        root, harvest = self.derived('derived')
+        before = catalog.loads((root/REGISTRY).read_text())
+        local = {e['id']: e for e in before['entries'] if e['scope'] == 'template'}
+        self.assertEqual(self.check(root).returncode, 0, self.check(root).stderr)
+        result = self.run_command(root)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        after = catalog.loads((root/REGISTRY).read_text())
+        entries = {e['id']: e for e in after['entries']}
+        for identity, entry in local.items():
+            self.assertEqual(entries[identity], entry)
+        self.assertIn('references', after['policy']['root_files'])
+        self.assertNotIn(harvest, {x['id'] for x in after['omitted']})
+        destinations = [d for m in after['migrations'] for d in m['to'] if d['id'] == harvest]
+        self.assertTrue(destinations)
+        self.assertIn({'id': harvest, 'path': '.agents/memory/project/harvest-decisions.md',
+                       'upstream_path': '.agents/memory/project/harvest-renamed.md'}, destinations)
+        self.assertTrue(all(d['path'] == '.agents/memory/project/harvest-decisions.md' for d in destinations))
+        self.assertEqual(after['template']['upstream']['version'], self.candidate)
+        checked = self.check(root)
+        self.assertEqual(checked.returncode, 0, checked.stdout + checked.stderr)
+
+    def test_a_project_without_upstream_still_drops_template_entries(self):
+        root, _ = self.derived('plain', upstream=False, harvest=False)
+        result = self.run_command(root)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        after = catalog.loads((root/REGISTRY).read_text())
+        self.assertFalse([e for e in after['entries'] if e['scope'] == 'template'])
+
+    def candidate_project_record_moves_with_rewritten_links(self, data):
+        new = '.agents/memory/project/foundation/brief.md'
+        data['entries'].append(unit(new, 'fixture-brief', 'memory'))
+        data['migrations'].append(migration('move', [{'id': 'fixture-brief', 'path': '.agents/memory/project/brief.md'}],
+                                            [{'id': 'fixture-brief', 'path': new}]))
+
+    def test_project_record_moves_with_rewritten_links(self):
+        root = self.project(self.old, own=True)
+        old = root/'.agents/memory/project/brief.md'
+        new = root/'.agents/memory/project/foundation/brief.md'
+        old.write_text('---\nname: brief\nscope: project\n---\n\n# Brief\n\n'
+                       'Keep this decision. [Fakes](../shared/screen-with-scriptable-fakes.md).\n')
+        data = catalog.loads((root/REGISTRY).read_text())
+        data['entries'].append(unit('.agents/memory/project/brief.md', 'fixture-brief', 'memory'))
+        self.save(root, data)
+        linked = root/'.agents/memory/project/foundation'
+        linked.symlink_to('../shared', target_is_directory=True)
+        before = files_of(root)
+        refused = self.run_command(root, '--check')
+        self.assertEqual(refused.returncode, 1, refused.stdout + refused.stderr)
+        self.assertIn('project-owned destination has a symbolic-link parent', refused.stdout)
+        self.assertEqual(files_of(root), before)
+        linked.unlink()
+        new.parent.mkdir()
+        new.write_text('# Another record\n')
+        before = files_of(root)
+        planned = self.run_command(root, '--check')
+        self.assertEqual(planned.returncode, 1, planned.stdout + planned.stderr)
+        self.assertIn('project-owned destination already exists', planned.stdout)
+        refused = self.run_command(root)
+        self.assertEqual(refused.returncode, 2, refused.stdout + refused.stderr)
+        self.assertIn('project record migration preflight failed; no source files or registry were changed', refused.stderr)
+        self.assertEqual(files_of(root), before)
+        new.unlink()
+        new.parent.rmdir()
+        result = self.run_command(root)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn('.agents/memory/project/brief.md -> .agents/memory/project/foundation/brief.md: preserve project-owned record', result.stdout)
+        self.assertFalse(old.exists())
+        text = new.read_text()
+        self.assertIn('[Fakes](../../shared/screen-with-scriptable-fakes.md)', text)
+        self.assertNotIn('scope:', text)
+        entry = next(e for e in catalog.loads((root/REGISTRY).read_text())['entries'] if e['id'] == 'fixture-brief')
+        self.assertEqual(entry['path'], '.agents/memory/project/foundation/brief.md')
+        checked = self.check(root)
+        self.assertEqual(checked.returncode, 0, checked.stdout + checked.stderr)
+
+    def candidate_two_sources_cannot_map_to_one_destination(self, data):
+        merged = {'id': 'fixture-merged', 'path': '.agents/memory/project/merged.md'}
+        for name in ('first', 'second'):
+            data['migrations'].append(migration('rename', [{'id': f'fixture-{name}', 'path': f'.agents/memory/project/{name}.md'}], [merged]))
+
+    def test_two_sources_cannot_map_to_one_destination(self):
+        root = self.project(self.old, own=True)
+        data = catalog.loads((root/REGISTRY).read_text())
+        for name in ('first', 'second'):
+            (root/f'.agents/memory/project/{name}.md').write_text(f'# {name}\n')
+            data['entries'].append(unit(f'.agents/memory/project/{name}.md', f'fixture-{name}', 'memory'))
+        self.save(root, data)
+        before = files_of(root)
+        result = self.run_command(root, '--check')
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn('.agents/memory/project/first.md and .agents/memory/project/second.md both map to '
+                      '.agents/memory/project/merged.md; preserve both and resolve manually', result.stdout)
+        self.assertEqual(files_of(root), before)
+
+    def candidate_directory_entry_follows_renamed_files(self, data):
+        data['migrations'].append(migration('rename',
+            [{'id': 'fixture-notes', 'path': '.agents/skills/project/local-kit/notes.md'}],
+            [{'id': 'fixture-notes', 'path': '.agents/skills/project/kit/renamed-notes.md'}]))
+
+    def test_directory_entry_follows_renamed_files(self):
+        root = self.project(self.old, own=True)
+        kit = root/'.agents/skills/project/local-kit'
+        kit.mkdir()
+        (kit/'SKILL.md').write_text('---\nname: local-kit\ndescription: Local kit.\n---\n\n# Local kit\n')
+        (kit/'notes.md').write_text('# Notes\n')
+        data = catalog.loads((root/REGISTRY).read_text())
+        data['entries'].append(unit('.agents/skills/project/local-kit/', 'fixture-kit', 'skill'))
+        self.save(root, data)
+        result = self.run_command(root)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        entry = next(e for e in catalog.loads((root/REGISTRY).read_text())['entries'] if e['id'] == 'fixture-kit')
+        self.assertEqual(entry['path'], '.agents/skills/project/kit/')
+
+    def candidate_moved_record_that_already_has_the_change(self, data):
+        old, new = '.agents/memory/shared/run-settings-from-config.md', '.agents/memory/shared/run-settings-come-from-config.md'
+        entry = next(e for e in data['entries'] if e['path'] == old)
+        entry['path'] = new
+        data['migrations'].append(migration('rename', [{'id': entry['id'], 'path': old}], [{'id': entry['id'], 'path': new}]))
+        (self.template/old).rename(self.template/new)
+        (self.template/new).write_text((self.template/new).read_text() + '\nUpstream addition.\n')
+
+    def test_moved_record_that_already_has_the_change(self):
+        root = self.project(self.old, own=True)
+        old = root/'.agents/memory/shared/run-settings-from-config.md'
+        section = '\n## In this repository\n\nLocal run settings live in config/run.toml.\n'
+        old.write_text((self.template/'.agents/memory/shared/run-settings-come-from-config.md').read_text() + section)
+        result = self.run_command(root)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        new = root/'.agents/memory/shared/run-settings-come-from-config.md'
+        self.assertFalse(old.exists())
+        self.assertTrue(new.read_text().endswith('Upstream addition.\n' + section))
+        checked = self.check(root)
+        self.assertEqual(checked.returncode, 0, checked.stdout + checked.stderr)
+
+    def test_optional_entry_without_a_file_becomes_an_omission(self):
+        root = self.project(self.old, own=True)
+        (root/'install.sh').unlink()
+        self.assert_plan_lines(root, {'install.sh': 'omitted: install.sh (optional entry without a file recorded as an omission)'})
+        merged = self.assert_upgraded_without_duplicates(root, root/REGISTRY)
+        self.assertNotIn('install.sh', {e['path'] for e in merged['entries']})
+        self.assertIn('install.sh', {x['path'] for x in merged['omitted'] if x['reason']})
+        self.assertFalse((root/'install.sh').exists())
+
+    def test_project_release_notes_at_a_template_only_path(self):
+        root = self.project(self.old, own=True)
+        data = catalog.loads((root/REGISTRY).read_text())
+        notes = next(x for x in data['omitted'] if x['path'] == 'RELEASE_NOTES.md')
+        data['entries'].append(unit('RELEASE_NOTES.md', notes['id'], 'document'))
+        self.save(root, data)
+        candidate_checker = subprocess.run([sys.executable, str(COMMANDS/'content_registry.py'), '--root', str(root)],
+                                           text=True, capture_output=True)
+        self.assertIn('omitted and registered: RELEASE_NOTES.md', candidate_checker.stderr)
+        plan = self.run_command(root, '--check')
+        self.assertEqual(plan.returncode, 0, plan.stdout + plan.stderr)
+        self.assertIn('  project-owned: RELEASE_NOTES.md (template-only omission dropped; file present)\n', plan.stdout)
+        merged = self.assert_upgraded_without_duplicates(root, root/REGISTRY)
+        self.assertEqual(next(e for e in merged['entries'] if e['path'] == 'RELEASE_NOTES.md')['id'], notes['id'])
+        self.assertEqual((root/'RELEASE_NOTES.md').read_text(), OWN_FILES['RELEASE_NOTES.md'])
 
 
 class UpgradeLatestLayoutTests(UpgradeFromAnOlderReleaseTests):

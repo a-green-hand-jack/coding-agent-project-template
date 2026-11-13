@@ -26,7 +26,7 @@ applies_to: repositories whose product has commands that start runs with tunable
    configuration file.
 6. **Settings hold no credentials and no machine-local default paths.** A run's
    grants (keys, mounts, compute) are separate from settings and may override
-   their limits. See [`llm-credentials.md`](llm-credentials.md).
+   their limits. See the optional memory record `llm-credentials` (`.agents/memory/shared/llm-credentials.md`, when adopted).
 
 ## Why
 
