@@ -1,5 +1,33 @@
 # Release notes
 
+## v0.1.33 — 2026-11-13
+
+**升级时遵守下游已记录的“不采用”决定。**
+
+下游可以在 registry 的 `omitted:` 中记录不采用的模板内容及理由。此前升级命令合并 registry 时会保留这些记录，但当新版本把同一路径登记为正式条目时，它又会为该路径追加一个 live 条目。于是同一路径和身份同时处于“已省略”和“在用”两种状态：文件不在磁盘上时，开发面检查失败于 `dangling active entry`，而且每次只报告一个；升级计划对此没有任何提示。本版修正这一合并规则，并在计划中逐路径说明结果。
+
+| 下游状态 | 本版处理 | 计划中的一行 |
+| --- | --- | --- |
+| 已省略，文件不存在 | 保持省略，保留理由；不写入或比较该文件 | `kept out: <path> (omitted locally)` |
+| 已省略，但文件现在存在 | 删除过期的省略记录，登记为在用条目 | `adopted: <path> (omission dropped; file present)` |
+| 已省略，同时有本地 retired/rejected/superseded 条目，文件不存在 | 保留本地生命周期条目，删除多余省略并打印其理由 | `kept <status>: <path> (redundant omission dropped: <reason>)` |
+| 同上，但文件仍在磁盘上 | 拒绝自动处理，registry 与版本不变 | `...: reconcile by hand` |
+
+已经因旧命令处于重复状态的下游（同一路径既被省略又有 active 条目、文件不存在），用本版命令重跑一次升级即可自动修复：live 重复被移除，省略记录及理由保留，计划报告 `kept out`。`scope: template` 内容仍只作为来源记录，不会被提升为在用条目。
+
+### Upgrading a project from v0.1.32
+
+1. 使用目标版本完整的 `.agents/scripts/shared/` 命令目录执行 `upgrade-template.sh --check v0.1.33`；项目自带的旧命令仍会产生重复条目。审阅计划中的 `kept out`、`adopted` 与 `kept <status>` 行，确认它们符合项目的决定。
+2. 执行升级并运行项目自己的检查。若计划拒绝某个“已退役却文件仍在”的路径，先决定保留文件还是生命周期记录，再重跑。
+
+### 验证与范围
+
+验收用真实旧 release 升级到候选版本的夹具覆盖四种状态：省略且缺失与省略但存在、#216 报告的 active 重复、rejected 条目与多余省略、retired 但文件仍在；检查计划每个路径恰好一行、合并后无重复、理由保留、下游开发面检查通过，以及拒绝时文件和版本不变。同一夹具在修复前的命令上失败。发布前风险检查读取了 15 个已知下游中 14 个可读的集成分支 registry：5 个使用 schema 2，其中没有下游的省略记录与候选版本的在用条目冲突；2 个下游的 `RELEASE_NOTES.md` 同时作为模板专属省略和项目自有条目存在，这属于 `scope: template` 路径，不在本版修复范围内，升级后保持原状；另有 1 个仓库无法读取。这不是完整经验采集，也没有运行下游项目。
+
+### 参考
+
+- [问题 #154](https://github.com/a-green-hand-jack/coding-agent-project-template/issues/154)；来源报告 [paper-agent-project-template#216](https://github.com/a-green-hand-jack/paper-agent-project-template/issues/216)；[上一版 v0.1.32](https://github.com/a-green-hand-jack/coding-agent-project-template/releases/tag/v0.1.32)；[版本比较](https://github.com/a-green-hand-jack/coding-agent-project-template/compare/v0.1.32...v0.1.33)。
+
 ## v0.1.32 — 2026-11-12
 
 **让旧项目跨越开发面目录和 registry 格式的升级边界。**
