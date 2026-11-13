@@ -8,9 +8,9 @@ applies_to: repositories that adopt llm-credentials and name their credentials i
 # Credential inventory, credentials.yaml and probes
 
 The decisions behind these files are in
-[`llm-credentials`](../../memory/shared/llm-credentials.md); the steps that use
+the optional memory record `llm-credentials` (`.agents/memory/shared/llm-credentials.md`, when adopted); the steps that use
 them are in
-[`credential-setup`](../../skills/shared/credential-setup/SKILL.md).
+the optional skill `credential-setup` (`.agents/skills/shared/credential-setup/`, when adopted).
 
 ## Fact
 

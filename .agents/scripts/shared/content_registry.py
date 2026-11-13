@@ -244,7 +244,9 @@ def generated_index(root, directory, entries):
         if (e['status'] != 'active' and not historical_body(e)) or not p.startswith(prefix) or e['kind'] in ('governance', 'symlink-index'):
             continue
         rest = p[len(prefix):].rstrip('/')
-        if '/' in rest or not rest or not (root / p).exists():
+        if not rest or not (root / p).exists():
+            continue
+        if '/' in rest and not (e['kind'] in ('memory', 'knowledge', 'document') and directory.split('/')[1] in ('memory', 'knowledge')):
             continue
         target = rest + '/SKILL.md' if e['kind'] == 'skill' else rest
         label = f" ({e['status']} history)" if historical_body(e) else ""
@@ -288,7 +290,11 @@ def relationship_errors(entries):
     fail = errors.append
     ids = {entry['id']: entry for entry in entries}
     if len(ids) != len(entries):
-        fail('duplicate stable identity after migration')
+        duplicates = sorted({entry['id'] for entry in entries
+                             if sum(other['id'] == entry['id'] for other in entries) > 1})
+        fail('duplicate stable identity after migration: ' + ', '.join(
+            f"{eid} ({', '.join(e['path'] for e in entries if e['id'] == eid)})"
+            for eid in duplicates))
     # One canonical old -> replacement graph, including reciprocal declarations.
     graph = {key: set() for key in ids}
     for eid, e in ids.items():
@@ -316,6 +322,32 @@ def relationship_errors(entries):
         done.add(eid)
     for eid in graph:
         visit(eid)
+    return errors
+
+
+def omission_errors(data):
+    errors = []
+    fail = errors.append
+    omitted = data.get('omitted', [])
+    if not isinstance(omitted, list):
+        return ['omitted must be a list of id/path/reason records']
+    registered = {e.get('id'): e for e in data.get('entries', [])}
+    seen = {}
+    for record in omitted:
+        if not isinstance(record, dict):
+            fail(f'invalid omission: {record!r}; use an id/path/reason record')
+            continue
+        eid, path, reason = record.get('id'), record.get('path'), record.get('reason')
+        if not eid or not safe_path(path) or not isinstance(reason, str) or not reason.strip() or set(record) - {'id', 'path', 'reason'}:
+            fail(f'invalid omission: {path or eid}; requires only id, path and a nonempty reason')
+        for key in (eid, path):
+            if key and key in seen and seen[key] is not record:
+                fail(f'duplicate omission: {key}')
+            seen.setdefault(key, record)
+        entry = registered.get(eid)
+        if entry:
+            fail(f'omitted and registered: {path} ({eid}) is also entry {entry.get("path")} ({entry.get("id")}); '
+                 'run the target release upgrade command or keep one record')
     return errors
 
 
@@ -354,6 +386,7 @@ def validate(root, data):
             if not isinstance(e.get(key, []), list):
                 fail(f'{key} must contain stable IDs: {path}')
     errors.extend(relationship_errors(entries))
+    errors.extend(omission_errors(data))
     policy = data.get('policy', {})
     exceptions = policy.get('naming_exceptions', [])
     for exception in exceptions:
@@ -388,7 +421,7 @@ def validate(root, data):
             if name == '.agents' or any(fnmatch.fnmatchcase(name, x.get('pattern','')) and x.get('reason') for x in exceptions):
                 continue
             stem = name.rsplit('.',1)[0] if '.' in name else name
-            python_name=name.endswith('.py') or (root/Path(*parts[:position+1])/'__init__.py').is_file() or (entry.get('language')=='python' and entry['kind']=='code')
+            python_name=name.endswith('.py') or (root/Path(*parts[:position+1])/'__init__.py').is_file() or (position == len(parts) - 1 and entry.get('language')=='python' and entry['kind']=='code')
             pattern = r'[a-z][a-z0-9_]*' if python_name else r'[a-z0-9]+(?:-[a-z0-9]+)*'
             if not re.fullmatch(pattern, stem):
                 fail(f'naming violation: {p} ({name}); register a reasoned exception')

@@ -27,7 +27,7 @@
 set -euo pipefail
 root=$(git rev-parse --show-toplevel)
 cd "$root"
-exec python3 -I - "$@" <<'PY'
+exec "${AGENTS_PYTHON:-python3}" -I - "$@" <<'PY'
 import json
 import os
 import re

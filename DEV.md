@@ -230,7 +230,13 @@ GitHub CLI 环境中幂等创建并推送 `dev`，并把 GitHub 默认分支设�
 前置段并检查名称和描述，不代表实际 agent 已成功加载该 skill。第三方 skill 同样
 检查，但不会自动改写其内容或许可。
 检查器以 Python 的隔离模式启动；应将依赖安装到所选虚拟环境或系统环境，不能
-依赖仅对用户 site-packages 可见的安装。
+依赖仅对用户 site-packages 可见的安装。继承命令（`check-development.sh`、
+`upgrade-template.sh`、`migrate-assets.sh`、`probe-credentials.sh`）和
+`diagnose-environment.sh` 默认使用 `PATH` 上的 `python3`；设置 `AGENTS_PYTHON` 为
+解释器路径即改用它。解释器拒绝 `pip install`（PEP 668 “externally managed”）时，
+创建一个装有两项依赖的虚拟环境，并 `export AGENTS_PYTHON=<venv>/bin/python`。
+`diagnose-environment.sh` 用 `"${AGENTS_PYTHON:-python3}" -I -c 'import yaml, markdown_it'`
+检查依赖，缺失时输出 `FAIL` 和上述处理办法。
 检查器检查 Git 可见的 `.agents/` Markdown 中的相对链接和 Markdown 标题锚点；代码
 块及行内代码不作为链接，外部链接不检查网络可达性。示例和历史路径应写在代码中；
 第三方文档中的真实相对链接须能在采用项目中解析。registry 身份与迁移关系仍由
@@ -251,6 +257,16 @@ bash .agents/scripts/shared/inspect-state.sh
 
 ```bash
 python3 -m unittest discover -s .agents/tests/project -p 'test_template_*.py'
+```
+
+升级命令的回归测试（`test_template_upgrade.py`、`test_template_upgrade_release.py`）
+默认测试本仓库的 `.agents/scripts/shared/`。把 `TEMPLATE_COMMAND_DIR` 设为另一份
+命令目录（含 `upgrade-template.sh` 与 `content_registry.py`）即测试那一份，例如
+派生模板同步后的副本；fixture 模板仍取自本仓库的 release tag：
+
+```bash
+TEMPLATE_COMMAND_DIR=/path/to/derived/.agents/scripts/shared \
+  python3 -m unittest discover -s .agents/tests/project -p 'test_template_upgrade*.py'
 ```
 
 合并和发布以本地检查为门禁：上述检查和初始化 `setup-worktree.sh` 是本仓库的

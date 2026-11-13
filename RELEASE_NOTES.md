@@ -2,31 +2,59 @@
 
 ## v0.1.33 — 2026-11-13
 
-**升级时遵守下游已记录的“不采用”决定。**
+**“不采纳”只有一种记录方式，升级命令可以被派生模板原样继承。**
 
-下游可以在 registry 的 `omitted:` 中记录不采用的模板内容及理由。此前升级命令合并 registry 时会保留这些记录，但当新版本把同一路径登记为正式条目时，它又会为该路径追加一个 live 条目。于是同一路径和身份同时处于“已省略”和“在用”两种状态：文件不在磁盘上时，开发面检查失败于 `dangling active entry`，而且每次只报告一个；升级计划对此没有任何提示。本版修正这一合并规则，并在计划中逐路径说明结果。
+下游项目和派生模板都靠 `upgrade-template.sh` 跟随本模板，靠 `check-development.sh` 检查开发面。此前这两份继承命令有三个问题：升级时会把下游已经省略的路径重新登记为在用条目，导致同一身份既“已省略”又“在用”；派生模板为了能用，自己维护了约 140 行修改，其中多数是通用修复；继承的 shared 记录还会相对链接到可以不采纳的内容，下游一旦不采纳，链接就断了。本版把这些修复统一放进上游，派生模板可以逐字节采用这两个命令文件。
 
-| 下游状态 | 本版处理 | 计划中的一行 |
+### 升级时遵守“不采纳”的决定
+
+registry 的顶层 `omitted:` 现在是记录“不采纳模板内容”的唯一方式：每条只有 `id`、`path`、非空 `reason`，作为来源记录而不是条目。`optional: true` 只表示模板允许不采纳；`status: rejected`、`retired`、`superseded` 是本仓库自己登记的条目的生命周期，优先于多余的省略记录。升级命令按下表处理，并在计划中逐路径报告：
+
+| 下游状态 | 处理 | 计划中的一行 |
 | --- | --- | --- |
-| 已省略，文件不存在 | 保持省略，保留理由；不写入或比较该文件 | `kept out: <path> (omitted locally)` |
-| 已省略，但文件现在存在 | 删除过期的省略记录，登记为在用条目 | `adopted: <path> (omission dropped; file present)` |
-| 已省略，同时有本地 retired/rejected/superseded 条目，文件不存在 | 保留本地生命周期条目，删除多余省略并打印其理由 | `kept <status>: <path> (redundant omission dropped: <reason>)` |
-| 同上，但文件仍在磁盘上 | 拒绝自动处理，registry 与版本不变 | `...: reconcile by hand` |
+| 已省略，文件不存在（含旧命令留下的在用重复） | 保持省略与理由，移除重复条目，不写入该文件 | `kept out: <path> (omitted locally)` |
+| 已省略，但文件现在存在 | 删除过期省略，登记为在用条目 | `adopted: <path> (omission dropped; file present)` |
+| 模板专属路径上是项目自己的文件，且与省略记录同身份 | 保留项目条目，删除省略 | `project-owned: <path> (template-only omission dropped; file present)` |
+| 本地 retired/rejected/superseded 条目同时被省略，文件不存在 | 保留生命周期条目，删除多余省略并打印理由 | `kept <status>: <path> (redundant omission dropped: <reason>)` |
+| 同上，但文件仍在磁盘上 | 拒绝，registry、文件与版本不变 | `...: reconcile by hand` |
+| `optional: true`、`active` 但文件不存在 | 改记为省略 | `omitted: <path> (optional entry without a file recorded as an omission)` |
 
-已经因旧命令处于重复状态的下游（同一路径既被省略又有 active 条目、文件不存在），用本版命令重跑一次升级即可自动修复：live 重复被移除，省略记录及理由保留，计划报告 `kept out`。`scope: template` 内容仍只作为来源记录，不会被提升为在用条目。
+已经因旧命令处于重复状态的下游，用本版命令重跑一次升级即可自动修复。`check-development.sh` 会一次列出所有格式错误、重复或与条目同身份的省略记录；仍处于旧状态的 registry 在用本版升级前会被它报告，升级本身会完成迁移。仍带 `status: rejected` 的条目和缺少文件的 optional 条目继续合法。
+
+### 派生模板携带的通用修复进入上游
+
+| 修复 | 效果 |
+| --- | --- |
+| 保留本地 `scope: template` 条目 | 仅当 registry 有 `template.upstream`（派生模板）时生效；与上游内容同路径时拒绝。普通项目仍不保留 |
+| 合并 `policy.root_files` | 下游登记的额外开发面根条目在升级后不再消失 |
+| 迁移目标路径 | 迁移指向本地条目的身份时改写为本地路径，并记录 `upstream_path`；派生模板保留的同身份条目不再产生省略记录 |
+| 项目记录搬迁 | release 移动 `scope: project` 记录时，连同下游内容搬到新路径并改写相对链接；目标已存在、父目录是符号链接或不是普通文件时拒绝，实际执行前先做一次 `--check` 预检 |
+| 别名写入 | 已改名的 shared 文件在本地已含新版变更时，也写到新路径 |
+| 目录映射与多源迁移 | 目录内文件改名时按路径段计算新目录；两条迁移把不同的现有文件映射到同一目标时拒绝 |
+| 检查器 | 重复身份报出 id 与路径；memory/knowledge 的主题子目录进入生成索引；`language: python` 的命名要求只作用于模块名 |
+
+### 继承命令的环境与诊断
+
+继承命令和 `diagnose-environment.sh` 支持 `AGENTS_PYTHON` 指定解释器；`PATH` 上的 `python3` 无法安装依赖（PEP 668）时，把它设为装有 PyYAML 和 markdown-it-py 的虚拟环境解释器。`diagnose-environment.sh` 新增 `"${AGENTS_PYTHON:-python3}" -I -c 'import yaml, markdown_it'` 检查，失败时给出处理办法。缺少 `template:` 块时的补录提示改用 `<TEMPLATE_URL>` 占位符，派生模板的下游不会再被引导写成本模板的地址。shared 记录不再相对链接到其他 optional 单元（`long-running-supervision` 也标为 optional），不采纳它们的仓库无需改动 shared 正文即可通过检查。
+
+升级命令的回归测试可以通过 `TEMPLATE_COMMAND_DIR` 对另一份命令目录运行，派生模板同步后可直接用上游用例检查自己的副本。
 
 ### Upgrading a project from v0.1.32
 
-1. 使用目标版本完整的 `.agents/scripts/shared/` 命令目录执行 `upgrade-template.sh --check v0.1.33`；项目自带的旧命令仍会产生重复条目。审阅计划中的 `kept out`、`adopted` 与 `kept <status>` 行，确认它们符合项目的决定。
+1. 使用目标版本完整的 `.agents/scripts/shared/` 命令目录执行 `upgrade-template.sh --check v0.1.33`；项目自带的旧命令仍会产生重复条目。审阅计划中的 `kept out`、`adopted`、`project-owned`、`kept <status>` 与 `omitted` 行，确认它们符合项目的决定。
 2. 执行升级并运行项目自己的检查。若计划拒绝某个“已退役却文件仍在”的路径，先决定保留文件还是生命周期记录，再重跑。
+3. 若项目曾为消除断链而改写 `provider-cost-routing`、`llm-credentials`、`screen-with-scriptable-fakes` 等 shared 记录在 `## In this repository` 之上的正文，计划会报告冲突；改回本版正文后用 `--resolved <path>` 重跑。
+4. 派生模板：本版的 `upgrade-template.sh` 与 `content_registry.py` 可逐字节替换本地副本；随后在本模板 v0.1.33 的 checkout 中运行 `TEMPLATE_COMMAND_DIR=<派生模板>/.agents/scripts/shared python3 -m unittest discover -s .agents/tests/project -p 'test_template_upgrade*.py'` 检查副本。
 
 ### 验证与范围
 
-验收用真实旧 release 升级到候选版本的夹具覆盖四种状态：省略且缺失与省略但存在、#216 报告的 active 重复、rejected 条目与多余省略、retired 但文件仍在；检查计划每个路径恰好一行、合并后无重复、理由保留、下游开发面检查通过，以及拒绝时文件和版本不变。同一夹具在修复前的命令上失败。发布前风险检查读取了 15 个已知下游中 14 个可读的集成分支 registry：5 个使用 schema 2，其中没有下游的省略记录与候选版本的在用条目冲突；2 个下游的 `RELEASE_NOTES.md` 同时作为模板专属省略和项目自有条目存在，这属于 `scope: template` 路径，不在本版修复范围内，升级后保持原状；另有 1 个仓库无法读取。这不是完整经验采集，也没有运行下游项目。
+验收用真实 v0.1.32 release 升级到候选版本的夹具覆盖每一项修复：省略状态的六种情况、派生模板保留本地 template 条目与额外根条目及迁移路径改写、项目记录搬迁与链接改写及三种拒绝、多源迁移、目录映射、已含新版变更的改名记录；检查器的省略规则、主题子目录索引、重复身份报错和 Python 命名；诊断命令的依赖检查与补录提示；不采纳三个 optional 单元的下游无需改动 shared 正文即可通过检查。升级与检查器的对应用例在本版之前的命令上失败（普通项目仍丢弃 template 条目的对照用例除外）；对派生模板当前副本运行时，只有 `template.upstream` 条件和新的省略规则失败。本版检查器对派生模板当前 dev 分支（24 条 rejected 条目、4 条缺文件的 optional 条目）直接通过。
+
+发布前风险检查读取了 15 个已知下游中 14 个可读的集成分支 registry：5 个使用 schema 2，其中没有下游的省略记录与候选版本的在用条目冲突；2 个下游的 `RELEASE_NOTES.md` 同时是模板专属省略与同身份的项目条目，本版检查器会报告它，升级会按 `project-owned` 自动修复；另有 1 个仓库无法读取。这不是完整经验采集，也没有运行下游项目。
 
 ### 参考
 
-- [问题 #154](https://github.com/a-green-hand-jack/coding-agent-project-template/issues/154)；来源报告 [paper-agent-project-template#216](https://github.com/a-green-hand-jack/paper-agent-project-template/issues/216)；[上一版 v0.1.32](https://github.com/a-green-hand-jack/coding-agent-project-template/releases/tag/v0.1.32)；[版本比较](https://github.com/a-green-hand-jack/coding-agent-project-template/compare/v0.1.32...v0.1.33)。
+- [问题 #154](https://github.com/a-green-hand-jack/coding-agent-project-template/issues/154)、[问题 #155](https://github.com/a-green-hand-jack/coding-agent-project-template/issues/155)；来源报告 [paper-agent-project-template#216](https://github.com/a-green-hand-jack/paper-agent-project-template/issues/216)；[上一版 v0.1.32](https://github.com/a-green-hand-jack/coding-agent-project-template/releases/tag/v0.1.32)；[版本比较](https://github.com/a-green-hand-jack/coding-agent-project-template/compare/v0.1.32...v0.1.33)。
 
 ## v0.1.32 — 2026-11-12
 

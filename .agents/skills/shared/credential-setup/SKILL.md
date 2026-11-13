@@ -9,10 +9,10 @@ Use this skill when a project's code, tools or agents call LLM providers with
 API keys, tokens or OAuth logins: when a project adopts it, when a login stops
 working, and when a sandbox or subprocess needs credentials. The decisions and
 their reasons are in
-[`llm-credentials`](../../../memory/shared/llm-credentials.md); the formats of
+the optional memory record `llm-credentials` (`.agents/memory/shared/llm-credentials.md`, when adopted); the formats of
 `inventory.yaml` and `credentials.yaml` and what `probe-credentials.sh` checks
 and prints are in
-[`credential-inventory`](../../../knowledge/shared/credential-inventory.md).
+the optional knowledge record `credential-inventory` (`.agents/knowledge/shared/credential-inventory.md`, when adopted).
 
 The steps use that record's two parameters, `SHARED_CREDENTIAL_FILE` and
 `CREDENTIAL_DIR`. The project fills them, and writes its own additions to a step

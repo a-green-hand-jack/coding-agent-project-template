@@ -53,10 +53,10 @@ Then:
 2. Before a batch, capture one request body from each distinct sender, strip
    credentials, and check it against the target backend's rules. The current
    facts for GPT-5.x are in
-   [`../../knowledge/shared/gpt5-strict-backend-requests.md`](../../knowledge/shared/gpt5-strict-backend-requests.md).
+   the optional knowledge record `gpt5-strict-backend-requests` (`.agents/knowledge/shared/gpt5-strict-backend-requests.md`, when adopted).
    Check the backend directly when a relay sits in front of it, because the
    relay's success does not show what its first-choice upstream accepted.
 3. Fix the request shape. Do not add a retry that drops the rejected parameter.
 4. Before committing a patch, captured body, log or Issue text, check that it
    holds no credential value, account, relay operator or machine-local path. See
-   [`llm-credentials.md`](llm-credentials.md).
+   the optional memory record `llm-credentials` (`.agents/memory/shared/llm-credentials.md`, when adopted).

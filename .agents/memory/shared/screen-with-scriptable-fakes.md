@@ -63,8 +63,8 @@ boundary behaves that way.
 3. Before a real run, run the scenarios once. A failure found there is cheaper
    than the same failure in the real run.
 4. Take completion evidence from the real run's receipts and artifacts, as in
-   [`long-running-supervision`](../../skills/shared/long-running-supervision/SKILL.md).
+   the optional skill `long-running-supervision`, when this repository adopts it.
    A passing fake run is a reason to start the real run, not a result.
 5. Before committing a scenario, request record or Issue text, check that it
    holds no credential value, account or machine-local path. See
-   [`llm-credentials.md`](llm-credentials.md).
+   the optional memory record `llm-credentials` (`.agents/memory/shared/llm-credentials.md`, when adopted).

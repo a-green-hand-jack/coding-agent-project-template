@@ -42,6 +42,90 @@ class DevelopmentContractTests(unittest.TestCase):
         self.assertNotEqual(result.returncode,0,result.stdout)
         self.assertIn(fragment,result.stderr)
 
+    def entry(self, path):
+        return next(e for e in self.data['entries'] if e['path']==path)
+
+    def test_omission_records_are_checked_together(self):
+        live=self.entry('.agents/memory/shared/issue-close-out.md')
+        self.data['omitted']=[
+            {'id':'missing-reason','path':'.agents/memory/shared/a.md'},
+            {'id':live['id'],'path':live['path'],'reason':'Not adopted.'},
+            {'id':'twice','path':'.agents/memory/shared/b.md','reason':'Not adopted.'},
+            {'id':'twice','path':'.agents/memory/shared/c.md','reason':'Not adopted.'},
+        ]
+        errors=self.check().stderr
+        self.assertIn('invalid omission: .agents/memory/shared/a.md',errors)
+        self.assertIn(f'omitted and registered: {live["path"]} ({live["id"]})',errors)
+        self.assertIn('duplicate omission: twice',errors)
+
+    def test_rejected_optional_units_need_no_shared_edits(self):
+        rejected=('.agents/knowledge/shared/credential-inventory.md','.agents/skills/shared/credential-setup/',
+                  '.agents/skills/shared/long-running-supervision/')
+        for path in rejected:
+            entry=self.entry(path)
+            self.assertTrue(entry.get('optional'),path)
+            self.data['entries'].remove(entry)
+            self.data.setdefault('omitted',[]).append({'id':entry['id'],'path':path,'reason':'Not adopted here.'})
+            target=self.root/path
+            shutil.rmtree(target) if path.endswith('/') else target.unlink()
+        shared=[p for p in subprocess.check_output(['git','ls-files'],cwd=self.root,text=True).split()
+                if '/shared/' in p and p.endswith('.md') and (self.root/p).exists()]
+        before={p:(self.root/p).read_text().split(registry.BEGIN)[0] for p in shared}
+        subprocess.run(['git','add','-A'],cwd=self.root,check=True)
+        self.check('--write-indexes')
+        result=self.check()
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertEqual({p:(self.root/p).read_text().split(registry.BEGIN)[0] for p in shared},before)
+
+    def test_shared_records_do_not_link_to_other_optional_units(self):
+        from markdown_it import MarkdownIt
+        import posixpath, re
+        entries=self.data['entries'];found=[]
+        for p in registry.git_files(ROOT):
+            if not p.endswith('.md'):continue
+            try:owner=registry.resolve(p,entries)
+            except registry.RegistryError:continue
+            if owner['scope'] not in ('shared','shared_with_adaptation'):continue
+            text=(ROOT/p).read_text()
+            text=re.sub(re.escape(registry.BEGIN)+'.*?'+re.escape(registry.END),'',text,flags=re.S)
+            for token in MarkdownIt('commonmark').parse(text):
+                for child in token.children or []:
+                    href=child.attrGet('href') if child.type=='link_open' else None
+                    if not href or re.match(r'^[a-z]+:',href) or href.startswith('#'):continue
+                    linked=posixpath.normpath(posixpath.join(posixpath.dirname(p),href.split('#')[0]))
+                    try:target=registry.resolve(linked,entries)
+                    except registry.RegistryError:continue
+                    if target is not owner and target.get('optional'):found.append(f'{p} -> {linked}')
+        self.assertEqual(found,[])
+
+    def test_index_lists_memory_topic_subdirectories(self):
+        note=self.root/'.agents/memory/project/topic/note.md'
+        note.parent.mkdir();note.write_text('# Topic note\n')
+        self.data['entries'].append({'path':'.agents/memory/project/topic/note.md','id':'topic-note','kind':'memory',
+            'scope':'project','owner':'project-maintainers','summary':'A topic note.','status':'active',
+            'source':'unknown','updated':'unknown','supersedes':[],'superseded_by':[]})
+        subprocess.run(['git','add','-A'],cwd=self.root,check=True)
+        self.assertEqual(self.check('--write-indexes').returncode,0)
+        self.assertIn('[topic/note.md](topic/note.md)',(self.root/'.agents/memory/project/AGENTS.md').read_text())
+        self.assertEqual(self.check().returncode,0)
+
+    def test_duplicate_identity_names_its_paths(self):
+        first,second=self.data['entries'][0],copy.deepcopy(self.data['entries'][1])
+        second['id']=first['id']
+        errors=registry.relationship_errors([first,second])
+        self.assertIn(f"duplicate stable identity after migration: {first['id']} ({first['path']}, {second['path']})",errors)
+
+    def test_python_language_names_only_the_module(self):
+        package=self.root/'.agents/scripts/project/report-tool';package.mkdir()
+        (package/'make_report.py').write_text('print(1)\n')
+        self.data['entries'].append({'path':'.agents/scripts/project/report-tool/','id':'report-tool','kind':'code',
+            'language':'python','scope':'project','owner':'project-maintainers','summary':'Report tool.',
+            'status':'active','source':'unknown','updated':'unknown','supersedes':[],'superseded_by':[]})
+        subprocess.run(['git','add','-A'],cwd=self.root,check=True)
+        self.check('--write-indexes')
+        result=self.check()
+        self.assertEqual(result.returncode,0,result.stderr)
+
     def test_valid_catalog_and_relative_git_symlinks(self):
         result=self.check()
         self.assertEqual(result.returncode,0,result.stderr)

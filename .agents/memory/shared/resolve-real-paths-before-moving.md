@@ -7,7 +7,7 @@ applies_to: any move, copy-then-delete, replacement or symlinking of a directory
 
 # Resolve real paths before moving a directory
 
-Related: [`llm-credentials.md`](llm-credentials.md) (login directories are never
+Related: the optional memory record `llm-credentials` (`.agents/memory/shared/llm-credentials.md`, when adopted) (login directories are never
 moved or copied).
 
 ## Decision

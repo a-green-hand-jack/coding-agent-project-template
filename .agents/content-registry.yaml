@@ -4387,6 +4387,7 @@ entries:
     source: {"commit": "d07f49d2f6e02ad531d920c8c8fb994f44e88971", "path": ".agents/skills/shared/long-running-supervision/SKILL.md"}
     updated: unknown
     adaptation: "Keep local adaptations in the trailing In this repository section for skills/memory; review other files per template-upgrade."
+    optional: true
     supersedes: []
     superseded_by: []
   - path: .agents/skills/shared/project-memory-governance/
