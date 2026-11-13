@@ -814,12 +814,14 @@ def prepare_layout(upgrade, source_text, target_text, local_text):
         result['path_mappings'] = local['path_mappings']
     pending_writes = {}
     upstream_ids = {}
-    result['omitted'] = list(local.get('omitted',[]))
-    for omitted in target.get('omitted', []):
-        if omitted not in result['omitted']:
+    def omitted_already(record):
+        return any(x.get('id') == record.get('id') or x.get('path') == record.get('path') for x in result['omitted'])
+    result['omitted'] = []
+    for omitted in [*local.get('omitted', []), *target.get('omitted', [])]:
+        if not omitted_already(omitted):
             result['omitted'].append(omitted)
     for e in target['entries']:
-        if e['scope']=='template' and not any(x['id']==e['id'] for x in result['omitted']):
+        if e['scope']=='template' and not omitted_already(e):
             result['omitted'].append({'id':e['id'],'path':e['path'],'reason':'Upstream template-only content; not adopted.'})
     result["template"] = local["template"]
     if "writing" in local: result["writing"] = local["writing"]
@@ -1099,7 +1101,7 @@ def prepare_layout(upgrade, source_text, target_text, local_text):
         status = entry.get('status', 'active')
         if not omissions:
             if (status == 'active' and entry.get('optional') and not present and entry['id'] in local_ids
-                    and entry['scope'] != 'template'):
+                    and entry['scope'] != 'template' and not omitted_already(entry)):
                 entries.remove(entry)
                 upgrade.kept_out.add(upgrade.physical(path))
                 result['omitted'].append({'id': entry['id'], 'path': path,

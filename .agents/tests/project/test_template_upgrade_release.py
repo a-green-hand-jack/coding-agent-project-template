@@ -663,6 +663,72 @@ class TemplateCommandSyncTests(unittest.TestCase):
         self.assertEqual((root/'RELEASE_NOTES.md').read_text(), OWN_FILES['RELEASE_NOTES.md'])
 
 
+TARGET_REASON = 'Optional content left out here (recorded from an optional entry without a file).'
+
+
+def target_omits_dockerfile(self, data):
+    entry = next(e for e in data['entries'] if e['path'] == 'Dockerfile')
+    data['entries'].remove(entry)
+    data.setdefault('omitted', []).append({'id': entry['id'], 'path': 'Dockerfile', 'reason': TARGET_REASON})
+    (self.template/'Dockerfile').unlink()
+
+
+class TargetOmissionTests(unittest.TestCase):
+    """A target registry that records its own omissions, as a derived template does."""
+    latest_source = True
+    setUp = UpgradeFromAnOlderReleaseTests.setUp
+    commit = UpgradeFromAnOlderReleaseTests.commit
+    project = UpgradeFromAnOlderReleaseTests.project
+    assert_plan_lines = UpgradeFromAnOlderReleaseTests.assert_plan_lines
+    assert_upgraded_without_duplicates = UpgradeFromAnOlderReleaseTests.assert_upgraded_without_duplicates
+    candidate_target_omission_with_a_local_omission_keeps_the_local_reason = target_omits_dockerfile
+    candidate_target_omission_with_a_local_duplicate_entry = target_omits_dockerfile
+    candidate_target_omission_without_a_local_record = target_omits_dockerfile
+    candidate_target_omission_with_a_stale_local_entry = target_omits_dockerfile
+
+    def downstream(self, entry: bool, reason: str | None):
+        root = self.project(self.old, own=True)
+        registry = root/REGISTRY
+        data = catalog.loads(registry.read_text())
+        dockerfile = next(e for e in data['entries'] if e['path'] == 'Dockerfile')
+        if not entry:
+            data['entries'].remove(dockerfile)
+        if reason:
+            data['omitted'].append({'id': dockerfile['id'], 'path': 'Dockerfile', 'reason': reason})
+        (root/'Dockerfile').unlink()
+        registry.write_text(catalog.dumps(data))
+        catalog.indexes(root, data, write=True)
+        return root, registry
+
+    def assert_single_omission(self, root, registry, reason):
+        merged = self.assert_upgraded_without_duplicates(root, registry)
+        self.assertEqual([x['reason'] for x in merged['omitted'] if x['path'] == 'Dockerfile'], [reason])
+        self.assertNotIn('Dockerfile', {e['path'] for e in merged['entries']})
+        self.assertFalse((root/'Dockerfile').exists())
+        after = files_of(root)
+        again = subprocess.run(['bash', str(SCRIPT), self.candidate], cwd=root, text=True, capture_output=True)
+        self.assertEqual(again.returncode, 0, again.stdout + again.stderr)
+        self.assertEqual(files_of(root), after)
+
+    def test_target_omission_with_a_local_omission_keeps_the_local_reason(self):
+        root, registry = self.downstream(entry=False, reason='This paper ships no container.')
+        self.assert_single_omission(root, registry, 'This paper ships no container.')
+
+    def test_target_omission_with_a_local_duplicate_entry(self):
+        root, registry = self.downstream(entry=True, reason='This paper ships no container.')
+        self.assert_plan_lines(root, {'Dockerfile': 'kept out: Dockerfile (omitted locally)'})
+        self.assert_single_omission(root, registry, 'This paper ships no container.')
+
+    def test_target_omission_without_a_local_record(self):
+        root, registry = self.downstream(entry=False, reason=None)
+        self.assert_single_omission(root, registry, TARGET_REASON)
+
+    def test_target_omission_with_a_stale_local_entry(self):
+        root, registry = self.downstream(entry=True, reason=None)
+        self.assert_plan_lines(root, {'Dockerfile': f'kept out: Dockerfile (omitted in {self.candidate})'})
+        self.assert_single_omission(root, registry, TARGET_REASON)
+
+
 class UpgradeLatestLayoutTests(UpgradeFromAnOlderReleaseTests):
     source_tag='v0.1.25'
 
