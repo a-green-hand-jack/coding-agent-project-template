@@ -52,4 +52,4 @@ one credential-free request body of each shape directly to it and compare the
 response with the table; do not infer the answer from a relay's success. Update
 the table, the date and `source`, and mark the record superseded if a shape is
 now accepted. The decisions that use these facts are in
-[`../../memory/shared/third-party-llm-compat-patches.md`](../../memory/shared/third-party-llm-compat-patches.md).
+the optional memory record `third-party-llm-compat-patches` (`.agents/memory/shared/third-party-llm-compat-patches.md`, when adopted).

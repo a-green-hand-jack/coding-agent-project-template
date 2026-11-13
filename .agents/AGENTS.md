@@ -68,6 +68,21 @@ An adopter's stable ID also retargets imported current relationships and migrati
 Known upstream prose descriptions already recorded as `legacy_lifecycle` remain
 historical metadata, never invented live edges.
 
+Followed-template content this repository does not adopt is recorded only in the
+top-level `omitted:` list: one `{"id", "path", "reason"}` record per upstream unit,
+with the upstream ID and path and a nonempty reason. It is provenance, not an
+entry. `optional: true` only says the template allows leaving a unit out; it does
+not record that it was left out. `status: rejected` (like retired/superseded) is
+the lifecycle of an entry this repository registered and wins over a redundant
+omission. An ID is never both omitted and registered; a project's own unit may
+occupy the path of omitted `scope: template` content only under its own ID. The
+upgrade command
+writes omissions for `scope: template` content, turns an active optional entry
+whose file is missing into an omission, drops an omission whose file is present,
+and reports each change in its plan; `check-development.sh` lists every malformed
+or contradictory omission at once. A derived template (`template.upstream`) keeps
+its own `scope: template` entries as entries.
+
 The on-disk schema uses a canonical YAML subset: block mappings for template
 and writing, path-first flat entry records, and JSON flow values for nested
 collections. No YAML tags/anchors/aliases or folded scalars. Unsupported syntax

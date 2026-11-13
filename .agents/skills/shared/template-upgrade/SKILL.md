@@ -25,8 +25,8 @@ does the mechanical part of steps 1, 2 and 5:
   there it works offline.
 - For each path changed between the tags it applies step 5 by the target
   release's registry (the source release's for a removed path). It skips
-  `scope: template` and project-owned paths, keeps out an `optional: true`
-  path the repository left out, and prints the release's diff for an
+  `scope: template` and project-owned paths, keeps out a path the repository
+  recorded in `omitted:`, and prints the release's diff for an
   `upgrade: review` file. A shared file is replaced above its
   `## In this repository` section after check 1, or whole when unchanged here
   (three-way merged when it has no section); a new shared path is added, and a
@@ -36,7 +36,17 @@ does the mechanical part of steps 1, 2 and 5:
   `scope: template` entries or the template's `writing:` block, keeps this
   repository's `writing:` block and the repository and version values of its
   `template` block, and sets the followed version to the target only when
-  nothing conflicts.
+  nothing conflicts. An entry whose path or ID is in the `omitted:` records
+  stays out while the path is absent (`kept out: <path>`, reason kept, files
+  untouched); when the path is present the omission is dropped and the entry
+  registered (`adopted: <path>`, or `project-owned: <path>` for a project file
+  at a template-only path). A local retired/rejected/superseded entry wins over
+  a redundant omission, whose reason the plan prints (`kept <status>: <path>`);
+  with the file still present it is a conflict. An active `optional: true` entry
+  whose file is missing becomes an omission (`omitted: <path>`). An identity is
+  never both omitted and live. A derived template (`template.upstream`) keeps its own
+  `scope: template` entries; one that collides with upstream content is a
+  conflict.
 - A local edit that the release's change overlaps is a conflict: it is never
   overwritten, a `git merge-file` proposal is written under
   `.project/state/template-upgrade/proposals/`, and the command exits 1. A
@@ -57,11 +67,12 @@ even when the repository already has an older command. Old commands cannot
 recognize the newer registry format and can write an unreadable mixture. Install
 the target command's declared `markdown-it-py` dependency before planning. A
 repository without the command also runs the target copy, cloning the followed
-template's repository (the URL from step 1):
+template's repository (`<TEMPLATE_URL>`, the `repository` read in step 1, and
+`<name>`, its last path component):
 
 ```bash
-clone=.project/state/template-upgrade/coding-agent-project-template.git
-[ -d "$clone" ] || git clone -q --bare https://github.com/a-green-hand-jack/coding-agent-project-template "$clone"
+clone=.project/state/template-upgrade/<name>.git
+[ -d "$clone" ] || git clone -q --bare <TEMPLATE_URL> "$clone"
 mkdir -p .project/state/template-upgrade/target-command
 git -C "$clone" archive <TARGET_TAG> .agents/scripts/shared | tar -x -C .project/state/template-upgrade/target-command
 bash .project/state/template-upgrade/target-command/.agents/scripts/shared/upgrade-template.sh <TARGET_TAG>
@@ -110,7 +121,7 @@ mechanical part.
    `src/`.
    Treat the template repository's `RELEASE_NOTES.md` as template-only content;
    it is not copied into the downstream project's release history.
-   Keep a rejected optional path out (registry `optional: true`, for example
+   Keep an omitted path out (an `omitted:` record, for example
    `.github/workflows/template-check.yml` in a project whose `issue-workflow`
    `<CI>` is `no`), and keep the registry's `writing:` block: both are local
    decisions.
@@ -190,12 +201,16 @@ migration map:
    disagree or neither names one, do not guess: compare the repository's
    template-derived files with the candidate release tags, or ask the maintainer.
    Record which evidence the tag came from.
-2. Insert the block, replacing `<TAG>` with the adopted tag. The command adds it
-   before the first top-level key that follows `purpose:`. If a `template:` key
-   already exists without `version:`, add the `version:` line by hand instead:
+2. Insert the block, replacing `<TAG>` with the adopted tag and `<TEMPLATE_URL>`
+   with the repository this one was made from and follows: for a project made
+   from a derived template, the derived template, not its upstream. GitHub shows
+   it as "generated from"; otherwise take it from the same evidence as the tag.
+   The command adds the block before the first top-level key that follows
+   `purpose:`. If a `template:` key already exists without `version:`, add the
+   `version:` line by hand instead:
 
    ```bash
-   awk -v tag=<TAG> '/^(default_scope|matching|classes|entries):/ && !done { print "template:"; print "  repository: https://github.com/a-green-hand-jack/coding-agent-project-template"; print "  version: " tag; done = 1 } { print }' .agents/content-registry.yaml > .agents/content-registry.yaml.new && mv .agents/content-registry.yaml.new .agents/content-registry.yaml
+   awk -v tag=<TAG> -v url=<TEMPLATE_URL> '/^(default_scope|matching|classes|entries):/ && !done { print "template:"; print "  repository: " url; print "  version: " tag; done = 1 } { print }' .agents/content-registry.yaml > .agents/content-registry.yaml.new && mv .agents/content-registry.yaml.new .agents/content-registry.yaml
    ```
 
 3. Verify with `grep -A2 '^template:' .agents/content-registry.yaml`, and with

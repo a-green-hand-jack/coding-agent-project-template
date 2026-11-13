@@ -52,7 +52,7 @@ and model, then the effort; check current availability and recommend a concrete
 choice, obtain the required confirmation, and record re-dispatch history.
 
 The formats of the device inventory and the project's `credentials.yaml`, and
-what a read-only probe checks, are in
-[`../../knowledge/shared/credential-inventory.md`](../../knowledge/shared/credential-inventory.md);
-the credential decisions that keep values out of tracked content are in
-[`llm-credentials.md`](llm-credentials.md).
+what a read-only probe checks, are in the optional knowledge record
+`credential-inventory` (`.agents/knowledge/shared/credential-inventory.md`) when
+this repository adopts it; the credential decisions that keep values out of tracked content are in
+the optional memory record `llm-credentials` (`.agents/memory/shared/llm-credentials.md`, when adopted).

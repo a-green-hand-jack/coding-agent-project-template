@@ -500,7 +500,8 @@ distinguishes rule/fixture coverage from a real authorized handoff.
   - Close-out migrates state into `.project/migrations/<worktree-dir>-<UTC-timestamp>/`,
     so close-outs by different coordinators do not overwrite each other.
 - The dev checkout may drive a long-running product run, which fails when a
-  pull changes the code under it (see `long-running-supervision`). Before every
+  pull changes the code under it (see the optional `long-running-supervision`
+  skill, when adopted). Before every
   `git pull` in `<dev>` below, run the *dev live-run check*: when
   `<MONITOR_CMD>` is defined, `(cd <dev> && <MONITOR_CMD>)`. A live run it lists
   goes to the maintainer, and the pull waits until the run ends or the

@@ -12,8 +12,8 @@
 #   - scope template: skipped; project-owned: left alone;
 #   - `upgrade: review` (a file the project owns once it has started): never
 #     changed; the release's diff is printed for review;
-#   - `optional: true` and left out here: a local decision, kept; a new optional
-#     path is left for a manual decision;
+#   - recorded in `omitted:` (or `optional: true` and left out here): a local
+#     decision, kept; a new optional path is left for a manual decision;
 #   - shared: replaced above its `## In this repository` section when check 1
 #     passes; without a section, replaced whole when unchanged here and
 #     otherwise three-way merged with the source tag as base; added when new;
@@ -37,7 +37,7 @@
 #   Extract TARGET_TAG:.agents/scripts/shared/ into .project/state/template-upgrade/
 #   and run that upgrade-template.sh with its content_registry.py alongside it.
 set -euo pipefail
-exec python3 -I -B - "$(dirname "${BASH_SOURCE[0]}")" "$@" <<'PY'
+exec "${AGENTS_PYTHON:-python3}" -I -B - "$(dirname "${BASH_SOURCE[0]}")" "$@" <<'PY'
 import os
 import posixpath
 import hashlib
@@ -393,6 +393,7 @@ class Upgrade:
         self.proposals = clone.parent / "proposals"
         self.report = Report()
         self.path_mappings = []
+        self.kept_out = set()
 
     def physical(self, path: str) -> str:
         matches = [(source, dest) for source, dest in self.path_mappings
@@ -502,6 +503,8 @@ class Upgrade:
 
     def path(self, old_mode: str, new_mode: str, old_sha: str, new_sha: str, status: str, path: str,
              entry: dict) -> None:
+        if any(catalog.rank(self.physical(path), kept) for kept in self.kept_out):
+            return
         report, state, scope = self.report, self.local(path), scope_in(entry)
         local_entry = next((e for e in self.local_entries if catalog.rank(self.physical(path),e["path"])), {})
         if local_entry.get("status") in ("retired", "superseded", "rejected"):
@@ -565,6 +568,8 @@ class Upgrade:
                 return self.conflict(path, f"{path}: changed here and in {self.target}"
                                            f"{self.propose(path, merged, clean)}")
             if merged == here:
+                if path in self.aliases and self.local(self.aliases[path]) is not None:
+                    self.write(path, new_mode, merged.encode())
                 report.applied(f"{path}: already has the change of {self.target}")
             else:
                 self.write(path, new_mode, merged.encode())
@@ -581,12 +586,16 @@ class Upgrade:
             self.write(path, new_mode, (target[0] + ("\n" + section if section else "")).encode())
             report.applied(f"{path}: replaced above {SECTION}")
         elif mine[0] == target[0]:
+            if path in self.aliases and self.local(self.aliases[path]) is not None:
+                self.write(path, new_mode, here.encode())
             report.applied(f"{path}: already as in {self.target} above {SECTION}")
         else:
             merged, clean = self.merge(mine[0], source[0], target[0])
             if not (clean and merged == mine[0]):
                 return self.conflict(path, f"{path}: edited above {SECTION} (check 1)"
                                            f"{self.propose(path, merged + chr(10) + mine[1], clean)}")
+            if path in self.aliases and self.local(self.aliases[path]) is not None:
+                self.write(path, new_mode, here.encode())
             report.applied(f"{path}: already has the change of {self.target} above {SECTION}")
         reasons = reconcile(source, target, mine[1]) if mine[1] != target[1] else []
         if reasons:
@@ -751,7 +760,7 @@ def reconcile_lifecycle(upgrade, entries, original, target, upstream_ids, pendin
     for entry in entries:
         path = entry['path']
         values = {key: entry.get(key, []) for key in ('supersedes', 'superseded_by')}
-        state = upgrade.local(path) if entry['kind'] in ('memory', 'knowledge') else None
+        state = (pending_writes.get(path) or upgrade.local(path)) if entry['kind'] in ('memory', 'knowledge') else None
         if state and state[0] != '120000' and entry['scope'] == 'project':
             body = state[1].decode()
             split = body.split('---', 2) if body.startswith('---\n') else []
@@ -796,6 +805,11 @@ def prepare_layout(upgrade, source_text, target_text, local_text):
     source = legacy_data(source_text)
     report = upgrade.report
     result = json.loads(json.dumps(target))
+    local_roots = local.get('policy', {}).get('root_files', [])
+    target_roots = result.setdefault('policy', {}).setdefault('root_files', [])
+    for name in local_roots:
+        if name not in target_roots:
+            target_roots.append(name)
     if upgrade.path_mappings:
         result['path_mappings'] = local['path_mappings']
     pending_writes = {}
@@ -833,11 +847,85 @@ def prepare_layout(upgrade, source_text, target_text, local_text):
             continue
         if old[0]["path"] != new[0]["path"]:
             old_path,new_path=old[0]['path'],new[0]['path']
-            old_state,new_state=upgrade.local(old_path),upgrade.local(new_path)
-            if old_state and new_state and old_state!=new_state:
-                upgrade.manual_paths.update((old_path,new_path))
+            old_state = upgrade.local(old_path)
+            destination = upgrade.root / upgrade.physical(new_path)
+            new_state = upgrade.local(new_path) if destination.exists() or destination.is_symlink() else None
+            if old_state and new_state and old_state != new_state:
+                upgrade.manual_paths.update((old_path, new_path))
                 report.refused(f'{old_path} -> {new_path}: conflicting existing destination; both files held')
-            upgrade.aliases[new_path] = old_path
+            previous = upgrade.aliases.get(new_path)
+            previous_state = upgrade.local(previous) if previous else None
+            if previous and previous != old_path and previous_state and old_state:
+                upgrade.manual_paths.update((previous, old_path, new_path))
+                report.refused(f'{previous} and {old_path} both map to {new_path}; preserve both and resolve manually')
+            if not previous or old_state or not previous_state:
+                upgrade.aliases[new_path] = old_path
+    local_by_id = {entry.get('upstream_id', entry.get('id')): entry for entry in local['entries']
+                   if entry.get('upstream_id', entry.get('id'))}
+    inverse_aliases = {old: new for new, old in upgrade.aliases.items()}
+    for target_entry in target['entries']:
+        if target_entry.get('scope') != 'project':
+            continue
+        new_path = target_entry['path']
+        old_path = upgrade.aliases.get(new_path)
+        mine = local_by_id.get(target_entry['id']) or next(
+            (entry for entry in local['entries'] if entry.get('scope') == 'project' and entry['path'] == old_path), None)
+        if old_path and not mine and local.get('schema_version') == 1:
+            legacy_owner = entry_of(old_path, parse_registry(local_text))
+            if scope_in(legacy_owner) == 'project':
+                mine = {'path': old_path}
+        if not old_path or not mine or mine['path'] != old_path:
+            continue
+        source_file = upgrade.root / upgrade.physical(old_path)
+        if any(parent.is_symlink() for parent in source_file.parents if parent != upgrade.root and upgrade.root in parent.parents):
+            report.refused(f'{old_path}: project-owned source has a symbolic-link parent')
+            upgrade.catalog_blocked = True
+            continue
+        old_state = upgrade.local(old_path)
+        if old_state is None:
+            continue
+        destination = upgrade.root / upgrade.physical(new_path)
+        if any(parent.is_symlink() for parent in destination.parents if parent != upgrade.root and upgrade.root in parent.parents):
+            report.refused(f'{old_path} -> {new_path}: project-owned destination has a symbolic-link parent')
+            upgrade.catalog_blocked = True
+            continue
+        if destination.exists() or destination.is_symlink():
+            report.refused(f'{old_path} -> {new_path}: project-owned destination already exists; preserve both and resolve manually')
+            upgrade.catalog_blocked = True
+            continue
+        if old_state[0] not in ('100644', '100755'):
+            report.refused(f'{old_path}: project-owned record is not a regular file; preserve and resolve manually')
+            upgrade.catalog_blocked = True
+            continue
+        try:
+            text = old_state[1].decode('utf-8')
+            from markdown_it import MarkdownIt
+            replacements = {}
+            for token in MarkdownIt('commonmark').parse(text):
+                for child in token.children or []:
+                    if child.type not in ('link_open', 'image'):
+                        continue
+                    href = child.attrGet('href' if child.type == 'link_open' else 'src') or ''
+                    parsed = urlsplit(href)
+                    if parsed.scheme or parsed.netloc or parsed.path.startswith('/') or not parsed.path:
+                        continue
+                    linked = posixpath.normpath(posixpath.join(posixpath.dirname(old_path), unquote(parsed.path)))
+                    destination_path = inverse_aliases.get(linked, linked)
+                    relative = posixpath.relpath(destination_path, posixpath.dirname(new_path))
+                    updated = urlunsplit(('', '', quote(relative, safe='/._-~'), parsed.query, parsed.fragment))
+                    if updated != href:
+                        replacements[href] = updated
+            for old_href, new_href in replacements.items():
+                syntax = '](' + old_href
+                if text.count(syntax) != 1:
+                    raise ValueError(f'ambiguous Markdown link {old_href}')
+                text = text.replace(syntax, '](' + new_href, 1)
+            pending_writes[new_path] = (old_state[0], text.encode('utf-8'))
+            report.applied(f'{old_path} -> {new_path}: preserve project-owned record')
+        except (UnicodeDecodeError, ValueError, ImportError) as exc:
+            report.refused(f'{old_path}: cannot safely relocate project-owned record: {exc}')
+            upgrade.catalog_blocked = True
+
     # Local hook names had a defined caller in schema1; move without rewriting
     # their contents. Other flat local items follow their existing scope.
     known = {x["path"] for x in target["entries"]}
@@ -867,7 +955,8 @@ def prepare_layout(upgrade, source_text, target_text, local_text):
     def mapped(path):
         if path in inverse:return inverse[path]
         if path.endswith('/'):
-            destinations={new[:-len(old[len(path):])] for old,new in inverse.items() if old.startswith(path) and old[len(path):]}
+            destinations={"/".join(new.split("/")[:-len(old[len(path):].split("/"))])+"/"
+                          for old,new in inverse.items() if old.startswith(path) and old[len(path):]}
             if len(destinations)==1:return destinations.pop()
         return path
     original = {e["path"]: e for e in local["entries"]}
@@ -911,7 +1000,15 @@ def prepare_layout(upgrade, source_text, target_text, local_text):
             removed_local.append(e['path'])
             continue
         path = mapped(e["path"])
-        if e["scope"] == "template": continue
+        if e["scope"] == "template":
+            if "upstream" not in local.get("template", {}):
+                continue
+            if path in target_paths:
+                report.refused(f'{path}: local template-only identity collides with upstream content')
+                upgrade.catalog_blocked = True
+            else:
+                entries.append(complete_entry(e, path)); target_paths.add(path)
+            continue
         # Schema1 inherited defaults are historical classification, not units.
         # Exact local entries, including retired paths, stay registered.
         if local["schema_version"] == 1 and (any(x in path for x in '*?[') or path.endswith('/') and e.get("kind") not in ("skill", "code")):
@@ -989,6 +1086,50 @@ def prepare_layout(upgrade, source_text, target_text, local_text):
     # files. A failed preflight preserves source bytes and the source registry.
     reconcile_lifecycle(upgrade, entries, original, target, upstream_ids, pending_writes)
     result["entries"] = entries
+    local_template_entries = {entry['id']: entry for entry in entries if entry['scope'] == 'template'}
+    result['omitted'] = [entry for entry in result['omitted'] if entry.get('id') not in local_template_entries]
+    recorded = local.get('omitted', [])
+    template_only = {entry['id'] for entry in target['entries'] if entry['scope'] == 'template'}
+    local_ids = {entry.get('id') for entry in local['entries']}
+    for entry in list(entries):
+        path = entry['path']
+        omissions = [x for x in result['omitted'] if x.get('id') == entry['id']
+                     or (x.get('path') == path and x.get('id') not in template_only)]
+        present = upgrade.local(path) is not None
+        status = entry.get('status', 'active')
+        if not omissions:
+            if (status == 'active' and entry.get('optional') and not present and entry['id'] in local_ids
+                    and entry['scope'] != 'template'):
+                entries.remove(entry)
+                upgrade.kept_out.add(upgrade.physical(path))
+                result['omitted'].append({'id': entry['id'], 'path': path,
+                                          'reason': 'Optional content left out here (recorded from an optional entry without a file).'})
+                report.applied(f"omitted: {path} (optional entry without a file recorded as an omission)")
+            continue
+        local_records = [x for x in omissions if x in recorded]
+        if status != 'active':
+            if present:
+                report.refused(f"{path}: local status {status} and omitted, but the file is present; reconcile by hand")
+                upgrade.catalog_blocked = True
+                continue
+            result['omitted'] = [x for x in result['omitted'] if x not in omissions]
+            upgrade.kept_out.add(upgrade.physical(path))
+            if local_records:
+                reasons = '; '.join(x.get('reason', '') for x in local_records)
+                report.skipped(f"kept {status}: {path} (redundant omission dropped: {reasons})")
+        elif present:
+            result['omitted'] = [x for x in result['omitted'] if x not in omissions]
+            if local_records and any(x.get('id') in template_only for x in local_records):
+                report.applied(f"project-owned: {path} (template-only omission dropped; file present)")
+            elif local_records:
+                report.applied(f"adopted: {path} (omission dropped; file present)")
+        else:
+            entries.remove(entry)
+            upgrade.kept_out.add(upgrade.physical(path))
+            for upstream, current in list(upstream_ids.items()):
+                if current == entry['id']:
+                    del upstream_ids[upstream]
+            report.skipped(f"kept out: {path} (omitted {'locally' if local_records else 'in ' + upgrade.target})")
     if local["schema_version"] == 2:
         # Preserve local policy exceptions and history in addition to upstream.
         exceptions = result["policy"]["naming_exceptions"]
@@ -1003,6 +1144,16 @@ def prepare_layout(upgrade, source_text, target_text, local_text):
             if old_id in upstream_ids:
                 destination.setdefault('upstream_id', old_id)
                 destination['id'] = upstream_ids[old_id]
+            current_entry = next((entry for entry in entries if entry['id'] == destination['id']), None)
+            if current_entry and not catalog.rank(destination['path'], current_entry['path']):
+                destination.setdefault('upstream_path', destination['path'])
+                destination['path'] = current_entry['path']
+            local_template = local_template_entries.get(destination['id'])
+            upstream_template = next((entry for entry in target['entries']
+                                      if entry['id'] == old_id and entry['scope'] == 'template'), None)
+            if local_template and upstream_template and not catalog.rank(destination['path'], local_template['path']):
+                destination.setdefault('upstream_path', destination['path'])
+                destination['path'] = local_template['path']
     unique_migrations = []
     for migration in result.get('migrations', []):
         if migration not in unique_migrations:
@@ -1176,6 +1327,19 @@ def main(arguments: list[str]) -> int:
                 expected = (upgrade.physical(before[identity]['path']), upgrade.physical(after[identity]['path']))
                 if local_path not in expected:
                     raise Failure(f'{identity}: locally relocated path {local_path}; automatic mapping is unsupported; reconcile the upgrade manually before advancing the version')
+        if not check and not mappings:
+            project_ids = {entry['id'] for entry in target_data.get('entries', []) if entry.get('scope') == 'project'}
+            project_moves = any(
+                len(migration.get('from', [])) == len(migration.get('to', [])) == 1
+                and migration['to'][0]['id'] in project_ids
+                and migration['from'][0]['path'] != migration['to'][0]['path']
+                and (root / migration['from'][0]['path']).is_file()
+                for migration in target_data.get('migrations', [])
+            )
+            if project_moves:
+                status = main(['--check', *sum((['--resolved', p] for p in sorted(resolved)), []), target])
+                if status:
+                    raise Failure('project record migration preflight failed; no source files or registry were changed')
         local_v2 = prepare_layout(upgrade, source_registry, target_registry, registry_text)
         upgrade.local_entries = local_v2["entries"]
     changes = [] if upgrade.catalog_blocked else layout_changes(upgrade) if schema2 else raw_changes(upgrade)
