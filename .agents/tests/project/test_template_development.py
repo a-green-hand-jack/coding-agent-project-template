@@ -233,19 +233,37 @@ class DevelopmentContractTests(unittest.TestCase):
         file.unlink();file.symlink_to('../../missing.md')
         self.rejected('bad CLAUDE link')
 
-    def test_replacement_cycles_dangling_and_inactive_chains(self):
+    def test_replacement_cycles_but_not_absent_replaced_records(self):
         a,b=self.data['entries'][:2]
         a['superseded_by']=[b['id']];b['superseded_by']=[a['id']]
         self.rejected('replacement cycle')
-        b['superseded_by']=['missing-id'];self.rejected('dangling replacement')
-        b['superseded_by']=[];b['status']='retired';self.rejected('inactive replacement chain')
+        # The replaced record is deleted; its identity stays only as provenance.
+        b['superseded_by']=['missing-id']
+        result=self.check();self.assertEqual(result.returncode,0,result.stderr)
 
-    def test_index_is_derived_and_stale_index_fails(self):
-        entry=next(e for e in self.data['entries'] if e['kind']=='memory')
-        entry['summary']='Changed authority summary.'
-        self.rejected('stale index')
-        result=self.check('--write-indexes');self.assertEqual(result.returncode,0,result.stderr)
-        self.assertEqual(self.check().returncode,0)
+    def test_current_records_only_rejects_history_fields_and_lifecycles(self):
+        path='.agents/memory/project/obsolete-note.md'
+        file=self.root/path;file.write_text('---\nname: obsolete-note\ndate: 2026-11\nsource: test\n---\n\n# Note\n')
+        entry={'path':path,'id':'obsolete-note','kind':'memory','scope':'project','owner':'test',
+               'summary':'An obsolete decision.','status':'active','source':'test','updated':'2026-11',
+               'supersedes':[],'superseded_by':[]}
+        self.data['entries'].append(entry)
+        self.check('--write-indexes')
+        entry['retention']='historical'
+        entry['retention_reason']='Preserve the old decision body.'
+        self.rejected('obsolete retention:')
+        self.assertIn('keep the history in Git',self.check().stderr)
+        del entry['retention'],entry['retention_reason']
+        result=self.check();self.assertEqual(result.returncode,0,result.stderr)
+        entry['status']='superseded'
+        self.rejected('obsolete lifecycle superseded:')
+        entry['status']='retired'
+        self.rejected('obsolete lifecycle retired:')
+        # Deleting the record and its file is the way to keep the history.
+        self.data['entries'].remove(entry)
+        file.unlink()
+        self.check('--write-indexes')
+        result=self.check();self.assertEqual(result.returncode,0,result.stderr)
 
     def test_schema_one_gets_explicit_migration_error(self):
         self.data['schema_version']=1
