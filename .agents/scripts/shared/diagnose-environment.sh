@@ -10,15 +10,23 @@ check() {
 
 check git --version
 check bash --version
-python="${AGENTS_PYTHON:-python3}"
+# The project's Python: AGENTS_PYTHON first, then a virtual environment at
+# .project/venv, then python3 on PATH. The same order holds in the other
+# inherited commands.
+python=${AGENTS_PYTHON:-}
+if [[ -z "$python" ]]; then
+  python=$root/.project/venv/bin/python3
+  [[ -x "$python" ]] || python=python3
+fi
 if "$python" -I -c 'import yaml, markdown_it' >/dev/null 2>&1; then
   printf 'ok   %s -I -c "import yaml, markdown_it"\n' "$python"
 else
   printf 'FAIL %s -I -c "import yaml, markdown_it": PyYAML or markdown-it-py is missing for this interpreter\n' "$python"
   echo '     The development commands run Python in isolated mode (-I), which ignores user site-packages and PYTHONPATH.'
+  echo '     A virtual environment at .project/venv is used automatically while AGENTS_PYTHON stays unset.'
   echo "     Install both packages into that interpreter (python3 -m pip install 'PyYAML>=6.0,<7' 'markdown-it-py>=3,<5'),"
   echo '     or, where pip refuses an externally managed interpreter, create a virtual environment with them and'
-  echo '     export AGENTS_PYTHON=<venv>/bin/python before running the commands. See DEV.md.'
+  echo '     export AGENTS_PYTHON=<venv>/bin/python before running the commands.'
   fail=1
 fi
 [[ -d .agents ]] && printf 'ok   .agents directory\n' || { echo 'FAIL .agents directory'; fail=1; }
@@ -66,13 +74,13 @@ else
       echo '     Repositories adopted before v0.1.5 have none. Backfill it, then rerun this script.'
     fi
     cat <<'HINT'
-     1. Read the adopted tag from the adoption commit or the developer docs:
+     1. Read the adopted tag from the release tags this checkout follows or the adoption commit:
+          git tag --sort=-v:refname | head -n 20
           git log --reverse --format='%h %s' -- .agents/content-registry.yaml
-          grep -nE 'v[0-9]+\.[0-9]+\.[0-9]+' DEV.md
      2. With no `template:` block, insert one, replacing <TAG> (for example v0.1.1) and <TEMPLATE_URL>,
         the URL of the template repository this one was made from and follows (for a project made
         from a derived template, the derived template, not its upstream; GitHub shows it as
-        "generated from", otherwise take it from the adoption commit or DEV.md):
+        "generated from", otherwise take it from the adoption commit or those release tags):
           awk -v tag=<TAG> -v url=<TEMPLATE_URL> '/^(default_scope|matching|classes|entries):/ && !done { print "template:"; print "  repository: " url; print "  version: " tag; done = 1 } { print }' .agents/content-registry.yaml > .agents/content-registry.yaml.new && mv .agents/content-registry.yaml.new .agents/content-registry.yaml
      See .agents/skills/shared/template-upgrade/SKILL.md ("Backfill a missing template record").
 HINT
@@ -104,7 +112,7 @@ else
 fi
 
 # Only a derived template records the template it follows, in template.upstream
-# (DEV.md, template relationship); a project made from it records only it.
+# (registry template block; a project made from it records only it).
 upstream_block=
 [[ ! -f "$registry" ]] || upstream_block=$(sed -n '/^template:/,/^[^[:space:]]/p' "$registry" |
   awk '/^  upstream:/ { u = 1; print; next } u && /^    / { print; next } u && /^  [^ #]/ { exit }')

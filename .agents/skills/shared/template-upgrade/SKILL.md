@@ -61,10 +61,11 @@ target's change counts as applied, and a file resolved by hand in another way
 is accepted with `--resolved <path>` (the registry too) once no conflict marker
 is left. Never edit the followed version by hand.
 
-When the local registry is schema 1 and the target uses schema 2, run the
-target release's complete command directory, including `content_registry.py`,
-even when the repository already has an older command. Old commands cannot
-recognize the newer registry format and can write an unreadable mixture. Install
+Run the target release's complete command directory, including
+`content_registry.py`, even when the repository already has an older command. Old
+commands cannot recognize the newer registry format and can write an unreadable
+mixture; a source older than the target's `minimum_upgrade_source` is refused, so
+upgrade it through the releases in between or adopt the template again. Install
 the target command's declared `markdown-it-py` dependency before planning. A
 repository without the command also runs the target copy, cloning the followed
 template's repository (`<TEMPLATE_URL>`, the `repository` read in step 1, and
@@ -80,13 +81,17 @@ bash .project/state/template-upgrade/target-command/.agents/scripts/shared/upgra
 
 ## Light path
 
-Each release entry in the template's `RELEASE_NOTES.md` has a
-`### Upgrading a project from <previous tag>` section that starts with
-`**Command only.**` when the command completes the upgrade, or lists the manual
-steps that remain. When every release crossed is command only and `--check`
-reports no conflict and no manual step (`Light path: yes`; review items do not
-count), the upgrade is one Issue, one worktree, the command, the checks of step
-6 and a PR. It needs no migration map and no step 4 presentation, and the Issue
+A release's own `RELEASE_NOTES.md` — the file at its tag, not an entry kept in a
+single growing file — has a `### Upgrading a project from <previous tag>` section
+that starts with `**Command only.**` when the command completes the upgrade, or
+lists the manual steps that remain. The file at HEAD describes only the current
+release; every entry names its predecessor, which is how the command reads each
+crossed release from its own tag (`git show <tag>:RELEASE_NOTES.md`) and fetches
+that tag when the upgrade cache has only the two ends. When every release
+crossed is command only and `--check` reports no conflict and no manual step
+(`Light path: yes`; review items do not count), the upgrade is one Issue, one
+worktree, the command, the checks of step 6 and a PR. It needs no migration map
+and no step 4 presentation, and the Issue
 is dispatched in the mechanical tier (`issue-workflow`, "Dispatch by
 difficulty"). Otherwise follow the full procedure below; the command's plan is
 the start of the step 2 migration map, and in step 5 the command applies the
@@ -104,8 +109,10 @@ mechanical part.
    no `template:` block or no `version:` line (repositories adopted before
    `v0.1.5`), backfill it first as described in "Backfill a missing template
    record"; without it the upgrade has no recorded source version.
-2. Fetch the target template tag and inspect its release notes and registry. Build
-   a path-level migration map from current version to target.
+2. Fetch the target template tag and inspect its release notes and registry. List
+   the path-level differences from current version to target, including every move
+   the release notes describe: the registry holds current state only, so a move is
+   never replayed from a migration table.
 3. Classify each difference as shared addition, required adaptation, local conflict,
    obsolete template behavior or intentionally skipped change. Search local
    Issues, memory and skills before changing an existing rule.
@@ -125,7 +132,7 @@ mechanical part.
    `.github/workflows/template-check.yml` in a project whose `issue-workflow`
    `<CI>` is `no`), and keep the registry's `writing:` block: both are local
    decisions.
-4. Present the migration map and acceptance plan before mutating a repository when
+4. Present the difference list and acceptance plan before mutating a repository when
    conflicts, public behavior or asset paths are involved.
 5. Work on an Issue branch. Apply only approved shared changes, adapt commands and
    paths, update `CLAUDE.md` and `.agents/**/AGENTS.md` consistently, and update
@@ -176,7 +183,7 @@ mechanical part.
 6. Run setup, diagnostics, public CLI checks, relevant seam tests and any required
    long-running supervision checks. Verify assets and worktree state remain
    visible and no local product files were overwritten.
-7. Report the exact source and target versions, migration decisions, validation
+7. Report the exact source and target versions, the decisions taken, validation
    evidence, skipped changes and remaining risks. Deliver through the downstream
    Issue/PR process.
 
@@ -186,18 +193,18 @@ capabilities it adopted and which it intentionally kept different.
 ## Backfill a missing template record
 
 A repository adopted before `v0.1.5` records its adopted release only in its
-developer docs or git history, and `.agents/scripts/shared/diagnose-environment.sh`
-reports a missing registry `template.version`. On the Issue branch, before the
-migration map:
+git history and the release tags it follows, and
+`.agents/scripts/shared/diagnose-environment.sh` reports a missing registry
+`template.version`. On the Issue branch, before the migration map:
 
 1. Read the adopted tag from the evidence:
 
    ```bash
-   grep -nE 'v[0-9]+\.[0-9]+\.[0-9]+' DEV.md
+   git tag --sort=-v:refname | head -n 20
    git log --reverse --format='%h %s' -- .agents/content-registry.yaml
    ```
 
-   The developer docs or the adoption commit normally name the tag. If they
+   The adoption commit and the release tags normally name the tag. If they
    disagree or neither names one, do not guess: compare the repository's
    template-derived files with the candidate release tags, or ask the maintainer.
    Record which evidence the tag came from.
@@ -217,11 +224,16 @@ migration map:
    `bash .agents/scripts/shared/diagnose-environment.sh` once the target scripts are
    in place.
 
-The backfilled value is the release the repository **adopted**. Step 5 of the
-procedure later moves it to the target tag; list the backfill in the migration
-report with its evidence.
+The registry's `minimum_upgrade_source` names the oldest release an upgrade still
+supports. A repository older than that cannot be upgraded mechanically: upgrade it
+step by step through the releases named in each release note, or adopt the template
+again. The command refuses such a source instead of leaving content at old paths.
 
-## Schema 1 to 2 and layout migration
+The backfilled value is the release the repository **adopted**. Step 5 of the
+procedure later moves it to the target tag; list the backfill in the report with
+its evidence.
+
+## Layout migration and path mappings
 
 The registry's optional `path_mappings` list records reviewed upstream-to-local
 paths, for example `[{"from":".agents/memory/shared/old.md",
@@ -252,10 +264,8 @@ old flat script. Inspect `--check` first. The target registry maps source paths
 before comparing blobs, preserving their merge base and local trailing sections.
 Local lifecycle/optional rejection and writing/template identity remain local.
 Project hooks move to scripts/project; template commands move to scripts/shared.
-Local flat content uses its existing registered scope or schema1 project default;
-unknown classification or a naming conflict needs an explicit reviewed decision.
-Multi-source/multi-target maps are reported for manual reconciliation; the version
-does not advance across an unresolved content conflict. `--resolved` never grants
+An unknown identity or a naming conflict needs an explicit reviewed decision.
+The version does not advance across an unresolved content conflict. `--resolved` never grants
 permission to discard a local record. New optional content still needs adoption.
 
 After upgrading, generate indexes from the merged registry and run the official
@@ -263,7 +273,7 @@ check. Verify each old path disposition, independent document registration,
 retired history and adaptation section. Repeating the same upgrade must leave
 all content and the new layout unchanged. Old compatibility wrappers are absent:
 all known template callers move together, and downstream callers must update in
-the reviewed migration. Preserve their old command references as history only.
+the reviewed release notes. Preserve their old command references as history only.
 
 Preserve an adopter's stable IDs and retarget imported migration destinations and
 current replacement edges to those IDs; retain upstream IDs as provenance.

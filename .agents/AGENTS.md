@@ -88,18 +88,19 @@ and writing, path-first flat entry records, and JSON flow values for nested
 collections. No YAML tags/anchors/aliases or folded scalars. Unsupported syntax
 fails explicitly. The parser and serializer are in `scripts/shared/content_registry.py`.
 Keep `template`, `writing`, `optional`, `upgrade` and adoption decisions when
-migrating; a schema1 file requires the target version's upgrade command.
+migrating. The file records current state only: no legacy inventory, adopter
+snapshot or migration map. Declare the oldest source an upgrade still supports in
+`minimum_upgrade_source`; a repository older than that adopts the template again
+(`template-adoption`) instead of replaying history.
 
 ## Change and verify
 
-Before relocation, fix the schema and complete old/new identity/path map in the
-registry's `migrations`. Each row records arrays of `from`/`to` identities,
-`keep|move|rename|merge|extract|retire`, reason, source commit, and verification.
-`entity: registration` rows describe legacy catalog-default expansion, not file
-operations. File rows cover physical contents. Arrays allow many-to-many changes; a merge/extraction needs reviewed content
-reconciliation, never automatic concatenation or overwrite. `legacy_inventory`
-preserves the source entries, including explicit empty/history dispositions.
-Git preserves the old authoritative body; do not introduce a runtime log store.
+Before relocation, fix the schema and describe the move in the release's own
+notes: histories live in Git and in the release tags, so the registry carries no
+old/new identity map. A move is a reviewed step of the release's
+`### Upgrading a project from <previous tag>` section, and a command-only release
+moves nothing. A merge or extraction needs reviewed content reconciliation, never
+automatic concatenation or overwrite. Do not introduce a runtime log store.
 
 Read inbound links and replacement chains before distilling content. Keep unique
 reasons and historical evidence; transfer procedures to skills and current facts
@@ -109,7 +110,8 @@ Run `bash .agents/scripts/shared/check-development.sh`; regenerate marked indexe
 with `--write-indexes`. Run `bash .agents/scripts/shared/check-shells.sh` to check
 all nested Shell files. Update callers, imports, test discovery, CI and
 adoption/upgrade references together. See `project-memory-governance` for the
-workflow and root DEV for local acceptance.
+workflow and the project's declared local check (the issue-workflow
+`<LOCAL_CHECK>` slot) for local acceptance.
 
 Never store credentials, raw authentication files, private sessions or personal
 data in the development tree.

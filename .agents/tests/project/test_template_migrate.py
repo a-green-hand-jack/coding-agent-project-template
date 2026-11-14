@@ -13,6 +13,7 @@ import stat
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
@@ -328,6 +329,22 @@ class MigrateRules(unittest.TestCase):
         self.assertFalse((migration / "home").exists())
         self.assertFalse((migration / "worktree.env").exists())
 
+    def test_project_rules_cover_tool_environments_and_the_project_venv(self) -> None:
+        tools = self.worktree / ".project/tools/ruff"
+        tools.mkdir(parents=True)
+        (tools / "config.toml").write_text("line-length = 100\n")
+        venv = self.worktree / ".project/venv/bin"
+        venv.mkdir(parents=True)
+        (venv / "python3").symlink_to("/usr/bin/python3")
+        self.rules("tools|drop|rebuilt by the tool environment\nvenv|drop|rebuilt by setup-project.sh\n")
+        result = self.migrate()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertRegex(result.stdout, r"tools\s+drop\s+\S+\s+rebuilt by the tool environment")
+        self.assertRegex(result.stdout, r"venv\s+drop\s+\S+\s+rebuilt by setup-project\.sh")
+        self.assertIn("verified: 1 item(s) identical", result.stdout)
+        self.assertFalse((self.copied() / "tools").exists())
+        self.assertFalse((self.copied() / "venv").exists())
+
     def test_wildcard_copies_matching_files(self) -> None:
         self.project_file("plan-12.md", "plan\n")
         self.project_file("plan-12-pr1.md", "plan pr1\n")
@@ -428,6 +445,24 @@ class MigrateRules(unittest.TestCase):
 
     def test_wildcard_duplicate_is_a_second_rule(self) -> None:
         self.assert_rejected("plan-*|copy|\nplan-*|copy|\n", 2, "second rule for plan-*")
+
+
+    def test_runs_note_names_the_optional_skill_only_when_it_exists(self) -> None:
+        runs = self.worktree / ".project/runs"
+        runs.mkdir()
+        (runs / "receipt.json").write_text('{"status":"done"}\n')
+        result = self.migrate()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn(".agents/skills/shared/asset-lifecycle/", result.stdout)
+        self.assertNotIn("long-running-supervision", result.stdout)
+        # A repository that adopts the optional skill still gets its path.
+        skill = self.worktree / ".agents/skills/shared/long-running-supervision"
+        skill.mkdir(parents=True)
+        (skill / "SKILL.md").write_text("---\nname: long-running-supervision\ndescription: supervise runs\n---\n")
+        time.sleep(1.1)
+        adopted = self.migrate()
+        self.assertEqual(adopted.returncode, 0, adopted.stdout + adopted.stderr)
+        self.assertIn("long-running-supervision", adopted.stdout)
 
 
 class SpecialFileVerification(unittest.TestCase):
@@ -544,6 +579,11 @@ class HandoffPrompt(unittest.TestCase):
         self.assertIn("Branch: feat/issue-7-child (already created from integration/issue-6", declared)
         self.assertIn("PR target: integration/issue-6", declared)
         self.assertNotIn("create it from", declared)
+
+    def test_prompt_names_the_local_check_slot_not_a_fixed_document(self) -> None:
+        result = self.prompt("## Dispatch\n- coordinator: `tpl-coord-1`\n")
+        self.assertNotIn("DEV.md", result)
+        self.assertIn("the issue-workflow <LOCAL_CHECK> slot", " ".join(result.split()))
 
     def test_prompt_tells_the_session_where_its_files_go(self) -> None:
         flat = " ".join(self.prompt("").split())

@@ -77,7 +77,10 @@ def release(version: str, repository: str) -> dict[str, str]:
             repository=repository, version=version, comment=COMMENT if number >= 2 else "",
             language="English" if number < 3 else "Deutsch", fields=FIELDS if number >= 3 else "",
             extra=EXTRAS if number >= 2 else ""),
-        "RELEASE_NOTES.md": "# Release notes\n\n" + "".join(NOTES[f"v{n}"] for n in range(number, 0, -1)),
+        # v3 keeps only its own entry (the release-notes policy it introduces);
+        # v1 and v2 also carry the older entries, as the real tags do.
+        "RELEASE_NOTES.md": "# Release notes\n\n" + (NOTES[version] if number >= 3 else
+                                                      "".join(NOTES[f"v{n}"] for n in range(number, 0, -1))),
         "shared/plain.txt": "one\n" if number == 1 else "two\n",
         "shared/skill.md": SKILL[version],
         "shared/edited.txt": "a\nb\nc\n" if number < 3 else "a\nb\nC\n",
@@ -202,6 +205,27 @@ class UpgradeTemplateTests(unittest.TestCase):
                      "template.version stays v1"):
             self.assertIn(line, result.stdout)
         self.assertNotIn("writing", result.stdout)
+
+    def test_a_crossed_release_that_cannot_be_read_is_a_manual_step(self) -> None:
+        # A release whose notes name a predecessor that is not in the repository:
+        # the plan reports it and still applies the rest.
+        files = release("v3", str(self.template))
+        files["RELEASE_NOTES.md"] = ("# Release notes\n\n## v4\n\nFourth.\n\n"
+                                     "### Upgrading a project from v9\n\n1. Do it by hand.\n")
+        for path in list(self.template.iterdir()):
+            if path.name != ".git":
+                shutil.rmtree(path) if path.is_dir() else path.unlink()
+        write(self.template, files)
+        git("add", "-A", cwd=self.template)
+        git(*IDENTITY, "commit", "-qm", "v4", cwd=self.template)
+        git("tag", "v4", cwd=self.template)
+        root = self.project("v2", edited=False)
+        result = self.upgrade(root, "v4")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("v4: manual steps remain:", result.stdout)
+        self.assertIn("1. Do it by hand.", result.stdout)
+        self.assertIn("cannot read RELEASE_NOTES.md at v9", result.stdout)
+        self.assertIn("Light path: no", result.stdout)
 
     def test_a_conflict_is_refused_and_the_rest_applied_across_two_releases(self) -> None:
         root = self.project("v1", edited=True)

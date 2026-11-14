@@ -251,13 +251,11 @@ class DevelopmentContractTests(unittest.TestCase):
         self.data['schema_version']=1
         self.rejected('use the target release upgrade command')
 
-    def test_many_to_many_map_and_complete_old_inventory(self):
-        first,second=self.data['migrations'][:2]
-        merged={**first,'from':first['from']+second['from'],'to':first['to']+second['to'],'action':'extract'}
-        self.data['migrations']=[merged]+self.data['migrations'][2:]
-        result=self.check();self.assertEqual(result.returncode,0,result.stderr)
-        self.data['migrations'].pop(0)
-        self.rejected('unmapped historical path')
+    def test_obsolete_history_blocks_are_named_and_refused(self):
+        self.data['legacy_inventory']={'entries': []}
+        self.data['migrations']=[]
+        self.rejected('obsolete registry history blocks: legacy_inventory, migrations')
+        self.assertIn('adopt the template again', self.check().stderr)
 
     def test_normalized_test_discovery_does_not_shrink(self):
         def names(source):
@@ -269,8 +267,16 @@ class DevelopmentContractTests(unittest.TestCase):
                 if isinstance(item,unittest.TestSuite):yield from flatten(item)
                 else:yield item.id()
         discovered=set(flatten(unittest.defaultTestLoader.discover(str(ROOT/'.agents/tests/project'),pattern='test_template_*.py')))
+        # The moves are history now: read the last registry that recorded them.
+        history=None
+        for tag in sorted(subprocess.check_output(['git','tag','-l','v*'],cwd=ROOT,text=True).split(),
+                          key=lambda value: [int(part) for part in value[1:].split('.')], reverse=True):
+            text=subprocess.check_output(['git','show',tag+':.agents/content-registry.yaml'],cwd=ROOT,text=True)
+            if '\nmigrations:' in text:
+                history=registry.loads(text);break
+        self.assertIsNotNone(history,'no release tag records the historical migration map')
         compared=0
-        for move in self.data['migrations']:
+        for move in history['migrations']:
             if move.get('entity')=='registration':continue
             for old in move['from']:
                 if not old['path'].startswith('.agents/tests/test_'):continue
@@ -281,6 +287,35 @@ class DevelopmentContractTests(unittest.TestCase):
                 self.assertLessEqual(normalized,discovered,new)
                 compared+=1
         self.assertEqual(compared,9)
+
+
+
+class BytecodePolicyTests(unittest.TestCase):
+    """Direct invocations must not leave __pycache__ in the source tree; Git
+    ignores it, so nothing detects or removes it."""
+
+    def test_inherited_commands_export_the_policy(self):
+        for name in ('check-development.sh','upgrade-template.sh','migrate-assets.sh','probe-credentials.sh'):
+            self.assertIn('PYTHONDONTWRITEBYTECODE=1',(ROOT/'.agents/scripts/shared'/name).read_text(),name)
+
+    def test_check_development_disables_bytecode_writing_for_its_interpreter(self):
+        with tempfile.TemporaryDirectory(prefix='bytecode-') as temp:
+            stub=Path(temp)/'python'
+            stub.write_text('#!/bin/sh\nprintf "%s\\n" "${PYTHONDONTWRITEBYTECODE:-unset}"\n')
+            stub.chmod(0o755)
+            result=subprocess.run(['bash',str(ROOT/'.agents/scripts/shared/check-development.sh')],
+                                  cwd=ROOT,env={**os.environ,'AGENTS_PYTHON':str(stub)},text=True,capture_output=True)
+        self.assertEqual(result.stdout.strip(),'1',result.stderr)
+
+    def test_registry_entry_point_stops_later_imports_from_caching(self):
+        with tempfile.TemporaryDirectory(prefix='bytecode-') as temp:
+            module=Path(temp)/'content_registry.py'
+            shutil.copy2(ROOT/'.agents/scripts/shared/content_registry.py',module)
+            result=subprocess.run([sys.executable,'-I','-c',
+                'import importlib.util, sys; spec=importlib.util.spec_from_file_location("c", %r); '
+                'module=importlib.util.module_from_spec(spec); spec.loader.exec_module(module); '
+                'print(sys.dont_write_bytecode)' % str(module)],text=True,capture_output=True)
+        self.assertEqual(result.stdout.strip(),'True',result.stderr)
 
 
 if __name__=='__main__':unittest.main()

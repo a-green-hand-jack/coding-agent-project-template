@@ -58,7 +58,8 @@ class BranchModelWhileAdoptingTests(unittest.TestCase):
         bin_dir.mkdir()
         (bin_dir / "gh").write_text(GH, encoding="utf-8")
         (bin_dir / "gh").chmod(0o755)
-        self.env = {key: value for key, value in os.environ.items() if key not in ("CI", "GITHUB_ACTIONS")}
+        self.env = {key: value for key, value in os.environ.items()
+                    if key not in ("CI", "GITHUB_ACTIONS", "AGENTS_PYTHON")}
         self.env["PATH"] = f"{bin_dir}{os.pathsep}{self.env['PATH']}"
         setup = self.run_script("setup-worktree.sh")
         self.assertEqual(setup.returncode, 0, setup.stdout + setup.stderr)
@@ -106,6 +107,19 @@ class BranchModelWhileAdoptingTests(unittest.TestCase):
         present = self.run_script("diagnose-environment.sh")
         self.assertIn(f'ok   {self.env["AGENTS_PYTHON"]} -I -c "import yaml, markdown_it"', present.stdout)
 
+    def test_backfill_hint_needs_no_root_dev_document(self) -> None:
+        registry = self.root / ".agents/content-registry.yaml"
+        text = registry.read_text(encoding="utf-8")
+        registry.write_text(re.sub(r"^template:\n(?:  .*\n)+", "", text, count=1, flags=re.M), encoding="utf-8")
+        (self.root / "DEV.md").unlink()
+        result = self.run_script("diagnose-environment.sh")
+        self.assertIn("has no `template:` block", result.stdout)
+        self.assertNotIn("DEV.md", result.stdout)
+        commands = [line.strip() for line in result.stdout.splitlines()
+                    if line.strip().startswith(("git tag", "git log"))]
+        self.assertEqual(commands, ["git tag --sort=-v:refname | head -n 20",
+                                    "git log --reverse --format='%h %s' -- .agents/content-registry.yaml"])
+
     def test_template_backfill_hint_names_no_fixed_repository(self) -> None:
         registry = self.root / ".agents/content-registry.yaml"
         text = registry.read_text(encoding="utf-8")
@@ -118,6 +132,51 @@ class BranchModelWhileAdoptingTests(unittest.TestCase):
         subprocess.run(["bash", "-c", command], cwd=self.root, check=True)
         block = re.search(r"^template:\n((?:  .*\n)+)", registry.read_text(encoding="utf-8"), re.M).group(1)
         self.assertEqual(block, "  repository: https://example.invalid/derived-template\n  version: v9.9.9\n")
+
+
+class ProjectPythonSelectionTests(unittest.TestCase):
+    """The inherited commands run with AGENTS_PYTHON when it is set, otherwise
+    with a virtual environment at .project/venv, otherwise with python3 on PATH."""
+
+    def setUp(self) -> None:
+        directory = tempfile.TemporaryDirectory(prefix="project-python-")
+        self.addCleanup(directory.cleanup)
+        self.root = Path(directory.name) / "project"
+        shutil.copytree(REPOSITORY / ".agents/scripts", self.root / ".agents/scripts", symlinks=True)
+        subprocess.run(["git", "init", "-q", str(self.root)], check=True)
+        self.env = {key: value for key, value in os.environ.items()
+                    if key not in ("CI", "GITHUB_ACTIONS", "AGENTS_PYTHON")}
+
+    def stub(self, relative: str) -> Path:
+        """A stand-in interpreter that only says which path ran it."""
+        path = self.root / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text('#!/bin/sh\nprintf "ran %s\\n" "$0"\n', encoding="utf-8")
+        path.chmod(0o755)
+        return path
+
+    def run_script(self, name: str) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(["bash", f".agents/scripts/shared/{name}"], cwd=self.root, env=self.env,
+                              capture_output=True, text=True, check=False)
+
+    def test_project_venv_python_is_used_when_agents_python_is_unset(self) -> None:
+        venv = self.stub(".project/venv/bin/python3")
+        diagnose = self.run_script("diagnose-environment.sh")
+        self.assertIn(f'ok   {venv} -I -c "import yaml, markdown_it"', diagnose.stdout)
+        check = self.run_script("check-development.sh")
+        self.assertEqual(check.returncode, 0, check.stdout + check.stderr)
+        self.assertIn(f"ran {venv}", check.stdout)
+
+    def test_agents_python_still_wins_over_the_project_venv(self) -> None:
+        venv = self.stub(".project/venv/bin/python3")
+        chosen = self.stub("bin/chosen-python")
+        self.env["AGENTS_PYTHON"] = str(chosen)
+        diagnose = self.run_script("diagnose-environment.sh")
+        self.assertIn(f'ok   {chosen} -I -c "import yaml, markdown_it"', diagnose.stdout)
+        self.assertNotIn(f"ok   {venv} ", diagnose.stdout)
+        check = self.run_script("check-development.sh")
+        self.assertEqual(check.returncode, 0, check.stdout + check.stderr)
+        self.assertIn(f"ran {chosen}", check.stdout)
 
 
 if __name__ == "__main__":

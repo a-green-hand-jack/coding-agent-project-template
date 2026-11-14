@@ -174,7 +174,10 @@ worktree 的 `.project/`。具体项目可以提供可执行的
    （`NAME|ACTION|WHY`，ACTION 为 `copy`、`drop` 或 `login`），否则 teardown 会
    停下来要求决定。`NAME` 可以是 shell 通配符，一行管一类文件，例如
    `plan-*.md|copy|`；通配符不能含 `/`、不能是 `login`、不能匹配模板自己处理的
-   条目，同名的精确规则优先于通配符。Issue session 自己的工作文件放在
+   条目，同名的精确规则优先于通配符。模板只为自己创建的条目定规则；
+   `setup-project.sh` hook 与工具环境创建的条目（例如 `.project/tools/<tool>/`
+   和 `.project/venv/`）是项目条目，由项目写 `tools|drop|WHY`、`venv|drop|WHY`
+   这样的规则，模板不替它决定是否保留。Issue session 自己的工作文件放在
    `.project/state/`，teardown 总会复制它，不需要规则。确认迁移输出里的
    `verified:` 覆盖上述条目和每个资产链接、资产软链接在 dev checkout 可解析、
    没有唯一副本留在旧目录后，再用 worktree 管理工具销毁 worktree 和 branch。
@@ -203,8 +206,9 @@ not-probed`。任何输出都不包含凭据值；格式和检查见
 文件，放入 `shared/` 或 `project/`，并使用对应的 `entry-template.md` front
 matter。新增或迁移条目时以 `content-registry.yaml` 为身份、归属、生命周期和摘要的唯一权威，
 用 `check-development.sh --write-indexes` 生成分组索引；正文只维护内容来源、日期和适用范围。
-六类目录、命名例外和 schema 2 格式见 `.agents/AGENTS.md`。旧 schema 1 必须通过目标版本
-升级入口迁移，不能直接交给新检查器。迁移表保留旧路径/新路径、稳定 ID、来源提交和处置；
+六类目录、命名例外和 schema 2 格式见 `.agents/AGENTS.md`。registry 只记录当前状态：
+没有旧清单、采纳快照或迁移表，历史在 Git 与各 release tag 里。升级支持的最老来源写在
+`minimum_upgrade_source`；更老的仓库用 `template-adoption` 重新采用，而不是回放历史。
 模板自用 tests/harvest 位于 project/ 但保持 template 分类。
 
 ## 分支模型与仓库可见性
@@ -232,10 +236,12 @@ GitHub CLI 环境中幂等创建并推送 `dev`，并把 GitHub 默认分支设�
 检查器以 Python 的隔离模式启动；应将依赖安装到所选虚拟环境或系统环境，不能
 依赖仅对用户 site-packages 可见的安装。继承命令（`check-development.sh`、
 `upgrade-template.sh`、`migrate-assets.sh`、`probe-credentials.sh`）和
-`diagnose-environment.sh` 默认使用 `PATH` 上的 `python3`；设置 `AGENTS_PYTHON` 为
-解释器路径即改用它。解释器拒绝 `pip install`（PEP 668 “externally managed”）时，
-创建一个装有两项依赖的虚拟环境，并 `export AGENTS_PYTHON=<venv>/bin/python`。
-`diagnose-environment.sh` 用 `"${AGENTS_PYTHON:-python3}" -I -c 'import yaml, markdown_it'`
+`diagnose-environment.sh` 按同一顺序选择 Python：设置了 `AGENTS_PYTHON` 就用它；
+否则用 `.project/venv/bin/python3`（存在且可执行时，`setup-project.sh` 和
+`uv venv` 把依赖装在这里）；两者都没有时用 `PATH` 上的 `python3`。解释器拒绝
+`pip install`（PEP 668 “externally managed”）时，把两项依赖装进 `AGENTS_PYTHON`
+指向的虚拟环境，或装进 `.project/venv`，无需再导出变量。
+`diagnose-environment.sh` 用选中的解释器执行 `-I -c 'import yaml, markdown_it'`
 检查依赖，缺失时输出 `FAIL` 和上述处理办法。
 检查器检查 Git 可见的 `.agents/` Markdown 中的相对链接和 Markdown 标题锚点；代码
 块及行内代码不作为链接，外部链接不检查网络可达性。示例和历史路径应写在代码中；
@@ -256,8 +262,13 @@ bash .agents/scripts/shared/inspect-state.sh
 不复制）：
 
 ```bash
-python3 -m unittest discover -s .agents/tests/project -p 'test_template_*.py'
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s .agents/tests/project -p 'test_template_*.py'
 ```
+
+直接运行 Python 入口（测试发现、单项脚本）时设 `PYTHONDONTWRITEBYTECODE=1`，
+或在直接入口里设 `sys.dont_write_bytecode = True`；继承的 Shell 命令在启动
+Python 前自行导出该变量。`__pycache__` 被 Git 忽略，留着不会被发现或清理，
+却会让 teardown 的 `ignored source-side state` 多出内容。
 
 升级命令的回归测试（`test_template_upgrade.py`、`test_template_upgrade_release.py`）
 默认测试本仓库的 `.agents/scripts/shared/`。把 `TEMPLATE_COMMAND_DIR` 设为另一份
@@ -266,7 +277,7 @@ python3 -m unittest discover -s .agents/tests/project -p 'test_template_*.py'
 
 ```bash
 TEMPLATE_COMMAND_DIR=/path/to/derived/.agents/scripts/shared \
-  python3 -m unittest discover -s .agents/tests/project -p 'test_template_upgrade*.py'
+  PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s .agents/tests/project -p 'test_template_upgrade*.py'
 ```
 
 合并和发布以本地检查为门禁：上述检查和初始化 `setup-worktree.sh` 是本仓库的
@@ -295,16 +306,20 @@ SHA、每条命令的结果和 CI 状态（通过、失败、没运行）写成 
 
 本仓库是 `coding-agent-project-template` 的模板仓库本身；当前模板版本记录在
 `.agents/content-registry.yaml` 的 `template.version`，模板自己的发布历史在
-`RELEASE_NOTES.md`。
+`RELEASE_NOTES.md`，而 HEAD 只保留当前版本的条目；更早的条目在各 release tag
+的 `RELEASE_NOTES.md` 里。
 
 从模板创建的项目在自己的 registry 里记录它采用的 `template.repository` 与
 `template.version`，并保留自己的 `RELEASE_NOTES.md`，不复制模板的发布历史。
 升级到新的模板版本用 `.agents/skills/shared/template-upgrade/`：
 `bash .agents/scripts/shared/upgrade-template.sh [--check] <TAG>` 按 registry 完成机械部分，
-跨过的每个版本在 `RELEASE_NOTES.md` 的升级段都标为 **Command only.** 且没有冲突
-时走轻量路径，否则以命令的计划为起点走完整流程。模板每个版本的 release notes
-都要有 `### Upgrading a project from <上一个 tag>` 段，以 **Command only.** 开头
-或列出手动步骤（`release-doc-audit` 检查）。发现模板本身的
+跨过的每个版本（逐个从它自己的 tag 读 `git show <tag>:RELEASE_NOTES.md`）的升级段
+都是 **Command only.** 且没有冲突时走轻量路径，否则以命令的计划为起点走完整流程。
+模板每个版本的 release notes 都写在该版本的 tag 里，含
+`### Upgrading a project from <上一个 tag>` 段，以 **Command only.** 开头或列出
+手动步骤（`release-doc-audit` 检查）；HEAD 的 `RELEASE_NOTES.md` 只保留当前版本的
+条目，旧条目不再累加。跨过的版本没有 release notes 或未命名上一个 tag 时，
+命令把它列为 manual 项而不是默认完成。发现模板本身的
 缺陷或缺失能力时用 `.agents/skills/shared/template-feedback/` 向上游开 Issue；
 模板维护者主动收集下游已沉淀的通用实践用 `.agents/skills/project/template-harvest/`
 （只属于模板仓库，下游不复制）。只有 URL 是项目专用的，其余规则通用。
