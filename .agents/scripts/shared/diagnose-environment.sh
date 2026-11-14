@@ -23,9 +23,10 @@ if "$python" -I -c 'import yaml, markdown_it' >/dev/null 2>&1; then
 else
   printf 'FAIL %s -I -c "import yaml, markdown_it": PyYAML or markdown-it-py is missing for this interpreter\n' "$python"
   echo '     The development commands run Python in isolated mode (-I), which ignores user site-packages and PYTHONPATH.'
+  echo '     A virtual environment at .project/venv is used automatically while AGENTS_PYTHON stays unset.'
   echo "     Install both packages into that interpreter (python3 -m pip install 'PyYAML>=6.0,<7' 'markdown-it-py>=3,<5'),"
   echo '     or, where pip refuses an externally managed interpreter, create a virtual environment with them and'
-  echo '     export AGENTS_PYTHON=<venv>/bin/python before running the commands; a venv at .project/venv is used automatically. See DEV.md.'
+  echo '     export AGENTS_PYTHON=<venv>/bin/python before running the commands. See DEV.md.'
   fail=1
 fi
 [[ -d .agents ]] && printf 'ok   .agents directory\n' || { echo 'FAIL .agents directory'; fail=1; }
