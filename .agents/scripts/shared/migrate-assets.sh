@@ -20,8 +20,17 @@ usage() {
   exit 2
 }
 [[ "${1:-}" == '--to' && -n "${2:-}" ]] || usage
+root=$(git rev-parse --show-toplevel)
+# The project's Python: AGENTS_PYTHON first, then a virtual environment at
+# .project/venv, then python3 on PATH. The same order holds in the other
+# inherited commands.
+python=${AGENTS_PYTHON:-}
+if [[ -z "$python" ]]; then
+  python=$root/.project/venv/bin/python3
+  [[ -x "$python" ]] || python=python3
+fi
 # Resolve links and missing destination components without GNU-only realpath -m.
-destination=$("${AGENTS_PYTHON:-python3}" -I -c 'import os, sys; print(os.path.realpath(sys.argv[1]))' "$2")
+destination=$("$python" -I -c 'import os, sys; print(os.path.realpath(sys.argv[1]))' "$2")
 shift 2
 also_list=
 skip_list=
@@ -33,7 +42,6 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-root=$(git rev-parse --show-toplevel)
 cd "$root"
 [[ "$destination" != "$root" && "$destination" != "$root"/* ]] || { echo 'destination must be outside this worktree' >&2; exit 1; }
 
@@ -269,7 +277,7 @@ printf '%s' "$report" > "$migration/migration-report.txt"
 
 # -- verify the copy ---------------------------------------------------------------------------
 same() { # SOURCE COPY
-  "${AGENTS_PYTHON:-python3}" -I - "$1" "$2" <<'PY'
+  "$python" -I - "$1" "$2" <<'PY'
 import os
 import stat
 import sys

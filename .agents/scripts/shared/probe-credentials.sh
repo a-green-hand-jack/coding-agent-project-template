@@ -27,7 +27,15 @@
 set -euo pipefail
 root=$(git rev-parse --show-toplevel)
 cd "$root"
-exec "${AGENTS_PYTHON:-python3}" -I - "$@" <<'PY'
+# The project's Python: AGENTS_PYTHON first, then a virtual environment at
+# .project/venv, then python3 on PATH. The same order holds in the other
+# inherited commands.
+python=${AGENTS_PYTHON:-}
+if [[ -z "$python" ]]; then
+  python=$root/.project/venv/bin/python3
+  [[ -x "$python" ]] || python=python3
+fi
+exec "$python" -I - "$@" <<'PY'
 import json
 import os
 import re
