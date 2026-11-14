@@ -329,23 +329,6 @@ class MigrateRules(unittest.TestCase):
         self.assertFalse((migration / "home").exists())
         self.assertFalse((migration / "worktree.env").exists())
 
-    def test_runs_note_names_the_optional_skill_only_when_it_exists(self) -> None:
-        runs = self.worktree / ".project/runs"
-        runs.mkdir()
-        (runs / "receipt.json").write_text('{"status":"done"}\n')
-        result = self.migrate()
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertIn(".agents/skills/shared/asset-lifecycle/", result.stdout)
-        self.assertNotIn("long-running-supervision", result.stdout)
-        # A repository that adopts the optional skill still gets its path.
-        skill = self.worktree / ".agents/skills/shared/long-running-supervision"
-        skill.mkdir(parents=True)
-        (skill / "SKILL.md").write_text("---\nname: long-running-supervision\ndescription: supervise runs\n---\n")
-        time.sleep(1.1)
-        adopted = self.migrate()
-        self.assertEqual(adopted.returncode, 0, adopted.stdout + adopted.stderr)
-        self.assertIn("long-running-supervision", adopted.stdout)
-
     def test_wildcard_copies_matching_files(self) -> None:
         self.project_file("plan-12.md", "plan\n")
         self.project_file("plan-12-pr1.md", "plan pr1\n")
@@ -446,6 +429,24 @@ class MigrateRules(unittest.TestCase):
 
     def test_wildcard_duplicate_is_a_second_rule(self) -> None:
         self.assert_rejected("plan-*|copy|\nplan-*|copy|\n", 2, "second rule for plan-*")
+
+
+    def test_runs_note_names_the_optional_skill_only_when_it_exists(self) -> None:
+        runs = self.worktree / ".project/runs"
+        runs.mkdir()
+        (runs / "receipt.json").write_text('{"status":"done"}\n')
+        result = self.migrate()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn(".agents/skills/shared/asset-lifecycle/", result.stdout)
+        self.assertNotIn("long-running-supervision", result.stdout)
+        # A repository that adopts the optional skill still gets its path.
+        skill = self.worktree / ".agents/skills/shared/long-running-supervision"
+        skill.mkdir(parents=True)
+        (skill / "SKILL.md").write_text("---\nname: long-running-supervision\ndescription: supervise runs\n---\n")
+        time.sleep(1.1)
+        adopted = self.migrate()
+        self.assertEqual(adopted.returncode, 0, adopted.stdout + adopted.stderr)
+        self.assertIn("long-running-supervision", adopted.stdout)
 
 
 class SpecialFileVerification(unittest.TestCase):
