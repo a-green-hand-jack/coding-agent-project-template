@@ -281,6 +281,8 @@ Resolve legacy lifecycle references by ID, repository/record-relative path, or a
 unambiguous filename. Reconcile the whole graph before stripping frontmatter or
 moving project files. Missing/ambiguous targets, cycles or conflicting metadata
 hold all source writes and version advancement. Preserve retired/superseded
-memory and knowledge bodies with explicit historical retention and a reason;
-generated indexes mark them as history. Known upstream historical descriptions
+memory and knowledge bodies only when the release keeps them current: a
+superseded or retired record is deleted with its file, and Git keeps its body, so
+a surviving record's replacement reference may name an identity that no longer
+exists. Known upstream historical descriptions
 stay explicitly recorded as provenance, not fabricated replacement identities.

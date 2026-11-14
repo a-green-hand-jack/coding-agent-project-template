@@ -494,6 +494,8 @@ class Upgrade:
         if self.check:
             return
         file = self.root / self.physical(path)
+        if not (file.exists() or file.is_symlink()):
+            return
         file.unlink()
         for parent in file.parents:
             if parent == self.root or any(parent.iterdir()):
@@ -681,7 +683,7 @@ def legacy_data(text):
     entries = []
     for block in parsed["blocks"]:
         e = {"path": block["path"], "scope": scope_in(block)}
-        for key in ("id", "kind", "owner", "summary", "status", "source", "updated", "optional", "upgrade", "adoption", "supersedes", "superseded_by", "refresh_after", "retention", "retention_reason"):
+        for key in ("id", "kind", "owner", "summary", "status", "source", "updated", "optional", "upgrade", "adoption", "supersedes", "superseded_by", "refresh_after"):
             raw = field(block, key)
             if raw:
                 try: e[key] = catalog.value(raw)
@@ -774,17 +776,9 @@ def reconcile_lifecycle(upgrade, entries, original, target, upstream_ids, pendin
                 candidates = {by_path[path]['id'] for path in paths if path in by_path}
             if not candidates and '/' not in ref:
                 candidates = {e['id'] for e in entries if Path(e['path'].rstrip('/')).name == ref}
-            if len(candidates) != 1:
-                # Known upstream prose descriptions were already explicitly
-                # retained as historical metadata; they are not active edges.
-                historical = next((e.get('legacy_lifecycle', {}) for e in target['entries']
-                                   if e['path'] == entry['path']), {})
-                if not candidates and historical.get(key) == ref and entry['status'] == 'active':
-                    entry.setdefault('legacy_lifecycle', {})[key] = ref
-                    continue
-                held(entry['path'], f'{key}: {ref!r}, {len(candidates)} matching identities')
-                continue
-            resolved.append(next(iter(candidates)))
+            # A replaced identity may already be deleted; an unresolved reference
+            # stays as written, it is provenance rather than a dangling edge.
+            resolved.append(next(iter(candidates)) if len(candidates) == 1 else ref)
         return list(dict.fromkeys(resolved))
 
     for entry in entries:
@@ -820,13 +814,8 @@ def reconcile_lifecycle(upgrade, entries, original, target, upstream_ids, pendin
                 pending_writes[path] = (state[0], ('---' + pattern.sub('', front) + '---' + split[2]).encode())
         for key, value in values.items():
             entry[key] = resolve_refs(entry, value, key)
-        if state and entry['status'] in ('superseded', 'retired'):
-            entry.setdefault('retention', 'historical')
-            entry.setdefault('retention_reason', 'Preserve the existing decision body and source evidence; not current guidance.')
         if entry['status'] not in catalog.STATUSES:
             held(path, 'invalid lifecycle status')
-        if entry.get('retention') and not catalog.historical_body(entry):
-            held(path, 'invalid historical retention policy')
 
 
 def prepare_layout(upgrade, source_text, target_text, local_text):
@@ -1035,6 +1024,24 @@ def prepare_layout(upgrade, source_text, target_text, local_text):
         exceptions = result["policy"]["naming_exceptions"]
         for item in local.get("policy",{}).get("naming_exceptions",[]):
             if item not in exceptions: exceptions.append(item)
+    target_by_path = {entry['path']: entry for entry in target['entries']}
+    for entry in [record for record in entries if record.get('status') in ('superseded', 'retired')]:
+        path = entry['path']
+        entries.remove(entry)
+        local_added[:] = [record for record in local_added if record is not entry]
+        pending_writes.pop(path, None)
+        if path in target_by_path:
+            report.refused(f"{path}: locally {entry['status']} but {upgrade.target} registers it;"
+                           " decide which record is current")
+            upgrade.catalog_blocked = True
+            continue
+        upgrade.remove(path)
+        upgrade.deleted_paths.append(path)
+        upgrade.kept_out.add(upgrade.physical(path))
+        report.applied(f"{path}: removed with its {entry['status']} record; the history stays in Git")
+    for entry in entries:
+        for key in ('retention', 'retention_reason'):
+            entry.pop(key, None)
     # A local path can derive the same stable ID as a template unit that now
     # sits at another path, for example after this repository's own history
     # blocks were dropped. Both are real units: keep the local one distinct
