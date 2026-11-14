@@ -25,6 +25,7 @@
 #
 # Exit 2: wrong arguments or a file this script cannot read.
 set -euo pipefail
+export PYTHONDONTWRITEBYTECODE=1
 root=$(git rev-parse --show-toplevel)
 cd "$root"
 exec "${AGENTS_PYTHON:-python3}" -I - "$@" <<'PY'

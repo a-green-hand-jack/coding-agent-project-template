@@ -15,8 +15,12 @@ of `diagnose-environment.sh`. They write only to temporary directories, and
 CI runs them:
 
 ```bash
-python3 -m unittest discover -s .agents/tests/project -p 'test_template_*.py'
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s .agents/tests/project -p 'test_template_*.py'
 ```
+
+The variable keeps discovery from writing `__pycache__` into the source tree:
+Git ignores those caches, so nothing cleans them up, and they outlive the
+checkout's purpose. The inherited commands export it themselves.
 
 The real-release test needs the release tags (`git fetch --tags origin`).
 

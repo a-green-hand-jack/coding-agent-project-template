@@ -256,8 +256,13 @@ bash .agents/scripts/shared/inspect-state.sh
 不复制）：
 
 ```bash
-python3 -m unittest discover -s .agents/tests/project -p 'test_template_*.py'
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s .agents/tests/project -p 'test_template_*.py'
 ```
+
+直接运行 Python 入口（测试发现、单项脚本）时设 `PYTHONDONTWRITEBYTECODE=1`，
+或在直接入口里设 `sys.dont_write_bytecode = True`；继承的 Shell 命令在启动
+Python 前自行导出该变量。`__pycache__` 被 Git 忽略，留着不会被发现或清理，
+却会让 teardown 的 `ignored source-side state` 多出内容。
 
 升级命令的回归测试（`test_template_upgrade.py`、`test_template_upgrade_release.py`）
 默认测试本仓库的 `.agents/scripts/shared/`。把 `TEMPLATE_COMMAND_DIR` 设为另一份
@@ -266,7 +271,7 @@ python3 -m unittest discover -s .agents/tests/project -p 'test_template_*.py'
 
 ```bash
 TEMPLATE_COMMAND_DIR=/path/to/derived/.agents/scripts/shared \
-  python3 -m unittest discover -s .agents/tests/project -p 'test_template_upgrade*.py'
+  PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s .agents/tests/project -p 'test_template_upgrade*.py'
 ```
 
 合并和发布以本地检查为门禁：上述检查和初始化 `setup-worktree.sh` 是本仓库的

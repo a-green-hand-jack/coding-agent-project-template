@@ -37,7 +37,8 @@
 #   Extract TARGET_TAG:.agents/scripts/shared/ into .project/state/template-upgrade/
 #   and run that upgrade-template.sh with its content_registry.py alongside it.
 set -euo pipefail
-exec "${AGENTS_PYTHON:-python3}" -I -B - "$(dirname "${BASH_SOURCE[0]}")" "$@" <<'PY'
+export PYTHONDONTWRITEBYTECODE=1
+exec "${AGENTS_PYTHON:-python3}" -I - "$(dirname "${BASH_SOURCE[0]}")" "$@" <<'PY'
 import os
 import posixpath
 import hashlib
