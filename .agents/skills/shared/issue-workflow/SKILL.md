@@ -135,7 +135,7 @@ project-neutral.
 | `<WORKSPACE_PREFIX>` | Display form of the same project prefix, optionally upper-case; preserve its mapping to the stable task key, not a second task identity. Workspace labels append the Issue number and short topic. | `<AGENT_PREFIX>` |
 | `<MERGE_METHOD>` | `gh pr merge` method flag. Close-out's ancestry check assumes a merge commit. | `--merge` |
 | `<CI>` | Whether the project adopts the template's optional `.github/workflows/template-check.yml`. `yes`: adopted; its result is read and noted on the PR, never waited for and never a condition (see Merge). `no`: that workflow is left out (`template-adoption` step 3). | project fact |
-| `<LOCAL_CHECK>` | The verification commands from `DEV.md`, always filled whatever `<CI>` is. They are the local merge gate; record any differences from hosted CI. | `DEV.md` verification strategy |
+| `<LOCAL_CHECK>` | The project's verification commands, always filled whatever `<CI>` is. They are the local merge gate; record any differences from hosted CI. | the developer guide's verification section |
 | `<PRE_MERGE_GATE>` | Optional read-only product command that must pass before merging, for example `<cmd> archive --check`. | none |
 | `<ARCHIVE_CMD>` | Product command that archives and registers non-rebuildable results before a worktree is retired. | none |
 | `<MONITOR_CMD>`, `<STOP_CMD>` | Product commands that list live runs started in a checkout (the dev checkout or a worktree) and stop one. Close-out stops every run the worktree started through `<STOP_CMD>`, and never through a generic process killer. | none |
@@ -208,7 +208,7 @@ writing:
 
 - `language`: the working language of Issues, PRs, review and Issue comments,
   the Issue-specific section of a handoff prompt, and the human documents
-  (`README.md`, `USER.md`, `DEV.md` and the project's release notes).
+  (the project's developer guide and release notes, whatever they are named).
   Commit messages use it too unless the project's `development-writing`
   adaptation explicitly chooses a different commit language or convention.
 - `issue_sections`: the sections an Issue body starts with, in order, for
@@ -609,8 +609,8 @@ This section applies only after choosing a new Herdr dispatch. Direct dev work
 does not run these worktree/branch/session steps; establish scope, owner,
 blockers, acceptance and safe checkout state using the available interfaces.
 
-Input: Issue number `<N>` and a branch `<branch>` named per `DEV.md`
-(`<type>/issue-<N>-<slug>`, with `<type>` one of `fix`, `feat`, `docs`, `chore`).
+Input: Issue number `<N>` and a branch `<branch>` named per the project's developer
+guide (`<type>/issue-<N>-<slug>`, with `<type>` one of `fix`, `feat`, `docs`, `chore`).
 
 1. Claim the Issue ([Claim](#claim)) and confirm it has settled scope and
    acceptance: `gh issue view <N>`. For structural work, first state its users,

@@ -561,6 +561,11 @@ class HandoffPrompt(unittest.TestCase):
         self.assertIn("PR target: integration/issue-6", declared)
         self.assertNotIn("create it from", declared)
 
+    def test_prompt_names_the_local_check_slot_not_a_fixed_document(self) -> None:
+        result = self.prompt("## Dispatch\n- coordinator: `tpl-coord-1`\n")
+        self.assertNotIn("DEV.md", result)
+        self.assertIn("the issue-workflow <LOCAL_CHECK> slot", " ".join(result.split()))
+
     def test_prompt_tells_the_session_where_its_files_go(self) -> None:
         flat = " ".join(self.prompt("").split())
         self.assertIn("plans, PR body drafts and messages to the coordinator", flat)

@@ -107,6 +107,19 @@ class BranchModelWhileAdoptingTests(unittest.TestCase):
         present = self.run_script("diagnose-environment.sh")
         self.assertIn(f'ok   {self.env["AGENTS_PYTHON"]} -I -c "import yaml, markdown_it"', present.stdout)
 
+    def test_backfill_hint_needs_no_root_dev_document(self) -> None:
+        registry = self.root / ".agents/content-registry.yaml"
+        text = registry.read_text(encoding="utf-8")
+        registry.write_text(re.sub(r"^template:\n(?:  .*\n)+", "", text, count=1, flags=re.M), encoding="utf-8")
+        (self.root / "DEV.md").unlink()
+        result = self.run_script("diagnose-environment.sh")
+        self.assertIn("has no `template:` block", result.stdout)
+        self.assertNotIn("DEV.md", result.stdout)
+        commands = [line.strip() for line in result.stdout.splitlines()
+                    if line.strip().startswith(("git tag", "git log"))]
+        self.assertEqual(commands, ["git tag --sort=-v:refname | head -n 20",
+                                    "git log --reverse --format='%h %s' -- .agents/content-registry.yaml"])
+
     def test_template_backfill_hint_names_no_fixed_repository(self) -> None:
         registry = self.root / ".agents/content-registry.yaml"
         text = registry.read_text(encoding="utf-8")

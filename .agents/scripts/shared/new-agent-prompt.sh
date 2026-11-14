@@ -75,7 +75,8 @@ Working rules for this session:
   hook and report its exact name and evidence. Never blanket-approve or
   blanket-reject hooks.
 - Verify to completion. Run every check the Issue's acceptance and the
-  project's local check (DEV.md) call for, including real runs. After a push you
+  project's local check (the issue-workflow <LOCAL_CHECK> slot) call for,
+  including real runs. After a push you
   may read gh pr checks and report its state (passed, failed or not run), but do
   not wait for it and do not stop because CI did not run; the local result is
   the evidence. Report one definite result with the commands and their output. Name only a
