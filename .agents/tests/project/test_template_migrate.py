@@ -328,6 +328,22 @@ class MigrateRules(unittest.TestCase):
         self.assertFalse((migration / "home").exists())
         self.assertFalse((migration / "worktree.env").exists())
 
+    def test_project_rules_cover_tool_environments_and_the_project_venv(self) -> None:
+        tools = self.worktree / ".project/tools/ruff"
+        tools.mkdir(parents=True)
+        (tools / "config.toml").write_text("line-length = 100\n")
+        venv = self.worktree / ".project/venv/bin"
+        venv.mkdir(parents=True)
+        (venv / "python3").symlink_to("/usr/bin/python3")
+        self.rules("tools|drop|rebuilt by the tool environment\nvenv|drop|rebuilt by setup-project.sh\n")
+        result = self.migrate()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertRegex(result.stdout, r"tools\s+drop\s+\S+\s+rebuilt by the tool environment")
+        self.assertRegex(result.stdout, r"venv\s+drop\s+\S+\s+rebuilt by setup-project\.sh")
+        self.assertIn("verified: 1 item(s) identical", result.stdout)
+        self.assertFalse((self.copied() / "tools").exists())
+        self.assertFalse((self.copied() / "venv").exists())
+
     def test_wildcard_copies_matching_files(self) -> None:
         self.project_file("plan-12.md", "plan\n")
         self.project_file("plan-12-pr1.md", "plan pr1\n")
