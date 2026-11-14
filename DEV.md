@@ -184,9 +184,10 @@ worktree 的 `.project/`。具体项目可以提供可执行的
 
 ## 环境变量与资产
 
-`.env.example` 只声明变量名、用途和文件路径约定，不包含秘密。项目需要的凭据
-按名字登记在根目录受跟踪的 `credentials.yaml`：需要设备清单 `inventory.yaml`
-的哪些行、工具用什么名字读取、给哪个沙箱或岗位、必需还是可选。setup 运行
+`.env.example` 只声明变量名、用途和文件路径约定，不包含秘密。采用模板后由
+`llm-credentials` 在根目录建立受跟踪的 `credentials.yaml`，按名字登记项目需要的
+凭据：需要设备清单 `inventory.yaml` 的哪些行、工具用什么名字读取、给哪个沙箱或岗位、
+必需还是可选（本模板自身不调用 LLM，没有这个文件）。setup 运行
 `bash .agents/scripts/shared/probe-credentials.sh --check`，对缺行、空占位和未设置的
 必需凭据报错；diagnose 运行只读探测，逐个报告 `credential <name>: ok | failed |
 not-probed`。任何输出都不包含凭据值；格式和检查见

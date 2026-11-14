@@ -9,8 +9,8 @@
 ## 选择模板版本
 
 普通使用从 GitHub 的 **Use this template** 开始，它使用默认分支的最新版本。
-需要固定版本时，从 release tag 浅克隆，再替换为新项目的 remote；
-具体命令见根目录 [README.md](README.md) 的“使用模板版本”。
+需要固定版本时，从 release tag 克隆，再替换为新项目的 remote；具体命令和其余
+起步手续见根目录 [RELEASE_NOTES.md](RELEASE_NOTES.md) 的 `## Starting from this template`。
 
 创建下游仓库时优先选择 **Private**，并在第一次 setup 时确认仓库可见性和默认
 分支。准备公开前，检查凭据、私有数据、日志、本机路径以及 Issue/PR 内容。

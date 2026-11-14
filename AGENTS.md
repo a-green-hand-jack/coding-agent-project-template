@@ -59,8 +59,9 @@
 
 每个 worktree 必须先运行 `.agents/scripts/shared/setup-worktree.sh`。所有本地状态进入
 该 worktree 的 `.project/`。外部大资产必须有仓库内 `assets/` 软链接和 manifest；
-凭据只通过路径或运行时环境注入，绝不写入 Git、日志或 manifest；项目需要的凭据
-只按名字登记在根目录的 `credentials.yaml`（见 `llm-credentials`）。
+凭据只通过路径或运行时环境注入，绝不写入 Git、日志或 manifest；采用模板后由
+`llm-credentials` 建立的根目录 `credentials.yaml` 按名字登记项目需要的凭据（本模板
+自身不调用 LLM，没有这个文件）。
 
 ## 证据
 
