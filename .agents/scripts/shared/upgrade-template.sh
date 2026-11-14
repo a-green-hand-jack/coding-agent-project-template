@@ -144,6 +144,16 @@ def parse_registry(text: str) -> dict:
             "default": default.group(1) if default else "project"}
 
 
+def moved_path(path: str, mapping: dict) -> str:
+    """PATH under MAPPING's longest exact or directory key, or PATH itself."""
+    matches = [(key, value) for key, value in mapping.items()
+               if path == key or (key.endswith('/') and path.startswith(key))]
+    if not matches:
+        return path
+    key, value = max(matches, key=lambda item: len(item[0]))
+    return value + path[len(key):]
+
+
 def version_key(tag: str):
     """A tag as comparable numbers, or None when it is not vX.Y.Z (the floor)."""
     match = re.fullmatch(r"v?(\d+(?:\.\d+)*)", tag.strip())
@@ -553,6 +563,15 @@ class Upgrade:
         if status == "D":
             data = self.blob(old_sha)
             if state is None:
+                original = moved_path(path, self.aliases)
+                original_state = self.local(original) if original != path else None
+                if original_state is not None:
+                    if self.same(original_state, old_mode, data) or self.same(
+                            original_state, old_mode, self.mapped_markdown(path, data)):
+                        self.remove(original)
+                        self.deleted_paths.append(path)
+                        return report.applied(f"{original}: removed (deleted at {path} in {self.target})")
+                    return self.conflict(path, f"{path}: removed in {self.target}, changed here at {original}")
                 self.deleted_paths.append(path)
                 return report.applied(f"{path}: already removed")
             if self.same(state, old_mode, data) or self.same(state, old_mode, self.mapped_markdown(path, data)):
@@ -1020,12 +1039,28 @@ def prepare_layout(upgrade, source_text, target_text, local_text):
     # sits at another path, for example after this repository's own history
     # blocks were dropped. Both are real units: keep the local one distinct
     # instead of writing a registry the checker rejects as a duplicate.
-    counts = {}
+    source_tree = tree(upgrade, upgrade.source)
+    counts, by_id = {}, {}
     for entry in entries:
         counts[entry['id']] = counts.get(entry['id'], 0) + 1
+        by_id.setdefault(entry['id'], []).append(entry)
     for entry in local_added:
         identity = entry['id']
         if counts.get(identity, 0) < 2:
+            continue
+        survivors = [other for other in by_id[identity] if other is not entry]
+        state = upgrade.local(entry['path'])
+        meta = source_tree.get(entry['path'])
+        unchanged = state is not None and meta is not None and state[1] in (
+            upgrade.blob(meta[1]), upgrade.mapped_markdown(entry['path'], upgrade.blob(meta[1])))
+        if len(survivors) == 1 and survivors[0]['path'] != entry['path'] and (state is None or unchanged):
+            # The same unit, registered at its current path: keep that one and
+            # record the old path as provenance.
+            entries.remove(entry)
+            counts[identity] -= 1
+            survivor = survivors[0]
+            survivor.setdefault('upstream_path', entry['path'])
+            report.applied(f"{entry['path']} -> {survivor['path']}: one identity, the target path wins")
             continue
         referenced = any(identity in other.get(key, []) for other in local['entries']
                          for key in ('supersedes', 'superseded_by'))

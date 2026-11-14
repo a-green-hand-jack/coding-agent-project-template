@@ -407,23 +407,24 @@ class UpgradeFromAnOlderReleaseTests(unittest.TestCase):
             self.assertIn('locally relocated path', result.stderr)
             self.assertEqual(before, files_of(project))
 
-    def candidate_a_new_upstream_unit_reusing_a_local_identity(self, data):
-        data['entries'].append(unit('.agents/memory/shared/new-note.md', 'shared-generated-identity', 'memory',
-                                    'shared'))
-        (self.template / '.agents/memory/shared/new-note.md').write_text('# New note\n')
+    def candidate_a_moved_unit_reusing_a_local_identity(self, data):
+        old = '.agents/memory/shared/run-settings-from-config.md'
+        new = '.agents/memory/shared/config/run-settings.md'
+        entry = next(e for e in data['entries'] if e['path'] == old)
+        entry['path'] = new
+        (self.template / new).parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(self.template / old), str(self.template / new))
 
-    def test_a_new_upstream_unit_reusing_a_local_identity(self) -> None:
-        # A schema 2 repository that still keeps its old history blocks, and whose
-        # local path derived the same identity the target registers upstream.
+    def test_a_moved_unit_reusing_a_local_identity(self) -> None:
+        # A schema 2 repository that still keeps its old history blocks, while the
+        # target registers the same identity at the path it moved to.
         root = self.project(self.old, own=True)
         registry = root / REGISTRY
         data = catalog.loads(registry.read_text())
-        data['entries'].append(unit('.agents/memory/shared/old-note.md', 'shared-generated-identity', 'memory',
-                                    'shared'))
-        (root / '.agents/memory/shared/old-note.md').write_text('# Old note\n')
+        old_path = '.agents/memory/shared/run-settings-from-config.md'
+        new_path = '.agents/memory/shared/config/run-settings.md'
         history = ('local_legacy_inventory: ' + json.dumps(
-                       {'version': self.old, 'entries': [{'path': '.agents/memory/shared/old-note.md',
-                                                          'scope': 'shared'}]}) + '\n'
+                       {'version': self.old, 'entries': [{'path': old_path, 'scope': 'shared'}]}) + '\n'
                    'legacy_inventory: {"entries": []}\n'
                    'migrations: []\n')
         registry.write_text(catalog.dumps(data).replace('\nentries:\n', '\n' + history + 'entries:\n', 1))
@@ -435,11 +436,12 @@ class UpgradeFromAnOlderReleaseTests(unittest.TestCase):
         merged = catalog.loads(registry.read_text())
         identities = [entry['id'] for entry in merged['entries']]
         self.assertEqual(len(identities), len(set(identities)), result.stdout)
-        local = next(entry for entry in merged['entries']
-                     if entry['path'] == '.agents/memory/shared/old-note.md')
-        self.assertEqual(local['id'], 'local-shared-generated-identity')
-        self.assertEqual(local['legacy_generated_id'], 'shared-generated-identity')
-        self.assertEqual((root / '.agents/memory/shared/new-note.md').read_text(), '# New note\n')
+        # The unit keeps the target path; the old path stays as provenance only.
+        survivor = next(entry for entry in merged['entries'] if entry['path'] == new_path)
+        self.assertEqual(survivor['upstream_path'], old_path)
+        self.assertFalse(any(entry['path'] == old_path for entry in merged['entries']))
+        self.assertFalse((root / old_path).exists())
+        self.assertTrue((root / new_path).is_file())
         checked = subprocess.run(['bash', '.agents/scripts/shared/check-development.sh'], cwd=root,
                                  text=True, capture_output=True)
         self.assertEqual(checked.returncode, 0, checked.stdout + checked.stderr)
