@@ -109,7 +109,8 @@ Run `bash .agents/scripts/shared/check-development.sh`; regenerate marked indexe
 with `--write-indexes`. Run `bash .agents/scripts/shared/check-shells.sh` to check
 all nested Shell files. Update callers, imports, test discovery, CI and
 adoption/upgrade references together. See `project-memory-governance` for the
-workflow and root DEV for local acceptance.
+workflow and the project's declared local check (the issue-workflow
+`<LOCAL_CHECK>` slot) for local acceptance.
 
 Never store credentials, raw authentication files, private sessions or personal
 data in the development tree.

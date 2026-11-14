@@ -186,18 +186,18 @@ capabilities it adopted and which it intentionally kept different.
 ## Backfill a missing template record
 
 A repository adopted before `v0.1.5` records its adopted release only in its
-developer docs or git history, and `.agents/scripts/shared/diagnose-environment.sh`
-reports a missing registry `template.version`. On the Issue branch, before the
-migration map:
+git history and the release tags it follows, and
+`.agents/scripts/shared/diagnose-environment.sh` reports a missing registry
+`template.version`. On the Issue branch, before the migration map:
 
 1. Read the adopted tag from the evidence:
 
    ```bash
-   grep -nE 'v[0-9]+\.[0-9]+\.[0-9]+' DEV.md
+   git tag --sort=-v:refname | head -n 20
    git log --reverse --format='%h %s' -- .agents/content-registry.yaml
    ```
 
-   The developer docs or the adoption commit normally name the tag. If they
+   The adoption commit and the release tags normally name the tag. If they
    disagree or neither names one, do not guess: compare the repository's
    template-derived files with the candidate release tags, or ask the maintainer.
    Record which evidence the tag came from.
