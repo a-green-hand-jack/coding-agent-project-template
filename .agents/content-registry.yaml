@@ -2,7 +2,7 @@ schema_version: 2
 purpose: "Record which development-plane content is reusable across repositories and which content belongs to one concrete project."
 template:
   repository: https://github.com/a-green-hand-jack/coding-agent-project-template
-  version: v0.1.37
+  version: v0.1.38
 writing:
   language: "中文"
   issue_sections: "最终目标, 实现哲学, 现状和问题, 怎么办, 验收, 不做"
@@ -1414,12 +1414,14 @@ entries:
   - path: README.md
     id: content-b335630551682c19
     kind: document
-    scope: project
-    owner: project-maintainers
-    summary: "Repository-owned content; preserve during template upgrades."
+    scope: shared_with_adaptation
+    owner: template-maintainers
+    summary: "Human entry point: keep the quick start and the directory table, delete the template's own starting steps and version instructions, and rewrite the opening section for the project."
     status: active
     source: {"commit": "d07f49d2f6e02ad531d920c8c8fb994f44e88971", "path": "README.md"}
     updated: unknown
+    adaptation: "Keep the quick start and the directory table; delete the template's starting steps (now in RELEASE_NOTES.md under `## Starting from this template`) and the version instructions; rewrite the opening section for the project's own product. Upgrade reports the release's diff and never rewrites this file."
+    upgrade: review
     supersedes: []
     superseded_by: []
   - path: RELEASE_EXAMPLE.md
