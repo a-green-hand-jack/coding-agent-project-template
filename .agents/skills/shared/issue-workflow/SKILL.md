@@ -101,7 +101,8 @@ Inspect the branch, status, live runs and concurrent work before editing; do not
 stage, overwrite or remove unrelated changes. Agree on scope and acceptance
 appropriate to risk. Use a worktree when isolation or parallelism is useful,
 not simply because a change spans files. When a running process consumes the
-checkout, observe `long-running-supervision` before changing its inputs. Run
+checkout, observe the optional `long-running-supervision` skill, when this
+repository adopts it, before changing its inputs. Run
 appropriate checks and report evidence; no path automatically authorizes Git
 delivery. When dispatching, follow Start and the maintainer confirmation below.
 In the canonical dev checkout, keep `.project/state/current-recovery.md` as a

@@ -216,8 +216,13 @@ done <<<"$(printf '%s' "$also_list"; printf '%s' "$skip_list" | cut -d= -f1)"
 if [[ -d .project/runs ]]; then
   say ''
   say 'note: before removing this worktree, check .project/runs/ with the project status command'
-  say '      and archive what cannot be rebuilt; see .agents/skills/shared/long-running-supervision/'
-  say '      and .agents/skills/shared/asset-lifecycle/.'
+  say '      and archive what cannot be rebuilt; see .agents/skills/shared/asset-lifecycle/.'
+  # The supervision skill is optional: a repository that leaves it out must not
+  # be pointed at a directory it never adopted.
+  if [[ -d .agents/skills/shared/long-running-supervision ]]; then
+    say '      If this repository adopts the optional long-running-supervision skill, its live-run and'
+    say '      archiving steps are in .agents/skills/shared/long-running-supervision/.'
+  fi
 fi
 
 # -- assets/ entries and link mappings ---------------------------------------------------------
