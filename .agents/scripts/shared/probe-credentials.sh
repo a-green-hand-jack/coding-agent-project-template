@@ -25,6 +25,7 @@
 #
 # Exit 2: wrong arguments or a file this script cannot read.
 set -euo pipefail
+export PYTHONDONTWRITEBYTECODE=1
 root=$(git rev-parse --show-toplevel)
 cd "$root"
 # The project's Python: AGENTS_PYTHON first, then a virtual environment at

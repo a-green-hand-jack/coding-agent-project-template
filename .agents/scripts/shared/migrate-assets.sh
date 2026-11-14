@@ -14,6 +14,7 @@
 # mapping would be overwritten, or the copy does not match its source. Exit 2:
 # wrong arguments or an invalid rules file.
 set -euo pipefail
+export PYTHONDONTWRITEBYTECODE=1
 
 usage() {
   echo "usage: $0 --to CANONICAL_PROJECT [--also NAME]... [--skip NAME=REASON]..." >&2
