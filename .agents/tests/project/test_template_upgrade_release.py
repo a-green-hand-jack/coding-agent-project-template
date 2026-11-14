@@ -4,6 +4,7 @@ equal a project made from the candidate, except the project's own files."""
 from __future__ import annotations
 
 import fnmatch
+import json
 import os
 import re
 import shutil
@@ -405,6 +406,43 @@ class UpgradeFromAnOlderReleaseTests(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertIn('locally relocated path', result.stderr)
             self.assertEqual(before, files_of(project))
+
+    def candidate_a_new_upstream_unit_reusing_a_local_identity(self, data):
+        data['entries'].append(unit('.agents/memory/shared/new-note.md', 'shared-generated-identity', 'memory',
+                                    'shared'))
+        (self.template / '.agents/memory/shared/new-note.md').write_text('# New note\n')
+
+    def test_a_new_upstream_unit_reusing_a_local_identity(self) -> None:
+        # A schema 2 repository that still keeps its old history blocks, and whose
+        # local path derived the same identity the target registers upstream.
+        root = self.project(self.old, own=True)
+        registry = root / REGISTRY
+        data = catalog.loads(registry.read_text())
+        data['entries'].append(unit('.agents/memory/shared/old-note.md', 'shared-generated-identity', 'memory',
+                                    'shared'))
+        (root / '.agents/memory/shared/old-note.md').write_text('# Old note\n')
+        history = ('local_legacy_inventory: ' + json.dumps(
+                       {'version': self.old, 'entries': [{'path': '.agents/memory/shared/old-note.md',
+                                                          'scope': 'shared'}]}) + '\n'
+                   'legacy_inventory: {"entries": []}\n'
+                   'migrations: []\n')
+        registry.write_text(catalog.dumps(data).replace('\nentries:\n', '\n' + history + 'entries:\n', 1))
+        result = subprocess.run(['bash', str(SCRIPT), self.candidate], cwd=root, text=True, capture_output=True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertNotIn('duplicate stable identity', result.stdout + result.stderr)
+        self.assertIn('removed legacy_inventory, local_legacy_inventory, migrations; the history stays in Git',
+                      result.stdout)
+        merged = catalog.loads(registry.read_text())
+        identities = [entry['id'] for entry in merged['entries']]
+        self.assertEqual(len(identities), len(set(identities)), result.stdout)
+        local = next(entry for entry in merged['entries']
+                     if entry['path'] == '.agents/memory/shared/old-note.md')
+        self.assertEqual(local['id'], 'local-shared-generated-identity')
+        self.assertEqual(local['legacy_generated_id'], 'shared-generated-identity')
+        self.assertEqual((root / '.agents/memory/shared/new-note.md').read_text(), '# New note\n')
+        checked = subprocess.run(['bash', '.agents/scripts/shared/check-development.sh'], cwd=root,
+                                 text=True, capture_output=True)
+        self.assertEqual(checked.returncode, 0, checked.stdout + checked.stderr)
 
     def test_declared_minimum_source_refuses_an_older_repository(self) -> None:
         root = self.project(self.old, own=True)

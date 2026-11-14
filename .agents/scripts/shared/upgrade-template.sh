@@ -877,6 +877,7 @@ def prepare_layout(upgrade, source_text, target_text, local_text):
     before = {e["path"]: e for e in source["entries"]}
     used = set()
     entries = []
+    local_added = []
     for e in target["entries"]:
         if e["scope"] == "template":
             continue
@@ -929,7 +930,10 @@ def prepare_layout(upgrade, source_text, target_text, local_text):
             continue
         if path in target_paths: continue
         if e["scope"] == "project" and path.endswith('/') and not any(p.startswith(e['path']) for p in local_files): continue
-        entries.append(complete_entry(e, path));target_paths.add(path)
+        entry = complete_entry(e, path)
+        entries.append(entry)
+        local_added.append(entry)
+        target_paths.add(path)
     for old, new in local_moves.items():
         if any(catalog.rank(new,e['path']) for e in entries): continue
         if '/skills/' in new:
@@ -957,6 +961,7 @@ def prepare_layout(upgrade, source_text, target_text, local_text):
         if local["schema_version"] == 1 and any(t["id"] == e["id"] and t["scope"] == "template" for t in target["entries"]):
             e["id"] = "local-" + e["id"]
         entries.append(e)
+        local_added.append(e)
         report.skipped(f"{new_path}: project-owned (preserved legacy content)")
     # Resolve the whole graph before removing any frontmatter or moving local
     # files. A failed preflight preserves source bytes and the source registry.
@@ -1011,6 +1016,29 @@ def prepare_layout(upgrade, source_text, target_text, local_text):
         exceptions = result["policy"]["naming_exceptions"]
         for item in local.get("policy",{}).get("naming_exceptions",[]):
             if item not in exceptions: exceptions.append(item)
+    # A local path can derive the same stable ID as a template unit that now
+    # sits at another path, for example after this repository's own history
+    # blocks were dropped. Both are real units: keep the local one distinct
+    # instead of writing a registry the checker rejects as a duplicate.
+    counts = {}
+    for entry in entries:
+        counts[entry['id']] = counts.get(entry['id'], 0) + 1
+    for entry in local_added:
+        identity = entry['id']
+        if counts.get(identity, 0) < 2:
+            continue
+        referenced = any(identity in other.get(key, []) for other in local['entries']
+                         for key in ('supersedes', 'superseded_by'))
+        replacement = 'local-' + identity
+        if referenced or replacement in counts:
+            report.refused(f"{identity}: local identity collides with an upstream identity;"
+                           " provenance or references need review")
+            upgrade.catalog_blocked = True
+            continue
+        entry['id'] = replacement
+        entry['legacy_generated_id'] = identity
+        counts[identity] -= 1
+        counts[replacement] = 1
     for message in catalog.relationship_errors(entries):
         report.refused(message)
         upgrade.catalog_blocked = True
