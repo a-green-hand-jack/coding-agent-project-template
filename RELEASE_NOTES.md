@@ -3,54 +3,41 @@
 本文件只描述当前发布；历史版本保留在各自的标签里（例如 `git show v0.1.37:RELEASE_NOTES.md`）。
 基于本模板创建的项目维护自己的发布说明，不复制此历史。
 
-## v0.1.38 — 2026-11-14
+## v0.1.39 — 2026-11-14
 
-README 只写给产品。模板自己的起步手续、版本选择和升级细则不再占据 human 入口。
+资产步骤改为按目录判断。没有外部载荷的派生模板可以删掉 `assets/`，诊断和 worktree 步骤
+不再要求它。
 
-- **README 分成两层。** 标题与三个平面、快速开始、这个项目怎么跑、目录、边界、分支
-  模型与可见性、论文项目、发布；每个主题只留决定和命令，细则指向权威处。
-- **起步手续换位置。** “Use this template / 克隆 release tag → setup → 填占位内容 →
-  删模板专用内容 → 让 agent 读 `AGENTS.md`”搬进本文件末尾的
-  `## Starting from this template`，README 只留指针；`USER.md` 的选择模板版本也指向
-  这一节，不再有悬空引用。
-- **补上“这个项目怎么跑”。** 产品树 `src/`、`pyproject.toml`/`Dockerfile`/`install.sh`
-  三个可选骨架怎么换成真的、验证与检查命令，以及输出为什么落在 `.project/`。
-- **前置条件写在命令旁。** GitHub CLI、已配置的 `origin`、`python3` 加 PyYAML 与
-  markdown-it-py（或 `AGENTS_PYTHON`）和命令写在一起；`init-branches.sh` 与 `DEV.md`
-  的分支模型对齐：在 `main` 上首次 setup 已幂等创建 `dev`，只有需要改分支名或补推时才
-  手工运行。
-- **目录表补齐。** 增加 `AGENTS.md`、`.github/`、`.env.example`、`RELEASE_NOTES.md`、
-  `RELEASE_EXAMPLE.md`、`DEVELOPMENT_WRITING_EXAMPLE.md` 和 `.gitignore`。
-- **`credentials.yaml` 不再凭空声称。** 本模板不调用 LLM，说法统一为“采用后由
-  `llm-credentials` 建立”；`AGENTS.md`、`DEV.md`、`.env.example` 同步。
-- **registry 与正文一致。** `README.md` 改为 `shared_with_adaptation` + `upgrade: review`：
-  升级命令不再假装它由模板拥有，也不改写已采用项目的 README，只打印本版差异供审阅。
+- **诊断不再判红。** `diagnose-environment.sh` 在 `assets/` 不存在时打印
+  `skip assets manifest` 并以 0 退出；目录存在而缺 manifest 时仍然 `FAIL`。
+- **worktree 步骤不再警告。** `setup-worktree.sh` 只在目录存在时提示缺 manifest。
+- **退休不再建回目录。** `migrate-assets.sh` 只在源目录存在时才在目标里创建 `assets/`。
+- **没有新规则。** 保留资产的仓库行为逐字不变；本模板自身仍有 `assets/`，诊断输出相同。
 
 ### 升级时的行为
 
-`README.md` 登记为 `upgrade: review`，升级命令不会改动已采用项目的 README，只在计划里
-打印本版差异并归入 “Review (left to the project)”；改写与否由项目自己决定。
+**Command only.** 三个脚本按常规替换；没有 `assets/` 的项目从现在起诊断全绿，有
+`assets/` 的项目什么都不变。
 
-### Upgrading a project from v0.1.37
+### Upgrading a project from v0.1.38
 
-**Command only.**
-
-用本版完整的命令目录执行 `bash .agents/scripts/shared/upgrade-template.sh v0.1.38`。
-共享文件按常规规则替换，本地 `## In this repository` 段保留。`README.md` 是
-`upgrade: review` 文件，命令不改写它：需要新形状时按本版的 README 自行重写，不重写也
-不影响升级。
+1. 用本版完整的命令目录执行 `bash .agents/scripts/shared/upgrade-template.sh v0.1.39`。
+2. 运行 `bash .agents/scripts/shared/diagnose-environment.sh`：删掉 `assets/` 的项目应看到
+   `skip assets manifest`。
+3. 运行 `bash .agents/scripts/shared/check-development.sh` 与本项目的检查命令。
 
 ### 验证与范围
 
-本地检查：`check-development.sh`（含索引一致）、`check-shells.sh` 通过，模板自有测试
-167 项全部通过。本模板没有产品运行时，因此本版没有真实运行或构建面之外的验证。
+本地检查：`check-development.sh` 通过（124 条登记）、`check-shells.sh` 通过（11 个文件）、
+模板自有测试 167 项全部通过。下游验证：在 `paper-agent-project-template` v0.8.0（无
+`assets/`）里运行本版 `diagnose-environment.sh`，输出 `skip assets manifest` 且无 FAIL。
 
 ### 参考
 
-- 问题：[#182](https://github.com/a-green-hand-jack/coding-agent-project-template/issues/182)
-- PR：[#183](https://github.com/a-green-hand-jack/coding-agent-project-template/pull/183)
-- 来源：[paper-agent-project-template v0.7.0](https://github.com/a-green-hand-jack/paper-agent-project-template/releases/tag/v0.7.0)
-- [上一版 v0.1.37](https://github.com/a-green-hand-jack/coding-agent-project-template/releases/tag/v0.1.37)；[版本比较](https://github.com/a-green-hand-jack/coding-agent-project-template/compare/v0.1.37...v0.1.38)
+- 问题：[#185](https://github.com/a-green-hand-jack/coding-agent-project-template/issues/185)
+- PR：[#186](https://github.com/a-green-hand-jack/coding-agent-project-template/pull/186)
+- 来源：[paper-agent-project-template v0.8.0](https://github.com/a-green-hand-jack/paper-agent-project-template)
+- [上一版 v0.1.38](https://github.com/a-green-hand-jack/coding-agent-project-template/releases/tag/v0.1.38)；[版本比较](https://github.com/a-green-hand-jack/coding-agent-project-template/compare/v0.1.38...v0.1.39)
 
 ## Starting from this template
 
