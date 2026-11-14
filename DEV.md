@@ -232,10 +232,12 @@ GitHub CLI 环境中幂等创建并推送 `dev`，并把 GitHub 默认分支设�
 检查器以 Python 的隔离模式启动；应将依赖安装到所选虚拟环境或系统环境，不能
 依赖仅对用户 site-packages 可见的安装。继承命令（`check-development.sh`、
 `upgrade-template.sh`、`migrate-assets.sh`、`probe-credentials.sh`）和
-`diagnose-environment.sh` 默认使用 `PATH` 上的 `python3`；设置 `AGENTS_PYTHON` 为
-解释器路径即改用它。解释器拒绝 `pip install`（PEP 668 “externally managed”）时，
-创建一个装有两项依赖的虚拟环境，并 `export AGENTS_PYTHON=<venv>/bin/python`。
-`diagnose-environment.sh` 用 `"${AGENTS_PYTHON:-python3}" -I -c 'import yaml, markdown_it'`
+`diagnose-environment.sh` 按同一顺序选择 Python：设置了 `AGENTS_PYTHON` 就用它；
+否则用 `.project/venv/bin/python3`（存在且可执行时，`setup-project.sh` 和
+`uv venv` 把依赖装在这里）；两者都没有时用 `PATH` 上的 `python3`。解释器拒绝
+`pip install`（PEP 668 “externally managed”）时，把两项依赖装进 `AGENTS_PYTHON`
+指向的虚拟环境，或装进 `.project/venv`，无需再导出变量。
+`diagnose-environment.sh` 用选中的解释器执行 `-I -c 'import yaml, markdown_it'`
 检查依赖，缺失时输出 `FAIL` 和上述处理办法。
 检查器检查 Git 可见的 `.agents/` Markdown 中的相对链接和 Markdown 标题锚点；代码
 块及行内代码不作为链接，外部链接不检查网络可达性。示例和历史路径应写在代码中；
@@ -256,8 +258,13 @@ bash .agents/scripts/shared/inspect-state.sh
 不复制）：
 
 ```bash
-python3 -m unittest discover -s .agents/tests/project -p 'test_template_*.py'
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s .agents/tests/project -p 'test_template_*.py'
 ```
+
+直接运行 Python 入口（测试发现、单项脚本）时设 `PYTHONDONTWRITEBYTECODE=1`，
+或在直接入口里设 `sys.dont_write_bytecode = True`；继承的 Shell 命令在启动
+Python 前自行导出该变量。`__pycache__` 被 Git 忽略，留着不会被发现或清理，
+却会让 teardown 的 `ignored source-side state` 多出内容。
 
 升级命令的回归测试（`test_template_upgrade.py`、`test_template_upgrade_release.py`）
 默认测试本仓库的 `.agents/scripts/shared/`。把 `TEMPLATE_COMMAND_DIR` 设为另一份
@@ -266,7 +273,7 @@ python3 -m unittest discover -s .agents/tests/project -p 'test_template_*.py'
 
 ```bash
 TEMPLATE_COMMAND_DIR=/path/to/derived/.agents/scripts/shared \
-  python3 -m unittest discover -s .agents/tests/project -p 'test_template_upgrade*.py'
+  PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s .agents/tests/project -p 'test_template_upgrade*.py'
 ```
 
 合并和发布以本地检查为门禁：上述检查和初始化 `setup-worktree.sh` 是本仓库的

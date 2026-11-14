@@ -283,4 +283,33 @@ class DevelopmentContractTests(unittest.TestCase):
         self.assertEqual(compared,9)
 
 
+
+class BytecodePolicyTests(unittest.TestCase):
+    """Direct invocations must not leave __pycache__ in the source tree; Git
+    ignores it, so nothing detects or removes it."""
+
+    def test_inherited_commands_export_the_policy(self):
+        for name in ('check-development.sh','upgrade-template.sh','migrate-assets.sh','probe-credentials.sh'):
+            self.assertIn('PYTHONDONTWRITEBYTECODE=1',(ROOT/'.agents/scripts/shared'/name).read_text(),name)
+
+    def test_check_development_disables_bytecode_writing_for_its_interpreter(self):
+        with tempfile.TemporaryDirectory(prefix='bytecode-') as temp:
+            stub=Path(temp)/'python'
+            stub.write_text('#!/bin/sh\nprintf "%s\\n" "${PYTHONDONTWRITEBYTECODE:-unset}"\n')
+            stub.chmod(0o755)
+            result=subprocess.run(['bash',str(ROOT/'.agents/scripts/shared/check-development.sh')],
+                                  cwd=ROOT,env={**os.environ,'AGENTS_PYTHON':str(stub)},text=True,capture_output=True)
+        self.assertEqual(result.stdout.strip(),'1',result.stderr)
+
+    def test_registry_entry_point_stops_later_imports_from_caching(self):
+        with tempfile.TemporaryDirectory(prefix='bytecode-') as temp:
+            module=Path(temp)/'content_registry.py'
+            shutil.copy2(ROOT/'.agents/scripts/shared/content_registry.py',module)
+            result=subprocess.run([sys.executable,'-I','-c',
+                'import importlib.util, sys; spec=importlib.util.spec_from_file_location("c", %r); '
+                'module=importlib.util.module_from_spec(spec); spec.loader.exec_module(module); '
+                'print(sys.dont_write_bytecode)' % str(module)],text=True,capture_output=True)
+        self.assertEqual(result.stdout.strip(),'True',result.stderr)
+
+
 if __name__=='__main__':unittest.main()

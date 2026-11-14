@@ -16,6 +16,8 @@ import unicodedata
 from urllib.parse import unquote, urlsplit
 from pathlib import Path, PurePosixPath
 
+sys.dont_write_bytecode = True
+
 CATEGORIES = ('execution', 'tests', 'memory', 'knowledge', 'skills', 'scripts')
 SCOPES = {'shared', 'shared_with_adaptation', 'project', 'template'}
 STATUSES = {'active', 'superseded', 'retired', 'rejected'}
