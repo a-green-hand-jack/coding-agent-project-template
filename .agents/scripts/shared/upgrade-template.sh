@@ -28,7 +28,8 @@
 # accepts PATH (the registry too) as resolved by hand once it has no conflict
 # markers left. assets/, .project/ and .env are never touched. It prints what it
 # applied, skipped, refused, left for review and for manual steps, including the
-# upgrade section of each release it crosses (RELEASE_NOTES.md at TARGET_TAG),
+# upgrade section of each release it crosses (each crossed tag's own
+# RELEASE_NOTES.md; the file at a tag describes only its own release),
 # and whether the light path applies. --check prints the same plan and changes
 # nothing outside .project/state/template-upgrade/.
 # Exit 0: done or planned without conflicts; 1: a conflict; 2: an error.
@@ -1187,19 +1188,31 @@ def prepare_layout(upgrade, source_text, target_text, local_text):
 
 # --- release notes -------------------------------------------------------------
 
-def crossed_releases(notes: str, source: str, target: str) -> tuple[list[tuple[str, str | None]], list[str]]:
+def crossed_releases(source: str, target: str, notes_at) -> tuple[list[tuple[str, str | None]], list[str]]:
     """Each release after source up to target, newest first, with the manual
-    steps of its upgrade section (None when it is marked **Command only.**)."""
-    entries = [(entry.split(None, 1)[0] if entry.strip() else "", entry)
-               for entry in re.split(r"^## ", notes, flags=re.M)[1:]]
-    tags = [tag for tag, _ in entries]
-    if target not in tags:
-        return [], [f"RELEASE_NOTES.md at {target} has no `## {target}` entry; read the notes by hand"]
-    problems = [] if source in tags else [
-        f"RELEASE_NOTES.md at {target} has no `## {source}` entry; every older entry is listed"]
-    crossed = []
-    for tag, entry in entries[tags.index(target):]:
-        if tag == source or (tag != target and not re.match(r"v\d", tag)):
+    steps of its upgrade section (None when it is marked **Command only.**).
+    Each crossed release is read from its own RELEASE_NOTES.md, because the file
+    describes only the current release; every entry names its predecessor in
+    `### Upgrading a project from <previous tag>`. notes_at(tag) returns that
+    tag's notes, or None when they cannot be read."""
+    crossed: list[tuple[str, str | None]] = []
+    problems: list[str] = []
+    tag, seen = target, set()
+    while tag != source:
+        if tag in seen:
+            problems.append(f"the release notes point back to {tag}; read the releases after it by hand")
+            break
+        seen.add(tag)
+        notes = notes_at(tag)
+        if notes is None:
+            problems.append(f"cannot read RELEASE_NOTES.md at {tag}; read that release and the older crossed"
+                            " ones by hand")
+            break
+        entries = {entry.split(None, 1)[0] if entry.strip() else "": entry
+                   for entry in re.split(r"^## ", notes, flags=re.M)[1:]}
+        entry = entries.get(tag)
+        if entry is None:
+            problems.append(f"RELEASE_NOTES.md at {tag} has no `## {tag}` entry; read that release by hand")
             break
         match = re.search(r"^### Upgrading\b.*?\n(.*?)(?=^### |\Z)", entry, re.M | re.S)
         if not match:
@@ -1208,6 +1221,12 @@ def crossed_releases(notes: str, source: str, target: str) -> tuple[list[tuple[s
             crossed.append((tag, None))
         else:
             crossed.append((tag, match.group(1).strip()))
+        previous = re.search(r"^### Upgrading\b[^\n]*?\bfrom\s+(\S+)", entry, re.M)
+        if previous is None:
+            problems.append(f"RELEASE_NOTES.md at {tag} names no `### Upgrading a project from <tag>`"
+                            " predecessor; read the older crossed releases by hand")
+            break
+        tag = previous.group(1).strip("'\".,;:")
     return crossed, problems
 
 
@@ -1388,9 +1407,19 @@ def main(arguments: list[str]) -> int:
         if "".join(merged) != registry_text and not check:
             (root / REGISTRY).write_text("".join(merged), encoding="utf-8")
 
-    notes = git("show", f"{target}:RELEASE_NOTES.md", cwd=clone, check=False)
-    crossed, problems = crossed_releases(notes.stdout.decode(), source, target) if not notes.returncode else (
-        [], [f"{target} has no RELEASE_NOTES.md; read its release by hand"])
+    def notes_at(tag: str):
+        """A tag's own release notes; a crossed tag is fetched when the cache
+        has only the two ends. None when the tag or its file cannot be read."""
+        if git("rev-parse", "-q", "--verify", f"refs/tags/{tag}^{{commit}}", cwd=clone,
+               check=False).returncode:
+            try:
+                fetch(clone, repository, (tag,))
+            except Failure:
+                return None
+        shown = git("show", f"{tag}:RELEASE_NOTES.md", cwd=clone, check=False)
+        return shown.stdout.decode(errors="replace") if not shown.returncode else None
+
+    crossed, problems = crossed_releases(source, target, notes_at)
     for problem in problems:
         report.manual(problem)
 

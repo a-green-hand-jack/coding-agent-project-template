@@ -305,16 +305,20 @@ SHA、每条命令的结果和 CI 状态（通过、失败、没运行）写成 
 
 本仓库是 `coding-agent-project-template` 的模板仓库本身；当前模板版本记录在
 `.agents/content-registry.yaml` 的 `template.version`，模板自己的发布历史在
-`RELEASE_NOTES.md`。
+`RELEASE_NOTES.md`，而 HEAD 只保留当前版本的条目；更早的条目在各 release tag
+的 `RELEASE_NOTES.md` 里。
 
 从模板创建的项目在自己的 registry 里记录它采用的 `template.repository` 与
 `template.version`，并保留自己的 `RELEASE_NOTES.md`，不复制模板的发布历史。
 升级到新的模板版本用 `.agents/skills/shared/template-upgrade/`：
 `bash .agents/scripts/shared/upgrade-template.sh [--check] <TAG>` 按 registry 完成机械部分，
-跨过的每个版本在 `RELEASE_NOTES.md` 的升级段都标为 **Command only.** 且没有冲突
-时走轻量路径，否则以命令的计划为起点走完整流程。模板每个版本的 release notes
-都要有 `### Upgrading a project from <上一个 tag>` 段，以 **Command only.** 开头
-或列出手动步骤（`release-doc-audit` 检查）。发现模板本身的
+跨过的每个版本（逐个从它自己的 tag 读 `git show <tag>:RELEASE_NOTES.md`）的升级段
+都是 **Command only.** 且没有冲突时走轻量路径，否则以命令的计划为起点走完整流程。
+模板每个版本的 release notes 都写在该版本的 tag 里，含
+`### Upgrading a project from <上一个 tag>` 段，以 **Command only.** 开头或列出
+手动步骤（`release-doc-audit` 检查）；HEAD 的 `RELEASE_NOTES.md` 只保留当前版本的
+条目，旧条目不再累加。跨过的版本没有 release notes 或未命名上一个 tag 时，
+命令把它列为 manual 项而不是默认完成。发现模板本身的
 缺陷或缺失能力时用 `.agents/skills/shared/template-feedback/` 向上游开 Issue；
 模板维护者主动收集下游已沉淀的通用实践用 `.agents/skills/project/template-harvest/`
 （只属于模板仓库，下游不复制）。只有 URL 是项目专用的，其余规则通用。

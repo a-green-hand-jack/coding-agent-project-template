@@ -80,13 +80,17 @@ bash .project/state/template-upgrade/target-command/.agents/scripts/shared/upgra
 
 ## Light path
 
-Each release entry in the template's `RELEASE_NOTES.md` has a
-`### Upgrading a project from <previous tag>` section that starts with
-`**Command only.**` when the command completes the upgrade, or lists the manual
-steps that remain. When every release crossed is command only and `--check`
-reports no conflict and no manual step (`Light path: yes`; review items do not
-count), the upgrade is one Issue, one worktree, the command, the checks of step
-6 and a PR. It needs no migration map and no step 4 presentation, and the Issue
+A release's own `RELEASE_NOTES.md` — the file at its tag, not an entry kept in a
+single growing file — has a `### Upgrading a project from <previous tag>` section
+that starts with `**Command only.**` when the command completes the upgrade, or
+lists the manual steps that remain. The file at HEAD describes only the current
+release; every entry names its predecessor, which is how the command reads each
+crossed release from its own tag (`git show <tag>:RELEASE_NOTES.md`) and fetches
+that tag when the upgrade cache has only the two ends. When every release
+crossed is command only and `--check` reports no conflict and no manual step
+(`Light path: yes`; review items do not count), the upgrade is one Issue, one
+worktree, the command, the checks of step 6 and a PR. It needs no migration map
+and no step 4 presentation, and the Issue
 is dispatched in the mechanical tier (`issue-workflow`, "Dispatch by
 difficulty"). Otherwise follow the full procedure below; the command's plan is
 the start of the step 2 migration map, and in step 5 the command applies the
