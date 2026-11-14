@@ -1,7 +1,7 @@
 """Canonical development registry format, validation and generated routing indexes.
 
 This is deliberately a documented YAML subset, not a permissive YAML parser.
-JSON flow values keep nested provenance/migrations unambiguous without dependencies.
+JSON flow values keep nested provenance unambiguous without dependencies.
 """
 from __future__ import annotations
 
@@ -353,11 +353,19 @@ def omission_errors(data):
     return errors
 
 
+OBSOLETE_BLOCKS = ('legacy_inventory', 'local_legacy_inventory', 'migrations')
+
+
 def validate(root, data):
     errors = []
     fail = errors.append
     if data.get('schema_version') != 2:
         return ['unsupported registry schema; schema 1 requires the target release upgrade command and migration map']
+    found = [key for key in OBSOLETE_BLOCKS if key in data]
+    if found:
+        return [f"obsolete registry history blocks: {', '.join(found)}; the registry records current state only."
+                ' Remove them and keep the history in Git (the upgrade command does this), or adopt the template again'
+                ' (template-adoption)']
     entries = data.get('entries', [])
     ids = {}
     paths = {}
@@ -456,30 +464,6 @@ def validate(root, data):
     for child in (root/'.agents').iterdir():
         if visible(child) and child.name not in root_allowed:
             fail(f'undeclared development root entry: {child.name}')
-    inventory=data.get('legacy_inventory',{})
-    migrations=data.get('migrations',[])
-    covered=set()
-    for m in migrations:
-        if m.get('action') not in ('keep','move','rename','merge','extract','retire') or not m.get('reason') or not m.get('source_commit') or not m.get('verification'):
-            fail('migration lacks action/reason/provenance/verification')
-        if not m.get('from') or (m.get('action')!='retire' and not m.get('to')):
-            fail('migration must declare from/to identities (retire may have no target)')
-        for old in m.get('from',[]):
-            if not old.get('id') or not safe_path(old.get('path')):fail('invalid migration source')
-            covered.add(old.get('path'))
-        for new in m.get('to',[]):
-            if not new.get('id') or not safe_path(new.get('path')):fail('invalid migration destination')
-            # Downstream legitimately omits template-only/rejected/optional payload.
-            target=ids.get(new.get('id'))
-            if not target and not any(x.get('id')==new.get('id') and x.get('reason') for x in data.get('omitted',[])):
-                fail(f'dangling migration identity: {new.get("id")}')
-            if target and not rank(new.get('path',''), target['path']):
-                fail(f'migration destination identity/path mismatch: {new}')
-    for path in inventory.get('tracked_paths',[]):
-        if path not in covered:fail(f'unmapped historical path: {path}')
-    for old in inventory.get('entries',[]):
-        if not any(rank(p,old['path']) for p in covered) and old['path'] not in inventory.get('empty_entries',[]):
-            fail(f'unmapped historical entry: {old["path"]}; record empty/history disposition explicitly')
     return errors
 
 
