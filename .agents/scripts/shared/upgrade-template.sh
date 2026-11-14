@@ -144,6 +144,16 @@ def parse_registry(text: str) -> dict:
             "default": default.group(1) if default else "project"}
 
 
+def moved_path(path: str, mapping: dict) -> str:
+    """PATH under MAPPING's longest exact or directory key, or PATH itself."""
+    matches = [(key, value) for key, value in mapping.items()
+               if path == key or (key.endswith('/') and path.startswith(key))]
+    if not matches:
+        return path
+    key, value = max(matches, key=lambda item: len(item[0]))
+    return value + path[len(key):]
+
+
 def version_key(tag: str):
     """A tag as comparable numbers, or None when it is not vX.Y.Z (the floor)."""
     match = re.fullmatch(r"v?(\d+(?:\.\d+)*)", tag.strip())
@@ -553,6 +563,15 @@ class Upgrade:
         if status == "D":
             data = self.blob(old_sha)
             if state is None:
+                original = moved_path(path, self.aliases)
+                original_state = self.local(original) if original != path else None
+                if original_state is not None:
+                    if self.same(original_state, old_mode, data) or self.same(
+                            original_state, old_mode, self.mapped_markdown(path, data)):
+                        self.remove(original)
+                        self.deleted_paths.append(path)
+                        return report.applied(f"{original}: removed (deleted at {path} in {self.target})")
+                    return self.conflict(path, f"{path}: removed in {self.target}, changed here at {original}")
                 self.deleted_paths.append(path)
                 return report.applied(f"{path}: already removed")
             if self.same(state, old_mode, data) or self.same(state, old_mode, self.mapped_markdown(path, data)):
@@ -877,6 +896,7 @@ def prepare_layout(upgrade, source_text, target_text, local_text):
     before = {e["path"]: e for e in source["entries"]}
     used = set()
     entries = []
+    local_added = []
     for e in target["entries"]:
         if e["scope"] == "template":
             continue
@@ -929,7 +949,10 @@ def prepare_layout(upgrade, source_text, target_text, local_text):
             continue
         if path in target_paths: continue
         if e["scope"] == "project" and path.endswith('/') and not any(p.startswith(e['path']) for p in local_files): continue
-        entries.append(complete_entry(e, path));target_paths.add(path)
+        entry = complete_entry(e, path)
+        entries.append(entry)
+        local_added.append(entry)
+        target_paths.add(path)
     for old, new in local_moves.items():
         if any(catalog.rank(new,e['path']) for e in entries): continue
         if '/skills/' in new:
@@ -957,6 +980,7 @@ def prepare_layout(upgrade, source_text, target_text, local_text):
         if local["schema_version"] == 1 and any(t["id"] == e["id"] and t["scope"] == "template" for t in target["entries"]):
             e["id"] = "local-" + e["id"]
         entries.append(e)
+        local_added.append(e)
         report.skipped(f"{new_path}: project-owned (preserved legacy content)")
     # Resolve the whole graph before removing any frontmatter or moving local
     # files. A failed preflight preserves source bytes and the source registry.
@@ -1011,6 +1035,45 @@ def prepare_layout(upgrade, source_text, target_text, local_text):
         exceptions = result["policy"]["naming_exceptions"]
         for item in local.get("policy",{}).get("naming_exceptions",[]):
             if item not in exceptions: exceptions.append(item)
+    # A local path can derive the same stable ID as a template unit that now
+    # sits at another path, for example after this repository's own history
+    # blocks were dropped. Both are real units: keep the local one distinct
+    # instead of writing a registry the checker rejects as a duplicate.
+    source_tree = tree(upgrade, upgrade.source)
+    counts, by_id = {}, {}
+    for entry in entries:
+        counts[entry['id']] = counts.get(entry['id'], 0) + 1
+        by_id.setdefault(entry['id'], []).append(entry)
+    for entry in local_added:
+        identity = entry['id']
+        if counts.get(identity, 0) < 2:
+            continue
+        survivors = [other for other in by_id[identity] if other is not entry]
+        state = upgrade.local(entry['path'])
+        meta = source_tree.get(entry['path'])
+        unchanged = state is not None and meta is not None and state[1] in (
+            upgrade.blob(meta[1]), upgrade.mapped_markdown(entry['path'], upgrade.blob(meta[1])))
+        if len(survivors) == 1 and survivors[0]['path'] != entry['path'] and (state is None or unchanged):
+            # The same unit, registered at its current path: keep that one and
+            # record the old path as provenance.
+            entries.remove(entry)
+            counts[identity] -= 1
+            survivor = survivors[0]
+            survivor.setdefault('upstream_path', entry['path'])
+            report.applied(f"{entry['path']} -> {survivor['path']}: one identity, the target path wins")
+            continue
+        referenced = any(identity in other.get(key, []) for other in local['entries']
+                         for key in ('supersedes', 'superseded_by'))
+        replacement = 'local-' + identity
+        if referenced or replacement in counts:
+            report.refused(f"{identity}: local identity collides with an upstream identity;"
+                           " provenance or references need review")
+            upgrade.catalog_blocked = True
+            continue
+        entry['id'] = replacement
+        entry['legacy_generated_id'] = identity
+        counts[identity] -= 1
+        counts[replacement] = 1
     for message in catalog.relationship_errors(entries):
         report.refused(message)
         upgrade.catalog_blocked = True

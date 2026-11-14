@@ -4,6 +4,7 @@ equal a project made from the candidate, except the project's own files."""
 from __future__ import annotations
 
 import fnmatch
+import json
 import os
 import re
 import shutil
@@ -405,6 +406,45 @@ class UpgradeFromAnOlderReleaseTests(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertIn('locally relocated path', result.stderr)
             self.assertEqual(before, files_of(project))
+
+    def candidate_a_moved_unit_reusing_a_local_identity(self, data):
+        old = '.agents/memory/shared/run-settings-from-config.md'
+        new = '.agents/memory/shared/config/run-settings.md'
+        entry = next(e for e in data['entries'] if e['path'] == old)
+        entry['path'] = new
+        (self.template / new).parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(self.template / old), str(self.template / new))
+
+    def test_a_moved_unit_reusing_a_local_identity(self) -> None:
+        # A schema 2 repository that still keeps its old history blocks, while the
+        # target registers the same identity at the path it moved to.
+        root = self.project(self.old, own=True)
+        registry = root / REGISTRY
+        data = catalog.loads(registry.read_text())
+        old_path = '.agents/memory/shared/run-settings-from-config.md'
+        new_path = '.agents/memory/shared/config/run-settings.md'
+        history = ('local_legacy_inventory: ' + json.dumps(
+                       {'version': self.old, 'entries': [{'path': old_path, 'scope': 'shared'}]}) + '\n'
+                   'legacy_inventory: {"entries": []}\n'
+                   'migrations: []\n')
+        registry.write_text(catalog.dumps(data).replace('\nentries:\n', '\n' + history + 'entries:\n', 1))
+        result = subprocess.run(['bash', str(SCRIPT), self.candidate], cwd=root, text=True, capture_output=True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertNotIn('duplicate stable identity', result.stdout + result.stderr)
+        self.assertIn('removed legacy_inventory, local_legacy_inventory, migrations; the history stays in Git',
+                      result.stdout)
+        merged = catalog.loads(registry.read_text())
+        identities = [entry['id'] for entry in merged['entries']]
+        self.assertEqual(len(identities), len(set(identities)), result.stdout)
+        # The unit keeps the target path; the old path stays as provenance only.
+        survivor = next(entry for entry in merged['entries'] if entry['path'] == new_path)
+        self.assertEqual(survivor['upstream_path'], old_path)
+        self.assertFalse(any(entry['path'] == old_path for entry in merged['entries']))
+        self.assertFalse((root / old_path).exists())
+        self.assertTrue((root / new_path).is_file())
+        checked = subprocess.run(['bash', '.agents/scripts/shared/check-development.sh'], cwd=root,
+                                 text=True, capture_output=True)
+        self.assertEqual(checked.returncode, 0, checked.stdout + checked.stderr)
 
     def test_declared_minimum_source_refuses_an_older_repository(self) -> None:
         root = self.project(self.old, own=True)
