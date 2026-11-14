@@ -2,13 +2,13 @@ schema_version: 2
 purpose: "Record which development-plane content is reusable across repositories and which content belongs to one concrete project."
 template:
   repository: https://github.com/a-green-hand-jack/coding-agent-project-template
-  version: v0.1.34
+  version: v0.1.35
 writing:
   language: "中文"
   issue_sections: "最终目标, 实现哲学, 现状和问题, 怎么办, 验收, 不做"
 default_scope: project
 matching: "Most specific path wins; explicit entries override directory defaults."
-minimum_upgrade_source: v0.1.32
+minimum_upgrade_source: v0.1.34
 classes: {
     "shared": {
       "meaning": "Generic process that can be reused across projects.",
