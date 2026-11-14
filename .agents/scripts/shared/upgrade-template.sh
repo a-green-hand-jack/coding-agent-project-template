@@ -133,6 +133,12 @@ def parse_registry(text: str) -> dict:
             "default": default.group(1) if default else "project"}
 
 
+def version_key(tag: str):
+    """A tag as comparable numbers, or None when it is not vX.Y.Z (the floor)."""
+    match = re.fullmatch(r"v?(\d+(?:\.\d+)*)", tag.strip())
+    return tuple(int(part) for part in match.group(1).split(".")) if match else None
+
+
 def field(block: dict, name: str) -> str:
     match = re.search(rf"^\s+{name}:[ \t]*([^\n]+)", "".join(block["body"]), re.M)
     return match.group(1).strip() if match else ""
@@ -388,12 +394,12 @@ class Upgrade:
         self.resolved = resolved
         self.aliases = {}
         self.local_entries = []
-        self.manual_paths = set()
         self.catalog_blocked = False
         self.proposals = clone.parent / "proposals"
         self.report = Report()
         self.path_mappings = []
         self.kept_out = set()
+        self.deleted_paths = []
 
     def physical(self, path: str) -> str:
         matches = [(source, dest) for source, dest in self.path_mappings
@@ -536,9 +542,11 @@ class Upgrade:
         if status == "D":
             data = self.blob(old_sha)
             if state is None:
+                self.deleted_paths.append(path)
                 return report.applied(f"{path}: already removed")
             if self.same(state, old_mode, data) or self.same(state, old_mode, self.mapped_markdown(path, data)):
                 self.remove(path)
+                self.deleted_paths.append(path)
                 return report.applied(f"{path}: removed")
             return self.conflict(path, f"{path}: removed in {self.target}, changed here")
         before, after = self.blob(old_sha), self.mapped_markdown(path, self.blob(new_sha))
@@ -741,14 +749,6 @@ def reconcile_lifecycle(upgrade, entries, original, target, upstream_ids, pendin
                 # retained as historical metadata; they are not active edges.
                 historical = next((e.get('legacy_lifecycle', {}) for e in target['entries']
                                    if e['path'] == entry['path']), {})
-                if not historical:
-                    # Follow explicit upstream history even when the template-only
-                    # destination is not adopted and local ownership stays put.
-                    destination_ids = {dest['id'] for migration in target.get('migrations', [])
-                                       if any(src['path'] == entry['path'] for src in migration['from'])
-                                       for dest in migration.get('to', [])}
-                    historical = next((e.get('legacy_lifecycle', {}) for e in target['entries']
-                                       if e['id'] in destination_ids and e['scope'] == 'template'), {})
                 if not candidates and historical.get(key) == ref and entry['status'] == 'active':
                     entry.setdefault('legacy_lifecycle', {})[key] = ref
                     continue
@@ -804,6 +804,9 @@ def prepare_layout(upgrade, source_text, target_text, local_text):
     local = legacy_data(local_text)
     source = legacy_data(source_text)
     report = upgrade.report
+    dropped = [key for key in catalog.OBSOLETE_BLOCKS if key in local]
+    if dropped:
+        report.applied(f"{REGISTRY}: removed {', '.join(dropped)}; the history stays in Git")
     result = json.loads(json.dumps(target))
     local_roots = local.get('policy', {}).get('root_files', [])
     target_roots = result.setdefault('policy', {}).setdefault('root_files', [])
@@ -826,108 +829,6 @@ def prepare_layout(upgrade, source_text, target_text, local_text):
     result["template"] = local["template"]
     if "writing" in local: result["writing"] = local["writing"]
     else: result.pop("writing", None)
-    # Historical metadata remains history, never an active competing catalog.
-    if local["schema_version"] == 1:
-        result["local_legacy_inventory"] = {"version": upgrade.source, "entries": local["entries"]}
-    elif "local_legacy_inventory" in local:
-        result["local_legacy_inventory"] = local["local_legacy_inventory"]
-    for migration in target.get("migrations", []):
-        if migration.get("entity") == "registration":continue
-        old, new = migration["from"], migration.get("to", [])
-        # Template-only entries are not adopted. A legacy project can own a
-        # file at the old upstream path; never relocate it as template content.
-        target_by_id = {entry["id"]: entry for entry in target["entries"]}
-        if new and all(target_by_id.get(item["id"], {}).get("scope") == "template" for item in new):
-            continue
-        if len(old) != 1 or len(new) != 1:
-            affected={x['path'] for x in old+new}
-            upgrade.manual_paths.update(affected)
-            if any(upgrade.local(x["path"]) for x in old):
-                report.manual(f"migration {migration['action']}: {old} -> {new}; reconcile many-to-many content by hand")
-                if not affected.issubset(upgrade.resolved):
-                    report.refused("many-to-many migration requires reviewed --resolved for every source and destination; all affected files held")
-            continue
-        if old[0]["path"] != new[0]["path"]:
-            old_path,new_path=old[0]['path'],new[0]['path']
-            old_state = upgrade.local(old_path)
-            destination = upgrade.root / upgrade.physical(new_path)
-            new_state = upgrade.local(new_path) if destination.exists() or destination.is_symlink() else None
-            if old_state and new_state and old_state != new_state:
-                upgrade.manual_paths.update((old_path, new_path))
-                report.refused(f'{old_path} -> {new_path}: conflicting existing destination; both files held')
-            previous = upgrade.aliases.get(new_path)
-            previous_state = upgrade.local(previous) if previous else None
-            if previous and previous != old_path and previous_state and old_state:
-                upgrade.manual_paths.update((previous, old_path, new_path))
-                report.refused(f'{previous} and {old_path} both map to {new_path}; preserve both and resolve manually')
-            if not previous or old_state or not previous_state:
-                upgrade.aliases[new_path] = old_path
-    local_by_id = {entry.get('upstream_id', entry.get('id')): entry for entry in local['entries']
-                   if entry.get('upstream_id', entry.get('id'))}
-    inverse_aliases = {old: new for new, old in upgrade.aliases.items()}
-    for target_entry in target['entries']:
-        if target_entry.get('scope') != 'project':
-            continue
-        new_path = target_entry['path']
-        old_path = upgrade.aliases.get(new_path)
-        mine = local_by_id.get(target_entry['id']) or next(
-            (entry for entry in local['entries'] if entry.get('scope') == 'project' and entry['path'] == old_path), None)
-        if old_path and not mine and local.get('schema_version') == 1:
-            legacy_owner = entry_of(old_path, parse_registry(local_text))
-            if scope_in(legacy_owner) == 'project':
-                mine = {'path': old_path}
-        if not old_path or not mine or mine['path'] != old_path:
-            continue
-        source_file = upgrade.root / upgrade.physical(old_path)
-        if any(parent.is_symlink() for parent in source_file.parents if parent != upgrade.root and upgrade.root in parent.parents):
-            report.refused(f'{old_path}: project-owned source has a symbolic-link parent')
-            upgrade.catalog_blocked = True
-            continue
-        old_state = upgrade.local(old_path)
-        if old_state is None:
-            continue
-        destination = upgrade.root / upgrade.physical(new_path)
-        if any(parent.is_symlink() for parent in destination.parents if parent != upgrade.root and upgrade.root in parent.parents):
-            report.refused(f'{old_path} -> {new_path}: project-owned destination has a symbolic-link parent')
-            upgrade.catalog_blocked = True
-            continue
-        if destination.exists() or destination.is_symlink():
-            report.refused(f'{old_path} -> {new_path}: project-owned destination already exists; preserve both and resolve manually')
-            upgrade.catalog_blocked = True
-            continue
-        if old_state[0] not in ('100644', '100755'):
-            report.refused(f'{old_path}: project-owned record is not a regular file; preserve and resolve manually')
-            upgrade.catalog_blocked = True
-            continue
-        try:
-            text = old_state[1].decode('utf-8')
-            from markdown_it import MarkdownIt
-            replacements = {}
-            for token in MarkdownIt('commonmark').parse(text):
-                for child in token.children or []:
-                    if child.type not in ('link_open', 'image'):
-                        continue
-                    href = child.attrGet('href' if child.type == 'link_open' else 'src') or ''
-                    parsed = urlsplit(href)
-                    if parsed.scheme or parsed.netloc or parsed.path.startswith('/') or not parsed.path:
-                        continue
-                    linked = posixpath.normpath(posixpath.join(posixpath.dirname(old_path), unquote(parsed.path)))
-                    destination_path = inverse_aliases.get(linked, linked)
-                    relative = posixpath.relpath(destination_path, posixpath.dirname(new_path))
-                    updated = urlunsplit(('', '', quote(relative, safe='/._-~'), parsed.query, parsed.fragment))
-                    if updated != href:
-                        replacements[href] = updated
-            for old_href, new_href in replacements.items():
-                syntax = '](' + old_href
-                if text.count(syntax) != 1:
-                    raise ValueError(f'ambiguous Markdown link {old_href}')
-                text = text.replace(syntax, '](' + new_href, 1)
-            pending_writes[new_path] = (old_state[0], text.encode('utf-8'))
-            report.applied(f'{old_path} -> {new_path}: preserve project-owned record')
-        except (UnicodeDecodeError, ValueError, ImportError) as exc:
-            report.refused(f'{old_path}: cannot safely relocate project-owned record: {exc}')
-            upgrade.catalog_blocked = True
-
     # Local hook names had a defined caller in schema1; move without rewriting
     # their contents. Other flat local items follow their existing scope.
     known = {x["path"] for x in target["entries"]}
@@ -1046,44 +947,6 @@ def prepare_layout(upgrade, source_text, target_text, local_text):
             e["id"] = "local-" + e["id"]
         entries.append(e)
         report.skipped(f"{new_path}: project-owned (preserved legacy content)")
-    if local['schema_version'] == 2:
-        legacy = local.get('local_legacy_inventory', {}).get('entries', [])
-        by_id = {}
-        for entry in entries:
-            by_id.setdefault(entry['id'], []).append(entry)
-        for identity, group in by_id.items():
-            projects = [e for e in group if e.get('scope') == 'project']
-            shared = [e for e in group if e.get('scope') in SHARED]
-            omitted_template = [e for e in target['entries'] if e.get('id') == identity and e.get('scope') == 'template']
-            if len(projects) != 1 or not ((len(group) == 2 and len(shared) == 1) or
-                                          (len(group) == 1 and len(omitted_template) == 1 and
-                                           omitted_template[0]['path'] != projects[0]['path'])):
-                continue
-            project = projects[0]
-            matches = [e for e in legacy if e.get('scope') == 'project' and not e.get('id')
-                       and identity == 'content-' + hashlib.sha256(e['path'].encode()).hexdigest()[:16]
-                       and (e['path'] == project['path'] or
-                            '/'.join((*Path(e['path']).parts[:2], 'project', *Path(e['path']).parts[2:])) == project['path'])]
-            source = project.get('source')
-            if not matches and isinstance(source, dict) and source.get('path') == project['path'] and source.get('version') == local.get('local_legacy_inventory', {}).get('version'):
-                if identity == 'content-' + hashlib.sha256(project['path'].encode()).hexdigest()[:16]:
-                    owners = [e for e in legacy if catalog.rank(project['path'], e['path'])]
-                    owner = max(owners, key=lambda e: catalog.rank(project['path'], e['path'])) if owners else {}
-                    if owner.get('scope') == 'project' and not owner.get('id'):
-                        matches.append(source)
-            referenced = any(identity in e.get(key, []) for e in local['entries']
-                             for key in ('supersedes', 'superseded_by'))
-            replacement = 'local-' + identity
-            if len(matches) == 1 and not referenced and replacement not in by_id:
-                project['id'] = replacement
-                project['legacy_generated_id'] = identity
-                for migration in result.get('migrations', []):
-                    for destination in migration.get('to', []):
-                        if destination.get('id') == identity and destination.get('path') == project['path']:
-                            destination['id'] = replacement
-            elif len(group) == 1:
-                report.refused(f"{identity}: project identity collides with omitted upstream content; provenance or references need review")
-                upgrade.catalog_blocked = True
     # Resolve the whole graph before removing any frontmatter or moving local
     # files. A failed preflight preserves source bytes and the source registry.
     reconcile_lifecycle(upgrade, entries, original, target, upstream_ids, pending_writes)
@@ -1137,30 +1000,6 @@ def prepare_layout(upgrade, source_text, target_text, local_text):
         exceptions = result["policy"]["naming_exceptions"]
         for item in local.get("policy",{}).get("naming_exceptions",[]):
             if item not in exceptions: exceptions.append(item)
-        for item in local.get("migrations",[]):
-            if item not in result["migrations"]:result["migrations"].append(item)
-    for migration in result.get('migrations', []):
-        for destination in migration.get('to', []):
-            destination['path'] = upgrade.physical(destination['path'])
-            old_id = destination['id']
-            if old_id in upstream_ids:
-                destination.setdefault('upstream_id', old_id)
-                destination['id'] = upstream_ids[old_id]
-            current_entry = next((entry for entry in entries if entry['id'] == destination['id']), None)
-            if current_entry and not catalog.rank(destination['path'], current_entry['path']):
-                destination.setdefault('upstream_path', destination['path'])
-                destination['path'] = current_entry['path']
-            local_template = local_template_entries.get(destination['id'])
-            upstream_template = next((entry for entry in target['entries']
-                                      if entry['id'] == old_id and entry['scope'] == 'template'), None)
-            if local_template and upstream_template and not catalog.rank(destination['path'], local_template['path']):
-                destination.setdefault('upstream_path', destination['path'])
-                destination['path'] = local_template['path']
-    unique_migrations = []
-    for migration in result.get('migrations', []):
-        if migration not in unique_migrations:
-            unique_migrations.append(migration)
-    result['migrations'] = unique_migrations
     for message in catalog.relationship_errors(entries):
         report.refused(message)
         upgrade.catalog_blocked = True
@@ -1243,6 +1082,14 @@ def main(arguments: list[str]) -> int:
 
     shown = lambda tag: git("show", f"{tag}:{REGISTRY}", cwd=clone)
     source_registry, target_registry = shown(source), shown(target)
+    floor = re.search(r"^minimum_upgrade_source:\s*(\S+)\s*$", target_registry, re.M)
+    if floor:
+        here, wanted = version_key(source), version_key(floor.group(1))
+        if here and wanted and here < wanted:
+            raise Failure(f"{target} supports upgrades from {floor.group(1)} and later; this repository records"
+                          f" {source}. Upgrade through the releases in between one at a time, each with the"
+                          f" command of the release it upgrades to ({STATE}), or adopt the template again"
+                          " (.agents/skills/shared/template-adoption/)")
     registries = {"before": parse_registry(source_registry), "after": parse_registry(target_registry)}
     registries["after"]["tag"] = target
     schema2 = re.search(r"^schema_version: 2$", target_registry, re.M) is not None
@@ -1252,9 +1099,9 @@ def main(arguments: list[str]) -> int:
             from markdown_it import MarkdownIt
         except ImportError:
             raise Failure('schema 2 upgrades require markdown-it-py; install it before retrying')
-        # Schema migrations describe upstream moves, not arbitrary adopter path
-        # mappings. Do not silently recreate an upstream path or overwrite a
-        # locally relocated identity when its mapping semantics are unknown.
+        # path_mappings are the adopter's own relocations. Do not silently
+        # recreate an upstream path or overwrite a locally relocated identity
+        # when its mapping semantics are unknown.
         local_data = legacy_data(registry_text)
         source_data = legacy_data(source_registry)
         target_data = catalog.loads(target_registry)
@@ -1329,24 +1176,11 @@ def main(arguments: list[str]) -> int:
                 expected = (upgrade.physical(before[identity]['path']), upgrade.physical(after[identity]['path']))
                 if local_path not in expected:
                     raise Failure(f'{identity}: locally relocated path {local_path}; automatic mapping is unsupported; reconcile the upgrade manually before advancing the version')
-        if not check and not mappings:
-            project_ids = {entry['id'] for entry in target_data.get('entries', []) if entry.get('scope') == 'project'}
-            project_moves = any(
-                len(migration.get('from', [])) == len(migration.get('to', [])) == 1
-                and migration['to'][0]['id'] in project_ids
-                and migration['from'][0]['path'] != migration['to'][0]['path']
-                and (root / migration['from'][0]['path']).is_file()
-                for migration in target_data.get('migrations', [])
-            )
-            if project_moves:
-                status = main(['--check', *sum((['--resolved', p] for p in sorted(resolved)), []), target])
-                if status:
-                    raise Failure('project record migration preflight failed; no source files or registry were changed')
         local_v2 = prepare_layout(upgrade, source_registry, target_registry, registry_text)
         upgrade.local_entries = local_v2["entries"]
     changes = [] if upgrade.catalog_blocked else layout_changes(upgrade) if schema2 else raw_changes(upgrade)
     for old_mode, new_mode, old_sha, new_sha, status, path in changes:
-        if path == REGISTRY or path in upgrade.manual_paths:
+        if path == REGISTRY:
             continue
         if path.startswith(NEVER) or path == ".env":
             report.manual(f"{path}: changed in {target}; this command never touches it, compare it by hand")
@@ -1356,6 +1190,15 @@ def main(arguments: list[str]) -> int:
         upgrade.path(old_mode, new_mode, old_sha, new_sha, status, path, entry)
 
     if schema2:
+        if upgrade.deleted_paths:
+            gone = [entry for entry in local_v2["entries"]
+                    if entry.get("scope") != "template"
+                    and any(catalog.rank(path, entry["path"]) for path in upgrade.deleted_paths)
+                    and not ((upgrade.root / upgrade.physical(entry["path"])).exists()
+                             or (upgrade.root / upgrade.physical(entry["path"])).is_symlink())]
+            for entry in gone:
+                local_v2["entries"].remove(entry)
+                report.applied(f"{entry['path']}: removed with the content {target} deleted")
         merged_text = catalog.dumps(local_v2)
         if not report.lists["refused"]:
             chosen = local_v2["template"].get("upstream", local_v2["template"])

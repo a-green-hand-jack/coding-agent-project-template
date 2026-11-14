@@ -26,12 +26,13 @@ fact that future sessions would otherwise need to rediscover.
    frontmatter owns content-specific sources/dates/applicability. Knowledge adds
    refresh_after; adapted content adds adaptation guidance and keeps its trailing
    local section. Never infer historical metadata without evidence.
-5. Before moving, merging, extracting or retiring content, freeze from/to arrays
-   of IDs/paths with action, rationale, source commit and verification in the
-   existing registry's migrations. Cover all prior entries and tracked paths,
-   including keep/empty/history dispositions. Preserve retired records, optional
-   rejection and adaptation decisions. Stable IDs survive rename; many-to-many
-   content reconciliation is reviewed explicitly. No competing ledger.
+5. Before moving, merging, extracting or retiring content, record the reviewed
+   move in the release's own notes (its `### Upgrading a project from <previous
+   tag>` section) and leave the old path in Git history; the registry records
+   current state only, with no migration table. Preserve retired records, optional
+   rejection and adaptation decisions. Stable IDs survive rename; a merge or
+   extraction is reconciled by review, never by automatic concatenation. No
+   competing ledger.
 6. Update callers/imports/CI/discovery and adoption/upgrade together. Generate
    group indexes with `bash .agents/scripts/shared/check-development.sh
    --write-indexes`; do not hand-maintain duplicate summaries. Check normalized
@@ -39,8 +40,8 @@ fact that future sessions would otherwise need to rediscover.
 7. Run the official check without write flags. It must reject unregistered or
    ambiguously owned content, dangling entries, bad CLAUDE links/Git modes,
    unjustified names, stale indexes and dangling/cyclic replacement chains.
-   Validate actual old-release migration and repeat-upgrade behavior for schema
-   changes. Keep original historical sources and report exact command exits.
+   Validate actual old-release upgrade and repeat-upgrade behavior for schema
+   changes, within the registry's `minimum_upgrade_source`. Keep original historical sources and report exact command exits.
 
 ## Migrating legacy single-file records
 

@@ -203,8 +203,9 @@ not-probed`。任何输出都不包含凭据值；格式和检查见
 文件，放入 `shared/` 或 `project/`，并使用对应的 `entry-template.md` front
 matter。新增或迁移条目时以 `content-registry.yaml` 为身份、归属、生命周期和摘要的唯一权威，
 用 `check-development.sh --write-indexes` 生成分组索引；正文只维护内容来源、日期和适用范围。
-六类目录、命名例外和 schema 2 格式见 `.agents/AGENTS.md`。旧 schema 1 必须通过目标版本
-升级入口迁移，不能直接交给新检查器。迁移表保留旧路径/新路径、稳定 ID、来源提交和处置；
+六类目录、命名例外和 schema 2 格式见 `.agents/AGENTS.md`。registry 只记录当前状态：
+没有旧清单、采纳快照或迁移表，历史在 Git 与各 release tag 里。升级支持的最老来源写在
+`minimum_upgrade_source`；更老的仓库用 `template-adoption` 重新采用，而不是回放历史。
 模板自用 tests/harvest 位于 project/ 但保持 template 分类。
 
 ## 分支模型与仓库可见性
