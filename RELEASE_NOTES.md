@@ -1,41 +1,46 @@
 # Release notes
 
-## v0.1.36 — 2026-11-14
+## v0.1.37 — 2026-11-14
 
-**修复 v0.1.35 在一个仍带历史块的仓库上以“重复身份”拒绝升级的问题，并把发布顺序写成规则。**
+**memory 与 knowledge 只保留当前记录：过时记录连同文件删除，历史交给 Git。**
 
-### 重复身份不再导致整次升级失败
+### `retention` 机制退出
 
-v0.1.35 的 `upgrade-template.sh` 不再回放迁移表，也不再读写 `local_legacy_inventory`。一个 schema 2 但本地仍带这些历史块的仓库（例如从 v0.4.6 起的论文）在升级时，本地路径派生的稳定身份与目标在另一个路径登记的同一身份会各写一条 entry，`relationship_errors` 报 `duplicate stable identity after migration`，文件与 registry 都停在 preflight（#177）。
+registry 过去允许 memory/knowledge 记录以 `status: superseded|retired` + `retention: historical` + `retention_reason` 继续留在仓库，索引还会把它们标成 history。这与“仓库只呈现当前状态”冲突：过时记录继续出现在阅读路径上，索引生成与校验也长期为历史服务（#179）。
 
-本版在合并注册表后按稳定身份去重，目标路径优先：
+本版删除 `retention`、`retention_reason` 与 `historical_body()`：
 
-| 合并后的情况 | 行为 |
+| 情况 | 现在的行为 |
 | --- | --- |
-| 同一 id 在本地旧路径与目标新路径各有一条，旧文件未改动 | 只保留目标路径的 entry，旧路径写入 `upstream_path`，旧文件随删除步骤移除 |
-| 本地内容已改动、身份被 `supersedes`/`superseded_by` 引用，或 `local-<id>` 已占用 | 本地条目改名为 `local-<id>`（保留 `legacy_generated_id`），或按冲突拒绝并提示人工复核 |
+| 条目含 `retention`/`retention_reason` | `check-development.sh` 失败，提示删除该记录与文件、历史留在 Git |
+| 条目为 `status: superseded` 或 `retired` | 同样失败，提示删除记录与文件 |
+| 替换链指向已删除的身份 | 允许：引用保留为出处，不再报 dangling |
+| 现存记录之间的替换环 | 仍然失败（`replacement cycle`） |
+| 生成索引 | 只列 active 记录，不再出现 history 标注 |
 
-同一版还修正了删除判断：路径已被记录的移动重映射时，删除步骤回退到别名指向的原始位置判断本地文件——一致则一并删除，改动则报冲突，不再报 `already removed` 而留下旧布局残留（#174）。
+`status: rejected` 仍是有效决定（未采纳的内容），保持不变。
 
-历史块（`legacy_inventory`、`local_legacy_inventory`、`migrations`）仍在升级时删除并报告，registry 只保留当前状态；升级下限仍是 `v0.1.34`。
+### 升级时的行为
 
-### 发布顺序写进文档
+`upgrade-template.sh` 在升级时删除本地 `status: superseded|retired` 的条目及其文件，并在计划里报告 `removed with its <status> record; the history stays in Git`；保留条目上的 `retention*` 字段一并清掉。frontmatter 里的替换引用解析不到唯一身份时按原文保留，不再因此挂起整次升级；如果目标版本仍登记同一路径，命令按冲突拒绝并要求人工决定哪条记录是当前记录。
 
-v0.1.35 的 tag 曾直接打在 `dev` 的发布提交上，`main` 停在上一版。现在 `DEV.md` 的发布段与共享的 `release-doc-audit` 技能都写明：**dev → main → tag → Release**，先合并 `dev` 到 `main`，再在 `main` 的合并提交上创建 annotated tag，最后发布 Release；绝不在 `dev` 或任何 worktree 分支上打 tag，也不先打 tag 再合并。v0.1.35 的 tag 已通过把 `dev` 合进 `main` 修正，`8e7b82f` 现在是 `main` 的祖先。
+### 发布顺序
 
-### Upgrading a project from v0.1.35
+自 v0.1.36 起发布顺序固定为 **dev → main → tag → Release**：先在 `dev` 准备版本并跑本地门禁，再合并 `dev` 到 `main`，然后**在 `main` 的合并提交上**创建 annotated tag，最后发布 Release。绝不在 `dev` 或 worktree 分支上打 tag，也不先打 tag 再合并（`DEV.md`、`release-doc-audit`）。
+
+### Upgrading a project from v0.1.36
 
 **Command only.**
 
-用本版完整的命令目录执行 `bash .agents/scripts/shared/upgrade-template.sh v0.1.36`。共享文件按常规规则替换，本地 `## In this repository` 段保留；不再回放迁移表，也不改动 `path_mappings`。若升级在身份合并处报冲突，按提示为相关身份补 `local-` 前缀或人工复核后再运行。
+用本版完整的命令目录执行 `bash .agents/scripts/shared/upgrade-template.sh v0.1.37`。共享文件按常规规则替换，本地 `## In this repository` 段保留；升级会删除自身的 superseded/retired 记录与其文件并报告，因此升级后的 registry 能直接通过检查。手工维护的仓库若仍带 `retention*`，按检查器提示删除这些记录与文件后再发布。
 
 ### 验证与范围
 
-本地门禁：`check-development.sh`、`check-shells.sh` 通过，模板自有测试 168 项全部通过。新增回归测试从“带 `local_legacy_inventory` 的 schema 2 仓库”升级到本版，断言每个 `id` 只出现一次、旧条目改名为 `local-<id>`、历史块被删除、`check-development.sh` 通过；该测试在 v0.1.35 的命令上以同一个 `duplicate stable identity after migration` 失败。本模板没有产品运行时，因此本版没有真实运行或构建面之外的验证。
+本地门禁：`check-development.sh`（含索引一致）、`check-shells.sh` 通过，模板自有测试 167 项全部通过。新增用例覆盖：含 `retention` 或 superseded/retired 条目的 registry 失败并说明理由、删除记录与文件后通过、替换链在被替换者缺席时不报错、升级删除 superseded 记录并保留对它的引用、索引不再标注 history。本模板没有产品运行时，因此本版没有真实运行或构建面之外的验证。
 
 ### 参考
 
-- 问题：[#174](https://github.com/a-green-hand-jack/coding-agent-project-template/issues/174)、[#177](https://github.com/a-green-hand-jack/coding-agent-project-template/issues/177)
-- PR：[#178](https://github.com/a-green-hand-jack/coding-agent-project-template/pull/178)
-- 来源：[paper-agent-project-template#235](https://github.com/a-green-hand-jack/paper-agent-project-template/issues/235)
-- [上一版 v0.1.35](https://github.com/a-green-hand-jack/coding-agent-project-template/releases/tag/v0.1.35)；[版本比较](https://github.com/a-green-hand-jack/coding-agent-project-template/compare/v0.1.35...v0.1.36)
+- 问题：[#179](https://github.com/a-green-hand-jack/coding-agent-project-template/issues/179)
+- PR：[#180](https://github.com/a-green-hand-jack/coding-agent-project-template/pull/180)
+- 来源：[paper-agent-project-template#225](https://github.com/a-green-hand-jack/paper-agent-project-template/issues/225)、[paper-agent-project-template#230](https://github.com/a-green-hand-jack/paper-agent-project-template/issues/230)
+- [上一版 v0.1.36](https://github.com/a-green-hand-jack/coding-agent-project-template/releases/tag/v0.1.36)；[版本比较](https://github.com/a-green-hand-jack/coding-agent-project-template/compare/v0.1.36...v0.1.37)

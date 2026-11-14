@@ -243,7 +243,7 @@ def generated_index(root, directory, entries):
     prefix = directory + '/'
     for e in entries:
         p = e['path']
-        if (e['status'] != 'active' and not historical_body(e)) or not p.startswith(prefix) or e['kind'] in ('governance', 'symlink-index'):
+        if e['status'] != 'active' or not p.startswith(prefix) or e['kind'] in ('governance', 'symlink-index'):
             continue
         rest = p[len(prefix):].rstrip('/')
         if not rest or not (root / p).exists():
@@ -251,8 +251,7 @@ def generated_index(root, directory, entries):
         if '/' in rest and not (e['kind'] in ('memory', 'knowledge', 'document') and directory.split('/')[1] in ('memory', 'knowledge')):
             continue
         target = rest + '/SKILL.md' if e['kind'] == 'skill' else rest
-        label = f" ({e['status']} history)" if historical_body(e) else ""
-        rows.append(f'- [{rest}]({target}){label} — {e["summary"]}')
+        rows.append(f'- [{rest}]({target}) — {e["summary"]}')
     return BEGIN + '\n' + '\n'.join(sorted(rows)) + '\n' + END
 
 
@@ -279,15 +278,13 @@ def indexes(root, data, write=False):
     return errors
 
 
-def historical_body(entry):
-    return (entry.get('kind') in ('memory', 'knowledge')
-            and entry.get('status') in ('superseded', 'retired')
-            and entry.get('retention') == 'historical'
-            and isinstance(entry.get('retention_reason'), str)
-            and bool(entry['retention_reason'].strip()))
-
-
 def relationship_errors(entries):
+    """Duplicate identities and replacement cycles among the records present.
+
+    A surviving record may name a replaced identity that no longer exists: the
+    record was deleted with its file and Git keeps its body, so that reference is
+    provenance, not a dangling edge.
+    """
     errors = []
     fail = errors.append
     ids = {entry['id']: entry for entry in entries}
@@ -297,17 +294,12 @@ def relationship_errors(entries):
         fail('duplicate stable identity after migration: ' + ', '.join(
             f"{eid} ({', '.join(e['path'] for e in entries if e['id'] == eid)})"
             for eid in duplicates))
-    # One canonical old -> replacement graph, including reciprocal declarations.
     graph = {key: set() for key in ids}
     for eid, e in ids.items():
         for key, reverse in (('superseded_by', False), ('supersedes', True)):
             for other in e.get(key, []) if isinstance(e.get(key, []), list) else []:
-                if other not in ids:
-                    fail(f'dangling replacement: {eid} -> {other}')
-                else:
+                if other in ids:
                     graph[other if reverse else eid].add(eid if reverse else other)
-        if e.get('status') == 'superseded' and not e.get('superseded_by'):
-            fail(f'superseded entry without replacement: {eid}')
     done, visiting = set(), set()
     def visit(eid):
         if eid in visiting:
@@ -318,8 +310,6 @@ def relationship_errors(entries):
         visiting.add(eid)
         for other in graph[eid]:
             visit(other)
-        if graph[eid] and all(ids[x].get('status') in ('retired','rejected') for x in graph[eid]):
-            fail(f'inactive replacement chain: {eid}')
         visiting.remove(eid)
         done.add(eid)
     for eid in graph:
@@ -390,8 +380,13 @@ def validate(root, data):
             fail(f'missing refresh_after: {path}')
         if e.get('updated') != 'unknown' and not re.fullmatch(r'\d{4}-\d{2}(?:-\d{2})?', str(e.get('updated'))):
             fail(f'invalid updated (do not invent a day): {path}')
-        if e.get('retention') and not historical_body(e):
-            fail(f'invalid historical retention: {path}')
+        for key in ('retention', 'retention_reason'):
+            if key in e:
+                fail(f'obsolete {key}: {path}; the registry records current records only. Delete the superseded'
+                     ' record and its file and keep the history in Git')
+        if e.get('status') in ('superseded', 'retired'):
+            fail(f'obsolete lifecycle {e.get("status")}: {path}; delete the record and its file and keep the'
+                 ' history in Git')
         for key in ('supersedes', 'superseded_by'):
             if not isinstance(e.get(key, []), list):
                 fail(f'{key} must contain stable IDs: {path}')
@@ -420,7 +415,7 @@ def validate(root, data):
             entry = resolve(p, entries)
         except RegistryError as exc:
             fail(str(exc)); continue
-        if entry['status'] != 'active' and not historical_body(entry):
+        if entry['status'] != 'active':
             fail(f'inactive content present: {p}')
         if entry['path'] != p and entry['kind'] not in ('skill', 'code', 'governance'):
             fail(f'independent content needs its own entry: {p}')
@@ -449,7 +444,7 @@ def validate(root, data):
         if entry['kind'] in ('memory','knowledge') and p.endswith('.md'):
             text=(root/p).read_text()
             front=text.split('---',2)[1] if text.startswith('---\n') and text.count('---')>=2 else ''
-            if re.search(r'^(scope|status|supersedes|superseded_by|refresh_after):',front,re.M):
+            if re.search(r'^(scope|status|supersedes|superseded_by|refresh_after|retention|retention_reason):',front,re.M):
                 fail(f'duplicate registry metadata in frontmatter: {p}')
     for category in CATEGORIES:
         base=root/'.agents'/category

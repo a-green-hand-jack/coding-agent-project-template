@@ -55,11 +55,14 @@ metadata is `unknown`; preserve partial dates. Registry owns paths, ownership,
 lifecycle, summaries and replacement IDs. Body frontmatter owns content-specific
 sources, observation dates and applicability; do not duplicate registry fields.
 Generated marked indexes in group AGENTS derive from registry; never hand-edit
-a second summary or state list. Retired/superseded entries keep provenance even
-when their files are absent. Replacement chains must resolve without cycles. Memory/knowledge bodies may
-remain under `status: superseded|retired` only with `retention: historical` and a
-nonempty `retention_reason`; generated indexes label them as history, not current
-guidance. This does not permit rejected or executable content to remain active.
+a second summary or state list. The registry records current records only: a
+superseded or retired record is deleted with its file, and Git keeps its body.
+`retention` and `retention_reason` no longer exist, and a registry that still
+carries either field, or a `status: superseded|retired` entry, fails the check.
+A surviving record may keep a `supersedes`/`superseded_by` reference to an
+identity that no longer exists; that reference is provenance. Replacement chains
+among the records present must not cycle. This does not permit rejected or
+executable content to remain active.
 Unambiguous old ID/path relationships migrate to stable IDs before frontmatter
 is removed. Unresolved/ambiguous links or conflicting lifecycle authorities hold
 source files and the registry for manual resolution without advancing versions.

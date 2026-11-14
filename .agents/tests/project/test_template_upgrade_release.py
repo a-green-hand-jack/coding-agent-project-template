@@ -741,7 +741,7 @@ class UpgradeLatestLayoutTests(UpgradeFromAnOlderReleaseTests):
             self.assertNotIn('Applied:', result.stdout)
             self.assertEqual(files_of(root), before)
 
-    def test_keeps_project_adaptations_optional_rejection_and_retired_history(self):
+    def test_keeps_project_adaptations_and_optional_rejection(self):
         root=self.project(self.old,own=True)
         skill='.agents/skills/shared/worktree-lifecycle/SKILL.md'
         section='\n## In this repository\n\nLocal acceptance remains owned by this project.\n'
@@ -772,12 +772,12 @@ class UpgradeLatestLayoutTests(UpgradeFromAnOlderReleaseTests):
         self.assertEqual((root/'.agents/scripts/project/setup-project.sh').read_bytes(),before['.agents/scripts/setup-project.sh'][1])
         self.assertEqual((root/'.agents/skills/project/local-tool/SKILL.md').read_bytes(),before['.agents/skills/local-tool/SKILL.md'][1])
         data=catalog.loads(path.read_text())
-        retired=next(e for e in data['entries'] if e['id']=='local-retired-decision')
         rejected=next(e for e in data['entries'] if e['path']=='Dockerfile')
         self.assertEqual(rejected['status'],'rejected')
         self.assertEqual(rejected['adoption'],'rejected-by-maintainer')
-        self.assertEqual(retired['status'],'retired')
-        self.assertEqual(retired['source'],'historical-user-decision')
+        # A retired record is removed with its file; Git keeps the history.
+        self.assertFalse([e for e in data['entries'] if e['id']=='local-retired-decision'])
+        self.assertFalse((root/'.agents/memory/project/old-decision.md').exists())
         tool=next(e for e in data['entries'] if e['id']=='local-tool-stable')
         self.assertEqual(tool['path'],'.agents/skills/project/local-tool/')
         self.assertFalse(any(e['scope']=='template' for e in data['entries']))
@@ -800,48 +800,28 @@ class UpgradeLatestLayoutTests(UpgradeFromAnOlderReleaseTests):
         self.assertEqual(files_of(root),after)
         return catalog.loads((root/REGISTRY).read_text())
 
-    def test_upgrade_preserves_historical_body_and_resolves_frontmatter_replacement_ids(self):
+    def test_upgrade_drops_superseded_records_and_keeps_their_reference(self):
         root=self.project(self.old,own=True)
         directory=root/'.agents/memory/project'
-        bodies={'old-note.md':'# Earlier choice\n\nUnique historical reason and evidence.\n',
+        bodies={'old-note.md':'# Earlier choice\n\nUnique reason and evidence.\n',
                 'new-note.md':'# Current choice\n\nNew evidence changes the decision.\n'}
         for name,status,relationship in (('old-note.md','superseded','superseded_by: new-note.md'),('new-note.md','active','supersedes: old-note.md')):
             (directory/name).write_text('---\nname: '+name[:-3]+'\ndate: 2026-09\nsource: recorded-project-decision\nscope: project\nstatus: '+status+'\n'+relationship+'\n---\n\n'+bodies[name])
-        data=self.assert_upgrade_check_repeat(root)
-        by_name={Path(e['path']).name:e for e in data['entries']}
-        old,new=by_name['old-note.md'],by_name['new-note.md']
-        self.assertEqual(old['status'],'superseded')
-        self.assertEqual(old['superseded_by'],[new['id']])
-        self.assertEqual(new['supersedes'],[old['id']])
-        self.assertEqual(old['retention'],'historical')
-        for name,body in bodies.items():
-            text=(directory/name).read_text()
-            self.assertTrue(text.endswith(body));self.assertIn('date: 2026-09',text)
-            self.assertIn('source: recorded-project-decision',text)
-        self.assertIn('old-note.md',(directory/'AGENTS.md').read_text())
-        self.assertIn('superseded history',(directory/'AGENTS.md').read_text())
-
-    def test_upgrade_holds_ambiguous_replacement_without_changing_history_or_version(self):
-        root=self.project(self.old,own=True)
-        directory=root/'.agents/memory/project'
-        old=directory/'old-note.md'
-        old.write_text('---\nname: old-note\nstatus: superseded\nsuperseded_by: missing-note.md\n---\n\nUnique evidence must not be dropped.\n')
-        before=files_of(root)
-        result=subprocess.run(['bash',str(SCRIPT),self.candidate],cwd=root,text=True,capture_output=True)
-        self.assertEqual(result.returncode,1,result.stdout+result.stderr)
-        self.assertIn('unresolved lifecycle reference',result.stdout)
-        self.assertEqual(files_of(root),before)
-        self.assertIn('version: '+self.old,(root/REGISTRY).read_text())
-        for name in ('first','second'):
-            alternative=directory/name/'missing-note.md'
-            alternative.parent.mkdir()
-            alternative.write_text('# Alternative with independent evidence\n')
-        before=files_of(root)
-        ambiguous=subprocess.run(['bash',str(SCRIPT),self.candidate],cwd=root,text=True,capture_output=True)
-        self.assertEqual(ambiguous.returncode,1,ambiguous.stdout+ambiguous.stderr)
-        self.assertIn('2 matching identities',ambiguous.stdout)
-        self.assertEqual(files_of(root),before)
-
+        # The obsolete record still carries the retired history fields.
+        data=catalog.loads((root/REGISTRY).read_text())
+        data['entries'].append(unit('.agents/memory/project/old-note.md','local-old-note','memory',
+                                    status='superseded', retention='historical',
+                                    retention_reason='Preserve the earlier decision.'))
+        (root/REGISTRY).write_text(catalog.dumps(data))
+        merged=self.assert_upgrade_check_repeat(root)
+        by_name={Path(e['path']).name:e for e in merged['entries']}
+        self.assertNotIn('old-note.md',by_name)
+        self.assertFalse((directory/'old-note.md').exists())
+        new=by_name['new-note.md']
+        self.assertEqual(new['supersedes'],['local-old-note'])
+        self.assertNotIn('retention',new)
+        self.assertNotIn('old-note.md',(directory/'AGENTS.md').read_text())
+        self.assertNotIn('superseded history',(directory/'AGENTS.md').read_text())
 
 
 if __name__ == "__main__":

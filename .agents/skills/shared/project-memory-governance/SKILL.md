@@ -29,17 +29,21 @@ fact that future sessions would otherwise need to rediscover.
 5. Before moving, merging, extracting or retiring content, record the reviewed
    move in the release's own notes (its `### Upgrading a project from <previous
    tag>` section) and leave the old path in Git history; the registry records
-   current state only, with no migration table. Preserve retired records, optional
-   rejection and adaptation decisions. Stable IDs survive rename; a merge or
-   extraction is reconciled by review, never by automatic concatenation. No
-   competing ledger.
+   current state only, with no migration table. A superseded or retired record is
+   deleted with its file instead of being kept as history; delete it from the
+   registry and the tree in the same change. A surviving record keeps its
+   `supersedes`/`superseded_by` reference to the deleted identity as provenance.
+   Preserve rejection (an explicit `rejected` decision) and adaptation
+   decisions. Stable IDs survive rename; a merge or extraction is reconciled by
+   review, never by automatic concatenation. No competing ledger.
 6. Update callers/imports/CI/discovery and adoption/upgrade together. Generate
    group indexes with `bash .agents/scripts/shared/check-development.sh
    --write-indexes`; do not hand-maintain duplicate summaries. Check normalized
    test discovery and all nested Shell scripts when paths change.
 7. Run the official check without write flags. It must reject unregistered or
    ambiguously owned content, dangling entries, bad CLAUDE links/Git modes,
-   unjustified names, stale indexes and dangling/cyclic replacement chains.
+   unjustified names, stale indexes, obsolete history fields or superseded
+   records, and replacement cycles.
    Validate actual old-release upgrade and repeat-upgrade behavior for schema
    changes, within the registry's `minimum_upgrade_source`. Keep original historical sources and report exact command exits.
 
