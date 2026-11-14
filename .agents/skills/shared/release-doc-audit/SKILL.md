@@ -16,6 +16,15 @@ for reader order, self-contained prose, traceable claims, historical evidence,
 proportional visuals and redaction. The steps below apply those principles to
 release claims and publication surfaces; they remain the release procedure.
 
+Release order is fixed: integrate the release preparation into the release
+branch (`main`) first, then create the annotated tag **on that merge commit on
+`main`**, then publish the release. Never tag a development or integration
+branch, and never tag before the merge; a tag on a branch that `main` does not
+contain is not a release, and it cannot be corrected by moving `main` afterwards
+without retagging. If a tag was created too early, merge the branch into `main`
+so the tagged commit becomes an ancestor, and correct the order for every later
+release.
+
 Run the consistency audit below read-only from the repository root before
 tagging. Pass the release being prepared as `TARGET_TAG`. Before a release
 heading exists, use `Unreleased` for the upgrade-section check in step 3 and

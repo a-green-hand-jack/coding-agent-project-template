@@ -366,9 +366,20 @@ template:
 
 发布前检查：工作树干净、文档与行为一致、资产 manifest 可解析、环境入口可用、
 适用的回归和真实运行证据已记录。运行
-`.agents/skills/shared/release-doc-audit/`，处理或记录每个文档审计发现。发布只
-从 `main` 或 release branch 进行，并更新下游项目自己的 `RELEASE_NOTES.md`；
-模板仓库的 `RELEASE_NOTES.md` 只记录模板版本，不作为下游版本记录。
+`.agents/skills/shared/release-doc-audit/`，处理或记录每个文档审计发现。
+
+发布顺序固定为 **dev → main → tag → Release**，不可颠倒：
+
+1. 在 `dev` 上准备版本（registry 的 `template.version`、只描述当前版本的
+   `RELEASE_NOTES.md`），本地检查通过；
+2. 开 `dev` → `main` 的 PR 并合并（或按项目规则 fast-forward/merge `main`）；
+3. 在 **`main` 的合并提交**上创建 annotated tag（`git tag -a <TAG> -m <TAG> <MAIN_SHA>`）；
+4. 在该 tag 上发布 GitHub Release。
+
+绝不在 `dev` 或任何开发/worktree 分支上打 tag，也不先打 tag 再合并：tag 必须
+指向 `main` 上的提交，`main` 也必须已经包含该版本的全部内容。合并回 `main`
+之后，仍按下述要求更新下游项目自己的 `RELEASE_NOTES.md`；模板仓库的
+`RELEASE_NOTES.md` 只记录模板版本，不作为下游版本记录。
 同时检查目标发布面的实际渲染、窄屏可读性和图链接；不支持内嵌图时使用可访问的
 静态图。仅本地准备时记录预览面和托管检查缺口，不为预览而发布。历史验收与最终
 候选验证分别说明，保留 `### Upgrading ...` 和 **Command only.** / 编号手动步骤
