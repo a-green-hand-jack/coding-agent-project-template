@@ -174,7 +174,10 @@ worktree 的 `.project/`。具体项目可以提供可执行的
    （`NAME|ACTION|WHY`，ACTION 为 `copy`、`drop` 或 `login`），否则 teardown 会
    停下来要求决定。`NAME` 可以是 shell 通配符，一行管一类文件，例如
    `plan-*.md|copy|`；通配符不能含 `/`、不能是 `login`、不能匹配模板自己处理的
-   条目，同名的精确规则优先于通配符。Issue session 自己的工作文件放在
+   条目，同名的精确规则优先于通配符。模板只为自己创建的条目定规则；
+   `setup-project.sh` hook 与工具环境创建的条目（例如 `.project/tools/<tool>/`
+   和 `.project/venv/`）是项目条目，由项目写 `tools|drop|WHY`、`venv|drop|WHY`
+   这样的规则，模板不替它决定是否保留。Issue session 自己的工作文件放在
    `.project/state/`，teardown 总会复制它，不需要规则。确认迁移输出里的
    `verified:` 覆盖上述条目和每个资产链接、资产软链接在 dev checkout 可解析、
    没有唯一副本留在旧目录后，再用 worktree 管理工具销毁 worktree 和 branch。

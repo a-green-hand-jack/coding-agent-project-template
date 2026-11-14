@@ -13,6 +13,11 @@
 # (leave it, with the reason). Exit 1: a real copy of a login, an asset or link
 # mapping would be overwritten, or the copy does not match its source. Exit 2:
 # wrong arguments or an invalid rules file.
+#
+# The template decides only for the entries it creates itself. Everything its
+# setup-project.sh hook or a tool environment creates is the project's own entry
+# and needs a project rule such as `venv|drop|WHY` or `tools|drop|WHY` (see the
+# format below): the template must not decide whether they are worth keeping.
 set -euo pipefail
 
 usage() {
@@ -41,6 +46,10 @@ in_list() { printf '%s' "$2" | grep -qxF -- "$1"; }
 
 # The top-level entries of .project/ the template has rules for; keep in step with
 # template_rule() below. A project rule, wildcard or not, may not match any of them.
+# Entries a project creates itself are deliberately absent: the tool environments
+# under tools/, the virtual environment at venv/ and anything else
+# setup-project.sh makes are the project's entries, so it decides their rule
+# (`tools|drop|WHY`, `venv|drop|WHY`) instead of inheriting one from here.
 template_names='state runs artifacts manifest assets.links home worktree.env credentials'
 is_glob() { [[ $1 == *[*?[]* ]]; }
 # Prints the first template entry name that the project rule NAME (a name or a
@@ -183,7 +192,7 @@ for path in .project/* .project/.[!.]*; do
       action=drop
       why='empty; nothing to keep'
     else
-      why="no rule for it: add one to $rules_file, or decide with --also NAME (copy it too) or --skip NAME=REASON (leave it)"
+      why="no rule for it: add one to $rules_file (for example venv|drop|WHY), or decide with --also NAME (copy it too) or --skip NAME=REASON (leave it)"
       fail_with 3
     fi
   fi
