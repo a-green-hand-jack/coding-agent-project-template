@@ -31,7 +31,11 @@ else
 fi
 [[ -d .agents ]] && printf 'ok   .agents directory\n' || { echo 'FAIL .agents directory'; fail=1; }
 [[ -f .env.example ]] && printf 'ok   .env.example\n' || { echo 'FAIL .env.example'; fail=1; }
-[[ -f assets/MANIFEST.yaml ]] && printf 'ok   assets manifest\n' || { echo 'FAIL assets manifest'; fail=1; }
+if [[ -d assets ]]; then
+  [[ -f assets/MANIFEST.yaml ]] && printf 'ok   assets manifest\n' || { echo 'FAIL assets manifest'; fail=1; }
+else
+  echo 'skip assets manifest: this repository keeps no assets/ directory'
+fi
 
 # Git must track the two files above and ignore the worktree-local state. An
 # existing repository's .gitignore often ignores .env.* or assets/, so the files
@@ -211,7 +215,7 @@ else
   echo 'skip credentials: no credentials.yaml (llm-credentials)'
 fi
 
-while IFS= read -r -d '' link; do
+[[ -d assets ]] && while IFS= read -r -d '' link; do
   if [[ ! -e "$link" ]]; then
     printf 'FAIL broken asset link: %s\n' "$link"
     fail=1

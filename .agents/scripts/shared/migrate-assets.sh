@@ -270,7 +270,8 @@ fi
 # -- copy --------------------------------------------------------------------------------------
 stamp=$(date -u +%Y%m%dT%H%M%SZ)
 migration="$destination/.project/migrations/$(basename "$root")-$stamp"
-mkdir -p "$destination/.project/migrations" "$destination/assets"
+mkdir -p "$destination/.project/migrations"
+[[ -d assets ]] && mkdir -p "$destination/assets"
 mkdir "$migration"
 while IFS= read -r name; do
   [[ -n "$name" ]] && cp -a ".project/$name" "$migration/"

@@ -32,7 +32,8 @@ if [[ "${SKIP_BRANCH_INIT:-0}" != 1 && "${CI:-}" != true && "${GITHUB_ACTIONS:-}
 fi
 
 [[ -f .env.example ]] || echo 'warning: .env.example is missing' >&2
-[[ -f assets/MANIFEST.yaml ]] || echo 'warning: assets/MANIFEST.yaml is missing' >&2
+# A repository without an assets/ directory keeps no external payloads.
+[[ ! -d assets || -f assets/MANIFEST.yaml ]] || echo 'warning: assets/MANIFEST.yaml is missing' >&2
 
 # Create assets/<name> -> <target> unless the entry already exists. $3 says where
 # the mapping came from.
