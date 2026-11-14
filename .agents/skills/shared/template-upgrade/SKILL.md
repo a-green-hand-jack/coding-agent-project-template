@@ -191,7 +191,7 @@ capabilities it adopted and which it intentionally kept different.
 A repository adopted before `v0.1.5` records its adopted release only in its
 developer docs or git history, and `.agents/scripts/shared/diagnose-environment.sh`
 reports a missing registry `template.version`. On the Issue branch, before the
-list of differences:
+migration map:
 
 1. Read the adopted tag from the evidence:
 
