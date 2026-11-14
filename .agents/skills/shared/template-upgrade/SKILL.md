@@ -87,10 +87,10 @@ Each release entry in the template's `RELEASE_NOTES.md` has a
 steps that remain. When every release crossed is command only and `--check`
 reports no conflict and no manual step (`Light path: yes`; review items do not
 count), the upgrade is one Issue, one worktree, the command, the checks of step
-6 and a PR. It needs no per-file plan and no step 4 presentation, and the Issue
+6 and a PR. It needs no migration map and no step 4 presentation, and the Issue
 is dispatched in the mechanical tier (`issue-workflow`, "Dispatch by
 difficulty"). Otherwise follow the full procedure below; the command's plan is
-the start of the step 2 difference list, and in step 5 the command applies the
+the start of the step 2 migration map, and in step 5 the command applies the
 mechanical part.
 
 ## Procedure
