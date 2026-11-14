@@ -132,13 +132,13 @@ class UpgradeFromAnOlderReleaseTests(unittest.TestCase):
         # Below the declared floor the command refuses the upgrade: those
         # releases predate the current registry shape.
         supported = [tag for tag in tags if self.floor is None or number(tag) >= number(self.floor)]
-        wanted = (tags[-1] if getattr(self, 'latest_source', False)
-                  or self._testMethodName in ('test_relocated_identity_stops_without_writes', 'test_declared_mapping_preserves_location', 'test_bad_mapping_never_changes_checkout', 'test_mapping_content_conflict_is_atomic', 'test_mapped_deletion_preserves_registry_consistency')
-                  or self._testMethodName.startswith('test_local_omission')
-                  else getattr(self, "source_tag", tags[-2]))
         if not supported:
             self.skipTest(f"no release at or after the minimum upgrade source {self.floor}"
                           f" can be upgraded to {self.candidate}")
+        wanted = (supported[-1] if getattr(self, 'latest_source', False)
+                  or self._testMethodName in ('test_relocated_identity_stops_without_writes', 'test_declared_mapping_preserves_location', 'test_bad_mapping_never_changes_checkout', 'test_mapping_content_conflict_is_atomic', 'test_mapped_deletion_preserves_registry_consistency')
+                  or self._testMethodName.startswith('test_local_omission')
+                  else getattr(self, "source_tag", supported[-2] if len(supported) > 1 else supported[-1]))
         if wanted not in supported:
             self.skipTest(f"{wanted} is older than the minimum upgrade source {self.floor}")
         self.old = wanted
