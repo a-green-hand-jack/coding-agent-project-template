@@ -722,9 +722,13 @@ guide (`<type>/issue-<N>-<slug>`, with `<type>` one of `fix`, `feat`, `docs`, `c
    started:
 
    ```bash
-   bash .agents/scripts/shared/new-agent-prompt.sh <N> <branch> <TARGET_BASE> \
+   bash .agents/scripts/shared/new-agent-prompt.sh --worktree <worktree> \
+     <N> <branch> <TARGET_BASE> \
      > <worktree>/.project/state/initial-prompt.md
    # Optional fourth argument: local coordinator handoff file (see below).
+   # --worktree <path>: the worktree this step created; the prompt names it and
+   # says not to create another. Omit it and the prompt asks the agent to
+   # verify the branch instead.
    # append the Issue-specific section from the template below
    # Deliver using agent-communication's resolved native transport or its
    # conditional Herdr fallback, with input preflight and a message id.
@@ -956,7 +960,9 @@ Constraints:
 
 The coordinator mapping/authorization/recovery lines may be saved in a local
 file and passed as the fourth argument to `new-agent-prompt.sh`; the script
-includes it verbatim. Inspect the generated prompt before sending, fill every
+includes it verbatim. `--worktree <path>` (any position) names the worktree this
+step created and adds the rule not to create another; it is peeled before the
+positional arguments, so existing calls keep their meaning. Inspect the generated prompt before sending, fill every
 mapping/constraint and keep private addresses out of public Issue/PR content.
 Omitting the file preserves the existing invocation but leaves a conspicuous
 instruction to append the local mapping before dispatch.
