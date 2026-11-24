@@ -212,10 +212,14 @@ writing:
   (the project's developer guide and release notes, whatever they are named).
   Commit messages use it too unless the project's `development-writing`
   adaptation explicitly chooses a different commit language or convention.
-- `issue_sections`: the sections an Issue body starts with, in order, for
-  example the goal and the approach before the details. The project may use
-  them as the fields of its own Issue forms; the template's forms in
-  `.github/ISSUE_TEMPLATE/` stay as they are.
+- `issue_sections`: the authority for the paragraphs an Issue body starts
+  with, in order, for example the goal and the approach before the details. An
+  Issue form holds prompts for that body, never a second order: a field label
+  does not replace a declared section, and a project that uses its own forms
+  maps their fields to its declared sections. The template's forms in
+  `.github/ISSUE_TEMPLATE/` are the template's own; a project's copy is its own
+  file, and a later template change to them arrives as an `upgrade: review`
+  diff, not as a rewritten form.
 - Text the template ships keeps the template's language and is never
   translated: the text of shared skills and memory records above their
   `## In this repository` section, script output, and the fixed markers other

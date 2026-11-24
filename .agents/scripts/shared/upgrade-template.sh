@@ -598,6 +598,10 @@ class Upgrade:
             return report.skipped(f"{path}: scope template")
         if field(entry, "upgrade") == "review":
             diff = git("diff", self.source, self.target, "--", path, cwd=self.clone)
+            if state is None:
+                return report.review((f"{path}: new here (upgrade: review); adopt it with"
+                                      f" git -C {self.clone.relative_to(self.root)} show {self.target}:{path}"
+                                      " if it fits, or leave it out; the release's content:", diff))
             return report.review((f"{path}: the project's own (upgrade: review); the release's change:", diff))
         if scope not in SHARED:
             return report.skipped(f"{path}: project-owned ({scope})")

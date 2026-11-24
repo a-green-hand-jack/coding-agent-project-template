@@ -4,10 +4,13 @@ body:
   - type: markdown
     attributes:
       value: >-
-        Follow the development writing guide at
-        `.agents/skills/shared/development-writing/SKILL.md` from this repository's root
-        and the project's declared language/sections. Explain the trigger and
-        consequence before diagnostic details; scale detail to the defect.
+        Write in the repository's declared language, and start the body with the
+        declared `issue_sections` (最终目标、实现哲学、现状和问题、怎么办、验收、不做) in
+        `.agents/content-registry.yaml`; the fields below are prompts for that
+        body, not a replacement for it. The common principles are in the
+        [development writing guide](https://github.com/a-green-hand-jack/coding-agent-project-template/blob/dev/.agents/skills/shared/development-writing/SKILL.md).
+        Explain the trigger and consequence before diagnostic details; scale the
+        detail to the defect.
   - type: textarea
     id: observed
     attributes:
