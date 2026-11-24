@@ -10,8 +10,10 @@ Keep repository-owned content here; reuse scope is recorded independently in the
 - [test_template_development.py](test_template_development.py) — Public checker counterexamples, Git symlink modes, normalized discovery and recursive Shell checks.
 - [test_template_diagnose.py](test_template_diagnose.py) — Template-only regression checks for diagnose.
 - [test_template_dispatch.py](test_template_dispatch.py) — Template-only regression checks for dispatch.
+- [test_template_fresh_copy.py](test_template_fresh_copy.py) — Template-only regression check that a repository copied from the template skips the release comparisons instead of failing its first push.
 - [test_template_governance.py](test_template_governance.py) — Template-only regression checks for governance.
 - [test_template_migrate.py](test_template_migrate.py) — Template-only regression checks for migrate.
+- [test_template_support.py](test_template_support.py) — Which tags are the template's own releases and whether this checkout is the template repository, shared by the tests that compare releases.
 - [test_template_upgrade.py](test_template_upgrade.py) — Template-only regression checks for upgrade.
 - [test_template_upgrade_release.py](test_template_upgrade_release.py) — Template-only regression checks for upgrade release.
 <!-- registry-index:end -->

@@ -85,17 +85,24 @@ CI 在 PR 上通过。
    不要用 `--depth 1`：浅克隆的仓库不能推送。
 
 2. 在 `.agents/content-registry.yaml` 的 `writing:` 写本项目的工作语言和 Issue 开头段落，
-   或删掉这一块（不声明）；不用托管 CI 时删掉 `.github/workflows/template-check.yml`。
-3. 运行 `bash .agents/scripts/shared/setup-worktree.sh`：它建立 `.project/`；在 `main` 上
+   或删掉这一块（不声明）。
+3. 首推前定下托管 CI，也就是 `issue-workflow` 的 `<CI>` 槽位，三选一：`no` 删掉
+   `.github/workflows/template-check.yml`；`yes` 保留并确认本仓库的 Actions 能启动；
+   `adopted-but-unavailable` 保留文件但用 `gh workflow disable template-check.yml` 停掉
+   跑不起来的运行（按量计费或额度用尽时，每次推送都会留下一个从未启动的红色运行），
+   Actions 恢复后 `gh workflow enable template-check.yml`。不论哪种，合并门槛都是本地检查。
+   不用等 adoption 清理完成再推：复制出来的仓库里，模板自己的测试中依赖模板 release
+   历史的那几项会自行跳过，首推拿到的是真实结果。
+4. 运行 `bash .agents/scripts/shared/setup-worktree.sh`：它建立 `.project/`；在 `main` 上
    运行时还会幂等创建、推送 `dev`，并把 GitHub 默认分支设为 `dev`。在其它分支上或需要
    换 remote 时，手工运行 `bash .agents/scripts/shared/init-branches.sh`。工作分支从 `dev`
    开始，发布才合并到 `main`。
-4. 修改 `README.md`、`USER.md` 中的项目占位内容；`DEV.md` 保留时一并改（v0.1.35 起
+5. 修改 `README.md`、`USER.md` 中的项目占位内容；`DEV.md` 保留时一并改（v0.1.35 起
    下游可以删除它）。产品树不是 `src/` 时，在 `AGENTS.md` 的“三个平面”和 `README.md`
    的目录表中写明。
-5. 删掉模板专用内容：registry 标 `scope: template` 的文件、本文档里的模板发布历史和这一节，
+6. 删掉模板专用内容：registry 标 `scope: template` 的文件、本文档里的模板发布历史和这一节，
    换成项目自己的发布说明。
-6. 让 coding agent 先读取 `AGENTS.md`、`.agents/AGENTS.md` 和当前 Issue，再开始修改；
+7. 让 coding agent 先读取 `AGENTS.md`、`.agents/AGENTS.md` 和当前 Issue，再开始修改；
    完整采用流程由 `template-adoption` 技能执行。
 
 模板升级：`bash .agents/scripts/shared/upgrade-template.sh --check <TEMPLATE_TAG>` 输出计划，

@@ -13,7 +13,9 @@ from pathlib import Path
 
 ROOT=Path(__file__).resolve().parents[3]
 sys.path.insert(0,str(ROOT/'.agents/scripts/shared'))
+sys.path.insert(0,str(ROOT/'.agents/tests/project'))
 import content_registry as registry
+import test_template_support as template_support
 
 
 class DevelopmentContractTests(unittest.TestCase):
@@ -286,6 +288,9 @@ class DevelopmentContractTests(unittest.TestCase):
                 else:yield item.id()
         discovered=set(flatten(unittest.defaultTestLoader.discover(str(ROOT/'.agents/tests/project'),pattern='test_template_*.py')))
         # The moves are history now: read the last registry that recorded them.
+        # A repository copied from the template has no template release to read
+        # there, so this skips outside the template repository.
+        template_support.require_releases(self)
         history=None
         for tag in sorted(subprocess.check_output(['git','tag','-l','v*'],cwd=ROOT,text=True).split(),
                           key=lambda value: [int(part) for part in value[1:].split('.')], reverse=True):
