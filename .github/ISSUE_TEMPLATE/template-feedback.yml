@@ -1,0 +1,72 @@
+name: Template feedback
+description: Report a defect, missing capability or cross-project improvement in this template
+title: "<short description of the template-level problem>"
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: >-
+        Use this form when a repository built from this template finds a problem
+        in the template itself, as described in
+        [template-feedback](https://github.com/a-green-hand-jack/coding-agent-project-template/blob/dev/.agents/skills/shared/template-feedback/SKILL.md).
+        This repository is public: never include credentials, private downstream
+        content, local machine paths or raw logs. Describe only the smallest
+        redacted reproduction that makes the report reusable.
+  - type: input
+    id: template-version
+    attributes:
+      label: Template version and downstream kind
+      description: The `template.version` (and `template.upstream.version` for a derived template) your repository records, and whether it is a private or public downstream repository. Name the repository only when it is public and its maintainer agrees.
+      placeholder: "<template.version>, a private or public downstream repository"
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: The commands or steps that trigger it, and what part of the template they touch.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: observed
+    attributes:
+      label: Observed behavior and evidence
+      description: What happened instead, with the checked commit or tag, command and result. Redact paths, identifiers and logs.
+    validations:
+      required: true
+  - type: textarea
+    id: cross-project
+    attributes:
+      label: Why this is cross-project
+      description: Why every repository adopting the template meets it, rather than a product-specific problem that a local Issue or workaround should hold.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed general rule or interface
+      description: Optional. What the template should require or provide, and which file would carry it.
+    validations:
+      required: false
+  - type: textarea
+    id: impact
+    attributes:
+      label: Compatibility, migration and cleanup impact
+      description: Which adopted files change, what projects must do when they upgrade, and what must be cleaned up or left behind.
+    validations:
+      required: true
+  - type: checkboxes
+    id: boundaries
+    attributes:
+      label: Boundaries
+      options:
+        - label: The report contains no credentials, private downstream content, local paths or raw logs.
+          required: true
+        - label: I searched the open and closed Issues for the same underlying problem.
+          required: true

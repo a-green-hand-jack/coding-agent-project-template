@@ -2,7 +2,7 @@ schema_version: 2
 purpose: "Record which development-plane content is reusable across repositories and which content belongs to one concrete project."
 template:
   repository: https://github.com/a-green-hand-jack/coding-agent-project-template
-  version: v0.1.40
+  version: v0.1.41
 writing:
   language: "中文"
   issue_sections: "最终目标, 实现哲学, 现状和问题, 怎么办, 验收, 不做"
@@ -1263,6 +1263,19 @@ entries:
     updated: unknown
     supersedes: []
     superseded_by: []
+  - path: .github/ISSUE_TEMPLATE/template-feedback.yml
+    id: content-e7996499874d10f6
+    kind: document
+    scope: project
+    owner: project-maintainers
+    summary: "Form for a downstream repository reporting a template defect or missing capability: version and downstream kind, reproduction, cross-project scope, compatibility impact and the public-repository boundary."
+    status: active
+    optional: true
+    source: {"commit": "cedaeeb9e6c7db0ce089340226818c29e9b0e426", "path": ".github/ISSUE_TEMPLATE/template-feedback.yml"}
+    updated: 2026-11-24
+    upgrade: review
+    supersedes: []
+    superseded_by: []
   - path: .github/ISSUE_TEMPLATE/bug.yml
     id: content-45b5634e925b8689
     kind: document
@@ -1273,6 +1286,7 @@ entries:
     source: {"commit": "d07f49d2f6e02ad531d920c8c8fb994f44e88971", "path": ".github/ISSUE_TEMPLATE/bug.yml"}
     updated: unknown
     supersedes: []
+    upgrade: review
     superseded_by: []
   - path: .github/ISSUE_TEMPLATE/feature.yml
     id: content-e5e34a44eb79bba1
@@ -1284,6 +1298,7 @@ entries:
     source: {"commit": "d07f49d2f6e02ad531d920c8c8fb994f44e88971", "path": ".github/ISSUE_TEMPLATE/feature.yml"}
     updated: unknown
     supersedes: []
+    upgrade: review
     superseded_by: []
   - path: .github/PULL_REQUEST_TEMPLATE.md
     id: content-18813c86948efc57
@@ -1295,6 +1310,7 @@ entries:
     source: {"commit": "d07f49d2f6e02ad531d920c8c8fb994f44e88971", "path": ".github/PULL_REQUEST_TEMPLATE.md"}
     updated: unknown
     supersedes: []
+    upgrade: review
     superseded_by: []
   - path: .github/release-examples/coordination-flow.mmd
     id: content-84b6c8e95af6fcab
