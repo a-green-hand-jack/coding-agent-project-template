@@ -177,10 +177,11 @@ mechanical part.
      way.
 
    Replace adopted scripts whole; the project's
-   `.agents/scripts/project/setup-project.sh` and `.agents/scripts/project/migrate-project.rules`
+   `.agents/scripts/project/setup-project.sh`, `.agents/scripts/project/teardown-project.sh`
+   and `.agents/scripts/project/migrate-project.rules`
    are not template files and stay. A local edit to an adopted script is a local
-   conflict: move it into one of those two files (`template-adoption` step 5), or
-   report it through `template-feedback` when neither can hold it. When the
+   conflict: move it into one of those files (`template-adoption` step 5), or
+   report it through `template-feedback` when none can hold it. When the
    target `migrate-assets.sh` handles an entry itself, it refuses the project's
    rule for that entry; remove the line.
 6. Run setup, diagnostics, public CLI checks, relevant seam tests and any required

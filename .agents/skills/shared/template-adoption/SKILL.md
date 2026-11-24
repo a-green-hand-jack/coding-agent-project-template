@@ -134,7 +134,11 @@ example assets or project-specific memory and knowledge.
      additions.
 
    Adopt scripts unchanged and put project-specific setup in the
-   `.agents/scripts/project/setup-project.sh` hook. When that hook creates entries in
+   `.agents/scripts/project/setup-project.sh` hook, and project-specific
+   preconditions for retiring a worktree in
+   `.agents/scripts/project/teardown-project.sh` (it runs before the teardown
+   inspects or copies anything; a non-zero exit stops it). When the setup hook
+   creates entries in
    `.project/`, say in `.agents/scripts/project/migrate-project.rules` how teardown
    migrates each one, one `NAME|ACTION|WHY` line per entry: `copy`, `drop` with
    the reason it may be left behind, or `login` for a link to the canonical
