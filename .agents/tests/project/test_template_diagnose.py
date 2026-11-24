@@ -17,7 +17,7 @@ case "$1 $2" in
   "repo view")
     echo '{"visibility":"PRIVATE","nameWithOwner":"owner/project","defaultBranchRef":{"name":"main"}}' ;;
   "run list")
-    echo '[{"databaseId":7,"conclusion":"failure","status":"completed"}]' ;;
+    echo '7 failure' ;;
   "run view")
     echo "$RUN_JOBS" ;;
   *) exit 1 ;;

@@ -195,10 +195,9 @@ fi
 if [[ -f .github/workflows/template-check.yml ]]; then
   if ! command -v gh >/dev/null 2>&1; then
     echo 'skip last template-check run: gh is unavailable'
-  elif last=$(gh run list --workflow template-check.yml --limit 1 --json databaseId,conclusion,status 2>/dev/null) \
-       && [[ -n "$last" && "$last" != '[]' ]]; then
-    run_id=$(jq -r '.[0].databaseId // empty' <<<"$last")
-    conclusion=$(jq -r '.[0].conclusion // .[0].status // "unknown"' <<<"$last")
+  elif last=$(gh run list --workflow template-check.yml --limit 1 --json databaseId,conclusion,status \
+       --jq '.[0] | "\(.databaseId) \(.conclusion // .status)"' 2>/dev/null) && [[ -n "$last" ]]; then
+    read -r run_id conclusion <<<"$last"
     jobs=$(gh run view "$run_id" --json jobs --jq '.jobs | length' 2>/dev/null || true)
     if [[ "$jobs" == 0 ]]; then
       printf 'warn template-check run %s has no job: hosted CI could not start (billing or a spending limit)\n' "$run_id"
