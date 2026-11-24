@@ -1,70 +1,70 @@
 # Release notes
 
-本文件只描述当前发布；历史版本保留在各自的标签里（例如 `git show v0.1.40:RELEASE_NOTES.md`）。
+本文件只描述当前发布；历史版本保留在各自的标签里（例如 `git show v0.1.41:RELEASE_NOTES.md`）。
 基于本模板创建的项目维护自己的发布说明，不复制此历史。
 
-## v0.1.41 — 2026-11-24
+## v0.1.42 — 2026-11-24
 
-仓库的 Issue/PR 表单从现在起是**可 review 的项目文件**：模板改了表单，升级计划会把改动
-给你看，而不是悄悄跳过；下游给模板报问题也有了自己的表单。写作规范的权威写清了一处：
-registry 的 `issue_sections` 决定 Issue 正文的段落，表单字段只是提示。
+两个来自同一个私有下游仓库的报告，在同一处收口：**从模板复制出来的仓库，首推就该拿到
+真实可信的 CI 结果**。一个是模板自有测试要求只有模板才有的 release tag（#198），另一个是
+按量计费跑不起来时每次推送都留下一个看不出原因的红色运行（#199）。
 
-- **表单不再是静默冻结的文件。** `.github/ISSUE_TEMPLATE/{bug,feature}.yml` 与
-  `.github/PULL_REQUEST_TEMPLATE.md` 仍属项目所有（`scope: project`），但登记为
-  `upgrade: review`：模板改动它们时，升级计划打印本版 diff，由项目决定是否合并。此前这类
-  改动从不进入采用者——抽查的两个采用者，其表单分别停在模板 v0.1.13 与 v0.1.26，之后的
-  改进一次都没到过。模板新增而项目没有的可 review 文件，计划写成
-  `new here (upgrade: review); adopt it with git -C … show <tag>:<path> if it fits, or leave it out`，
-  不会写入。
-- **下游反馈有了专用表单。** 新增 `.github/ISSUE_TEMPLATE/template-feedback.yml`：模板版本
-  与下游类型、复现、期望与观察、为什么是跨项目问题、提案、兼容/迁移/清理影响，以及公开
-  仓库的边界（不含凭据、私有内容、本机路径、原始日志）。`template-feedback` 指向它，并
-  首次写明 PR 通道：只用于已被 Issue 覆盖的改动或显而易见的机械修复，行为改变与新规则仍
-  先开 Issue。该文件登记为 `optional: true`，项目可以采纳或不用。
-- **权威写清。** `issue-workflow` 的 Writing conventions 现在说明：`issue_sections` 决定
-  Issue 正文开头的段落顺序，表单字段不构成第二套顺序；采用者把自己的表单映射到自己的段落。
-- **采用步骤补上表单。** `template-adoption` 增加一步：采用时把模板的 Issue/PR 表单落成
-  自己的文件、字段映射到自己的段落（或记录不采用），并说明此后模板改动只以 review diff 到达。
-
-采用者这次升级会看到什么：
-
-| 计划里出现 | 含义 | 要做什么 |
-| --- | --- | --- |
-| `Review` 里有 `.github/...` | 模板改了这一版的形式或内容，文件仍归你所有 | 看 diff，决定合并进自己的表单还是保持现状 |
-| `Manual` 里有 `new optional content … template-feedback.yml` | 新增的反馈表单是可选的 | 想用就 `git show <tag>:.github/ISSUE_TEMPLATE/template-feedback.yml` 取来，或留着不用 |
-| `Refused`（若之前内联改过共享脚本） | 本地补丁与新版共享脚本冲突 | 把补丁移进项目文件（`.agents/scripts/project/`），见 v0.1.40 的说明 |
+- **发布比较按归属判断，而不是按 tag 数量。** 模板自有测试现在只在“这就是模板仓库”时
+  比较发布（`origin` 与 registry 的 `template.repository` 一致），并且只认“自己的 registry
+  声明了这个版本”的 tag。模板仓库里缺 tag **仍然失败**；复制出来的仓库里这些比较 skip，
+  并打印需要的 `git fetch --tags` 命令。实测一次复制品：180 项中 39 项 skip、0 项失败，
+  而改动前正是这 39 项把首推判红。
+- **workflow 容忍取不到 tag。** `git fetch --depth=1 origin '+refs/tags/*:refs/tags/*'` 在
+  origin 没有任何 tag 时静默退出 1（git 2.56 实测，无 stderr），所以只改测试不够。现在它会
+  打印 `no tag on origin yet: the template release comparisons skip` 并继续。
+- **托管 CI 跑不起来是可记录的状态。** `issue-workflow` 的 `<CI>` 新增
+  `adopted-but-unavailable`：保留 workflow，用 `gh workflow disable template-check.yml`
+  让推送不再产生从未启动的运行，Actions 恢复后 `gh workflow enable template-check.yml`
+  即可，本地检查始终是合并门槛。
+- **诊断直接指出这件事。** `diagnose-environment.sh` 读最近一次 `template-check.yml` 运行：
+  没有任何 job 就说明托管 CI 没跑起来，并打印上面的命令与该槽位值；job 失败则指向
+  `gh run view <id> --log-failed`；`gh` 不可用、未认证或没有运行记录时跳过，且从不因为这条
+  检查失败。
+- **起步手续先定 CI。** `## Starting from this template` 第 3 步把首推前的三选一写清
+  （`no` 删文件 / `yes` 确认 Actions 可用 / `adopted-but-unavailable` 停掉跑不起来的运行），
+  并说明不必等 adoption 清理完成才推。
 
 ### 升级时的行为
 
-共享 skill 与 `upgrade-template.sh` 按常规替换；表单属项目，只在 Review 里出现。本版没有
-schema、布局或 registry 字段的变化。
+三个共享文件（`diagnose-environment.sh`、`issue-workflow`、`template-adoption`）按常规替换，
+其余是模板自有内容。
 
-### Upgrading a project from v0.1.40
+一个必须说清的边界：#198 的修复**不会通过升级**到达“原样拷贝、尚未采用”的仓库——这些测试
+登记为 `scope: template`，升级恰好跳过这一范围。这类仓库要么重新拷贝
+`.agents/tests/project/test_template_support.py` 与 `test_template_fresh_copy.py` 及两处
+改动，要么按 `template-adoption` 完成采用（它本来就会删掉模板自有测试）。已完成采用的项目
+本来就没有这些测试，不受影响。
 
-1. 用本版完整的命令目录执行 `bash .agents/scripts/shared/upgrade-template.sh v0.1.41`。
-2. 看 Review 列表里的 `.github` 条目：模板对表单的改动从本版起以 review diff 出现，采纳与否由项目决定。
-3. 需要反馈表单的项目按 Manual 里的提示取用 `template-feedback.yml`，不需要就留着不用。
-4. 运行 `bash .agents/scripts/shared/check-development.sh` 与本项目的检查命令。
+### Upgrading a project from v0.1.41
+
+**Command only.**
+
+升级后 `diagnose-environment.sh` 会多一行“最近一次 template-check 运行”；`<CI>` 槽位多了
+`adopted-but-unavailable` 这个可选值，已填 `yes`/`no` 的项目不用改。
 
 ### 验证与范围
 
-本地检查：`check-development.sh` 通过（125 条登记）、`check-shells.sh` 通过（11 个文件）、
-模板自有测试 176 项全部通过，其中本版新增 2 项、更新 1 项：项目改写过的表单被 review 且
-不被写入（该 review 机制本版之前就有，这项守护的是新登记不被写坏）；模板新增而项目缺失的
-可 review 文件按“new here”提示、不写文件、registry 条目保持 optional——去掉
-`upgrade-template.sh` 的改动后这项失败，旧措辞会把项目根本没有的文件说成“项目自己的”。
-CI 在 PR 上通过。
+本地检查：模板自有测试 180 项通过、`check-development.sh` 通过（127 条登记）、
+`check-shells.sh` 通过（11 个文件）、CI 在三个 PR 上通过。实测三件事：复制品跑完整套
+workflow 步骤全绿（39 项 skip）；本仓库全部执行并通过；`origin` 指向模板但没有 tag 的
+clone 仍按预期失败。
 
-发布前下游风险检查（只读）：16 个在册采用者都有这三个表单，唯一的例外是还没有 registry 的
-`research-funding-os`；因此本版不会让在册采用者出现 dangling entry。没有执行下游测试，也没有
-在浏览器里核对 GitHub 的表单渲染（YAML 结构与字段 id 唯一性已用解析器检查）。
+发布前下游风险检查（只读）：本版只改三个共享文件与一个可选 workflow 的措辞，没有 schema、
+布局或 registry 字段变化；计费场景没有在真实失败的仓库上演示，提示由夹具覆盖。
 
 ### 参考
 
-- 问题：[#195](https://github.com/a-green-hand-jack/coding-agent-project-template/issues/195)
-- PR：[#196](https://github.com/a-green-hand-jack/coding-agent-project-template/pull/196)
-- 前序版本：[v0.1.40](https://github.com/a-green-hand-jack/coding-agent-project-template/releases/tag/v0.1.40)（本地已有块不再重复插入、teardown 项目钩子、worktree 路径）
-- [版本比较](https://github.com/a-green-hand-jack/coding-agent-project-template/compare/v0.1.40...v0.1.41)
+- 问题：[#198](https://github.com/a-green-hand-jack/coding-agent-project-template/issues/198)、
+  [#199](https://github.com/a-green-hand-jack/coding-agent-project-template/issues/199)
+- PR：[#200](https://github.com/a-green-hand-jack/coding-agent-project-template/pull/200)、
+  [#201](https://github.com/a-green-hand-jack/coding-agent-project-template/pull/201)
+- 前序版本：[v0.1.41](https://github.com/a-green-hand-jack/coding-agent-project-template/releases/tag/v0.1.41)（Issue/PR 表单作为可 review 的项目文件）
+- [版本比较](https://github.com/a-green-hand-jack/coding-agent-project-template/compare/v0.1.41...v0.1.42)
 
 ## Starting from this template
 
