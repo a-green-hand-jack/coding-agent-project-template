@@ -49,7 +49,10 @@ maintainer first as specified by `issue-workflow`.
    that mounts the worktree or a state that cannot be confirmed stops the
    retirement and goes to the maintainer.
 6. Migrate once nothing runs. Run
-   `.agents/scripts/shared/teardown-worktree.sh --migrate-to <canonical-project>`. It
+   `.agents/scripts/shared/teardown-worktree.sh --migrate-to <canonical-project>`. A
+   project hook, `.agents/scripts/project/teardown-project.sh`, runs first and may
+   stop the teardown; it is the project's own precondition check, not a
+   replacement for step 5. The command
    inspects state, then copies
    `.project/state`, `runs`, `artifacts`, `manifest`, the entries
    `migrate-project.rules` marks `copy` and the untracked asset links into the

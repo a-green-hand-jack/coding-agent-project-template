@@ -63,10 +63,21 @@ SKILL = {
     "v3": "# Skill\n\n1. First step, changed.\n2. Second step, reworded.\n",
 }
 LOCAL_SECTION = "\n## In this repository\n\n- Step 1 (First step): also run the local check.\n"
+VENV = ("ifneq ($(wildcard $(CURDIR)/.project/venv/bin/python3),)\n"
+        "export PATH := $(CURDIR)/.project/venv/bin:$(PATH)\n"
+        "endif\n")
+MAKEFILE = "all:\n\techo built\n\ndocs:\n\t./docs.sh\n\nclean:\n\trm -rf out\n"
+LOCAL_MAKEFILE = ("all:\n\techo built\n\n# The project's own note.\n" + VENV
+                  + "\ndocs:\n\t./docs.sh\n\nclean:\n\trm -rf out\n")
 INDEX = "# Tools\n\n{rules}\n\n## Index\n\n- `a.sh` — does a.\n"
 LOCAL_INDEX_LINE = "- `mine.sh` — the project's own tool.\n"
 OWN_README = "# My project\n\nBuild it with make.\n"
 OWN_WRITING = "writing:\n  language: 中文\n  issue_sections: 最终目标, 怎么办, 验收\n"
+
+
+def with_venv(text: str) -> str:
+    """MAKEFILE with the template's venv block, inserted after the docs recipe."""
+    return text.replace("\nclean:", "\n" + VENV + "\nclean:")
 
 
 def release(version: str, repository: str) -> dict[str, str]:
@@ -87,6 +98,8 @@ def release(version: str, repository: str) -> dict[str, str]:
         "TEMPLATE.md": f"template record {version}\n",
         "notes/plan.txt": f"plan {version}\n",
         "shared/overlap.txt": "x\n" if number < 3 else "z\n",
+        "shared/build.mk": MAKEFILE if number < 2 else with_venv(MAKEFILE)
+        + ("\ncheck:\n\t./check.sh\n" if number >= 3 else ""),
         "assets/README.md": "assets\n" if number < 2 else "assets, revised\n",
         "README.md": "# Template\n\nStart here.\n" if number < 3 else "# Template\n\nStart here, then run init.\n",
         "ci/check.yml": "on: push\n" if number < 3 else "on: pull_request\n",
@@ -154,6 +167,7 @@ class UpgradeTemplateTests(unittest.TestCase):
             registry[registry.index("writing:"):registry.index("default_scope:")], OWN_WRITING)
         files["RELEASE_NOTES.md"] = "# Release notes\n"
         files["shared/skill.md"] += LOCAL_SECTION
+        files["shared/build.mk"] = LOCAL_MAKEFILE
         files["README.md"] = OWN_README
         files[".agents/tools/AGENTS.md"] += LOCAL_INDEX_LINE
         if edited:
@@ -283,6 +297,34 @@ class UpgradeTemplateTests(unittest.TestCase):
         self.assertEqual(read("README.md"), OWN_README)
         self.assertEqual(read(".agents/tools/AGENTS.md"), INDEX.format(rules="Rules, revised.") + LOCAL_INDEX_LINE)
         self.assertEqual(self.version(root), "v3")
+
+    def test_a_block_the_project_added_by_hand_is_not_added_again(self) -> None:
+        # Issue #188: the release inserts a block the project wrote by hand at
+        # another place. The insertions do not overlap, so a plain three-way
+        # merge keeps both, and the next run adds a third.
+        root = self.project("v1", edited=False)
+        result = self.upgrade(root, "v2")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("shared/build.mk: already has the change of v2; 1 insertion(s) already here",
+                      result.stdout)
+        read = lambda name: (root / name).read_text(encoding="utf-8")
+        self.assertEqual(read("shared/build.mk"), LOCAL_MAKEFILE)
+        self.assertEqual(self.version(root), "v2")
+        # The next release changes the same file further; the local block stays
+        # one block and the new target arrives.
+        result = self.upgrade(root, "v3")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(read("shared/build.mk"), LOCAL_MAKEFILE + "\ncheck:\n\t./check.sh\n")
+
+    def test_insertions_the_project_already_holds_are_not_repeated(self) -> None:
+        root = self.project("v1", edited=False)
+        result = self.upgrade(root, "v3")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("shared/build.mk: merged with the local text (three-way, no overlap);"
+                      " 1 insertion(s) already here, not added again", result.stdout)
+        text = (root / "shared/build.mk").read_text(encoding="utf-8")
+        self.assertEqual(text.count("export PATH"), 1)
+        self.assertEqual(text, LOCAL_MAKEFILE + "\ncheck:\n\t./check.sh\n")
 
     def test_a_project_without_writing_conventions_gets_none(self) -> None:
         root = self.project("v2", edited=False)

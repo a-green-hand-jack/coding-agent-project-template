@@ -176,23 +176,62 @@ class MigrateRules(unittest.TestCase):
 
     def test_teardown_entrypoint_finishes_with_fifo(self) -> None:
         self.verification_tree()
-        (self.worktree / ".agents/scripts/shared").mkdir()
+        result = self.teardown(None)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("ready for managed worktree removal; no source directory was deleted", result.stdout)
+        self.assertTrue(stat.S_ISFIFO((self.copied() / "runs/stream\n pipe").lstat().st_mode))
+
+    def teardown(self, hook: str | None, *, executable: bool = True) -> subprocess.CompletedProcess[str]:
+        """The teardown entrypoint in this fixture, with an optional project hook."""
+        shared = self.worktree / ".agents/scripts/shared"
+        shared.mkdir(parents=True, exist_ok=True)
         for script in (MIGRATE, TEARDOWN, MIGRATE.with_name("inspect-state.sh")):
-            shutil.copy2(script, self.worktree / ".agents/scripts/shared" / script.name)
+            shutil.copy2(script, shared / script.name)
+        if hook is not None:
+            path = self.worktree / ".agents/scripts/project/teardown-project.sh"
+            path.write_text(hook)
+            if executable:
+                path.chmod(0o755)
         bin_dir = self.temp / "bin"
-        bin_dir.mkdir()
+        bin_dir.mkdir(exist_ok=True)
         for runtime in ("docker", "podman"):
-            executable = bin_dir / runtime
-            executable.write_text("#!/bin/sh\n[ \"$1\" = ps ] && [ \"$2\" = -aq ]\n")
-            executable.chmod(0o755)
-        result = subprocess.run(
+            executable_path = bin_dir / runtime
+            executable_path.write_text('#!/bin/sh\n[ "$1" = ps ] && [ "$2" = -aq ]\n')
+            executable_path.chmod(0o755)
+        return subprocess.run(
             ["bash", ".agents/scripts/shared/teardown-worktree.sh", "--migrate-to", str(self.destination)],
             cwd=self.worktree, text=True, capture_output=True, timeout=20,
             env={**os.environ, "PATH": f"{bin_dir}:{os.environ['PATH']}"},
         )
+
+    def test_teardown_project_hook_runs_before_anything_is_migrated(self) -> None:
+        receipt = self.temp / "receipt"
+        destination = shlex.quote(str(self.destination / ".project"))
+        result = self.teardown(
+            "#!/usr/bin/env bash\nset -euo pipefail\n"
+            f"printf '%s\\n' \"$(ls -A {destination} | wc -l)\" > {shlex.quote(str(receipt))}\n"
+            "echo hook-ran\n")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertIn("ready for managed worktree removal; no source directory was deleted", result.stdout)
-        self.assertTrue(stat.S_ISFIFO((self.copied() / "runs/stream\n pipe").lstat().st_mode))
+        self.assertIn("hook-ran", result.stdout)
+        self.assertLess(result.stdout.index("hook-ran"),
+                        result.stdout.index("ready for managed worktree removal"))
+        # The hook sees the destination before the migration writes anything.
+        self.assertEqual(receipt.read_text(encoding="utf-8").strip(), "0")
+        self.assertTrue((self.copied() / "state/initial-prompt.md").exists())
+
+    def test_a_failing_teardown_hook_stops_with_nothing_migrated(self) -> None:
+        self.verification_tree()
+        result = self.teardown("#!/usr/bin/env bash\necho 'a run is still going' >&2\nexit 1\n")
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("a run is still going", result.stderr)
+        self.assertIn("teardown-project.sh stopped the teardown; nothing was migrated", result.stderr)
+        self.assertNotIn("ready for managed worktree removal", result.stdout)
+        self.assertFalse((self.destination / ".project/migrations").exists())
+
+    def test_a_teardown_hook_that_is_not_executable_is_ignored(self) -> None:
+        result = self.teardown("#!/usr/bin/env bash\nexit 1\n", executable=False)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("ready for managed worktree removal", result.stdout)
 
     def test_regular_content_is_checked_past_first_chunk(self) -> None:
         runs = self.worktree / ".project/runs"
@@ -584,6 +623,27 @@ class HandoffPrompt(unittest.TestCase):
         result = self.prompt("## Dispatch\n- coordinator: `tpl-coord-1`\n")
         self.assertNotIn("DEV.md", result)
         self.assertIn("the issue-workflow <LOCAL_CHECK> slot", " ".join(result.split()))
+
+    def test_the_created_worktree_is_named_and_must_not_be_recreated(self) -> None:
+        result = self.prompt("", "feat/issue-7", "integration/issue-6",
+                             "--worktree", "/tmp/worktrees/issue-7")
+        self.assertIn("Branch: feat/issue-7", result)
+        self.assertIn("Worktree: /tmp/worktrees/issue-7 (already created from integration/issue-6;"
+                      " do not create another worktree or branch)", result)
+        self.assertIn("Work only in that worktree", " ".join(result.split()))
+        self.assertIn("Start in that worktree and run", result)
+        self.assertNotIn("verify it", result)
+        self.assertIn("PR target: integration/issue-6", result)
+
+    def test_a_worktree_name_without_a_value_or_twice_is_a_usage_error(self) -> None:
+        for arguments in (("--worktree",), ("7", "--worktree", "/a", "--worktree", "/b"),
+                          ("--worktree", "")):
+            with self.subTest(arguments=arguments):
+                failed = subprocess.run(["bash", str(PROMPT), *arguments], cwd=REPOSITORY,
+                                        text=True, capture_output=True)
+                self.assertEqual(failed.returncode, 2, failed.stdout + failed.stderr)
+                self.assertEqual(failed.stdout, "")
+                self.assertIn("--worktree PATH", failed.stderr)
 
     def test_prompt_tells_the_session_where_its_files_go(self) -> None:
         flat = " ".join(self.prompt("").split())

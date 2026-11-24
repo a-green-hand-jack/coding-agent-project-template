@@ -28,7 +28,8 @@
 - 需要派出 Herdr worktree 时，事先请维护者确认本次 coding agent、具体模型和 thinking
   level 三项；已明确提供的选择不重复询问。未确认不得派遣或静默 fallback。
   使用 Herdr 原生 worktree 能力创建，运行 `bash .agents/scripts/shared/setup-worktree.sh`，
-  并用 `bash .agents/scripts/shared/new-agent-prompt.sh <issue-number>` 生成交接。
+  并用 `bash .agents/scripts/shared/new-agent-prompt.sh --worktree <worktree> <issue-number>`
+  生成交接。
   Herdr 不可用时报告，不用原始 Git 创建替代 worktree。
 - issue agent 负责承接任务；多个 PR 的合并及 dev 与 worktree 的集成冲突由 dev 中的
   协调者处理。相关新 Issue 可以由原 agent 在原 session/worktree 承接，明确范围和交付。
