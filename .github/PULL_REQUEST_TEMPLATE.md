@@ -4,9 +4,8 @@ Closes #
 
 Describe the final before/after behavior or boundary and why it changed.
 Keep this title and body aligned with the final scope; retain important decisions
-in comments. Follow the development writing guide at
-`.agents/skills/shared/development-writing/SKILL.md` from this repository's root
-and the project's writing language; scale the detail to the change.
+in comments. Follow the [development writing guide](https://github.com/a-green-hand-jack/coding-agent-project-template/blob/dev/.agents/skills/shared/development-writing/SKILL.md) and the project's writing
+language; scale the detail to the change.
 
 ## Validation
 

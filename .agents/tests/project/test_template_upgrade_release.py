@@ -520,12 +520,19 @@ class UpgradeFromAnOlderReleaseTests(unittest.TestCase):
         # nothing, so such a path differs from the fresh project without being a
         # difference the upgrade is responsible for.
         unadopted = set(re.findall(r"^  (\S+): new optional content in ", result.stdout, re.M))
+        # `upgrade: review` paths are the project's own once it has them: the
+        # command prints the release's diff and never writes them, so they may
+        # differ from a project made from the candidate.
+        reviewed = set(re.findall(r"^  (\S+): the project's own \(upgrade: review\)", result.stdout, re.M)) \
+            | set(re.findall(r"^  (\S+): new here \(upgrade: review\)", result.stdout, re.M))
         differing = {path for path in fresh.keys() | after.keys() if fresh.get(path) != after.get(path)}
         # Catalog provenance and derived indexes intentionally differ when old
         # project history survives. Compare authoritative content separately.
         derived = {REGISTRY} | {p for p in fresh if p.endswith('/AGENTS.md') and '<!-- registry-index:start -->' in fresh[p][1].decode(errors='replace')}
         manual = set(re.findall(r"^  (\S+): changed in .*this command never touches it", result.stdout, re.M))
-        self.assertEqual(differing - owned - unadopted - derived - manual, set(), result.stdout)
+        self.assertEqual(differing - owned - unadopted - reviewed - derived - manual, set(), result.stdout)
+        for path in reviewed:
+            self.assertEqual(after.get(path), before.get(path), f"{path}: a review path is never written")
         for path in manual:
             self.assertEqual(after.get(path),before.get(path))
         for path in derived - {REGISTRY}:

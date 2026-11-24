@@ -61,8 +61,14 @@ example assets or project-specific memory and knowledge.
    Map the writing conventions (`issue-workflow`, "Writing conventions"): write
    the maintainer's working language and Issue opening sections in the
    registry's `writing:` block, or leave the block out when nothing is
-   declared. Map the template's Issue and PR forms as adopted, or adapted to the
-   declared sections in the repository's own forms.
+   declared. Then land the template's `.github/ISSUE_TEMPLATE/*` forms and
+   `.github/PULL_REQUEST_TEMPLATE.md` as the repository's own files, with their
+   fields mapped to the declared `issue_sections`, or record that the repository
+   keeps its existing forms. Those files stay the repository's own: the template
+   registry marks them `upgrade: review`, so a later template change reaches the
+   repository as a reviewable diff in the upgrade plan and is never written over
+   it. Read that diff on every upgrade and port what still fits; a repository
+   that never lands the forms has no such reminder.
    Map the optional product release skeleton (`pyproject.toml`, `Dockerfile`,
    `install.sh`, `.dockerignore`) as adopted, adapted, preserved or a local
    conflict; never overwrite an existing product build entrypoint.

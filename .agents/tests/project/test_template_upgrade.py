@@ -33,6 +33,10 @@ default_scope: project
     scope: shared_with_adaptation
     upgrade: review
     note: Rewritten for the project.
+  - path: .github/ISSUE_TEMPLATE/bug.yml
+    scope: project
+    upgrade: review
+    note: The project's own Issue form.
   - path: ci/check.yml
     scope: shared_with_adaptation
     optional: true
@@ -73,6 +77,8 @@ INDEX = "# Tools\n\n{rules}\n\n## Index\n\n- `a.sh` — does a.\n"
 LOCAL_INDEX_LINE = "- `mine.sh` — the project's own tool.\n"
 OWN_README = "# My project\n\nBuild it with make.\n"
 OWN_WRITING = "writing:\n  language: 中文\n  issue_sections: 最终目标, 怎么办, 验收\n"
+FORM = "name: Bug\nbody:\n  - Observed behavior\n  - Expected behavior\n"
+OWN_FORM = "name: Bug\nbody:\n  - 现象\n  - 期望\n"
 
 
 def with_venv(text: str) -> str:
@@ -102,6 +108,8 @@ def release(version: str, repository: str) -> dict[str, str]:
         + ("\ncheck:\n\t./check.sh\n" if number >= 3 else ""),
         "assets/README.md": "assets\n" if number < 2 else "assets, revised\n",
         "README.md": "# Template\n\nStart here.\n" if number < 3 else "# Template\n\nStart here, then run init.\n",
+        ".github/ISSUE_TEMPLATE/bug.yml": FORM if number < 3 else FORM.replace(
+            "Observed behavior", "Observed behavior and evidence"),
         "ci/check.yml": "on: push\n" if number < 3 else "on: pull_request\n",
         ".agents/tools/AGENTS.md": INDEX.format(rules="Rules." if number < 3 else "Rules, revised."),
     }
@@ -169,6 +177,7 @@ class UpgradeTemplateTests(unittest.TestCase):
         files["shared/skill.md"] += LOCAL_SECTION
         files["shared/build.mk"] = LOCAL_MAKEFILE
         files["README.md"] = OWN_README
+        files[".github/ISSUE_TEMPLATE/bug.yml"] = OWN_FORM
         files[".agents/tools/AGENTS.md"] += LOCAL_INDEX_LINE
         if edited:
             files["shared/edited.txt"] = "A\nb\nc\n"
@@ -292,7 +301,7 @@ class UpgradeTemplateTests(unittest.TestCase):
         result = self.upgrade(root, "v3")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("Refused (conflicts): 0", result.stdout)
-        self.assertIn("Review (left to the project; never conflicts): 1", result.stdout)
+        self.assertIn("Review (left to the project; never conflicts): 2", result.stdout)
         read = lambda name: (root / name).read_text(encoding="utf-8")
         self.assertEqual(read("README.md"), OWN_README)
         self.assertEqual(read(".agents/tools/AGENTS.md"), INDEX.format(rules="Rules, revised.") + LOCAL_INDEX_LINE)
@@ -325,6 +334,53 @@ class UpgradeTemplateTests(unittest.TestCase):
         text = (root / "shared/build.mk").read_text(encoding="utf-8")
         self.assertEqual(text.count("export PATH"), 1)
         self.assertEqual(text, LOCAL_MAKEFILE + "\ncheck:\n\t./check.sh\n")
+
+    def test_a_reviewable_file_the_project_lacks_is_named_as_new(self) -> None:
+        # A form the template adds later is optional: the plan names it, shows the
+        # content and says to adopt it or leave it out; nothing is written, and
+        # the project's checks still pass because the entry is optional.
+        files = release("v3", str(self.template))
+        files[".github/ISSUE_TEMPLATE/template-feedback.yml"] = "name: Template feedback\nbody: []\n"
+        registry_path = self.template / ".agents/content-registry.yaml"
+        registry = files[".agents/content-registry.yaml"].replace(
+            "  - path: .github/ISSUE_TEMPLATE/bug.yml\n",
+            "  - path: .github/ISSUE_TEMPLATE/template-feedback.yml\n    scope: project\n    optional: true\n"
+            "    upgrade: review\n    note: Feedback form.\n"
+            "  - path: .github/ISSUE_TEMPLATE/bug.yml\n", 1)
+        files[".agents/content-registry.yaml"] = registry
+        for path in list(self.template.iterdir()):
+            if path.name != ".git":
+                shutil.rmtree(path) if path.is_dir() else path.unlink()
+        write(self.template, files)
+        git("add", "-A", cwd=self.template)
+        git(*IDENTITY, "commit", "-qm", "v4", cwd=self.template)
+        git("tag", "v4", cwd=self.template)
+        root = self.project("v1", edited=False)
+        result = self.upgrade(root, "v4")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn(".github/ISSUE_TEMPLATE/template-feedback.yml: new here (upgrade: review);"
+                      " adopt it with git -C", result.stdout)
+        self.assertIn("+name: Template feedback", result.stdout)
+        self.assertFalse((root / ".github/ISSUE_TEMPLATE/template-feedback.yml").exists())
+        # The entry stays registered and optional, so a project that leaves the
+        # form out has no dangling entry to clean up.
+        registry = (root / ".agents/content-registry.yaml").read_text(encoding="utf-8")
+        entry = registry[registry.index("  - path: .github/ISSUE_TEMPLATE/template-feedback.yml"):
+                         registry.index("  - path: .github/ISSUE_TEMPLATE/bug.yml")]
+        self.assertIn("optional: true", entry)
+
+    def test_a_project_owned_form_is_reviewed_never_written(self) -> None:
+        # `.github` holds the project's own Issue forms. The template marks them
+        # `upgrade: review`, so a later template change is a reviewable diff and
+        # the project's form keeps its own fields.
+        root = self.project("v1", edited=False)
+        result = self.upgrade(root, "v3")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("Review (left to the project; never conflicts): 2", result.stdout)
+        self.assertIn(".github/ISSUE_TEMPLATE/bug.yml: the project's own (upgrade: review);"
+                      " the release's change:", result.stdout)
+        self.assertIn("+  - Observed behavior and evidence", result.stdout)
+        self.assertEqual((root / ".github/ISSUE_TEMPLATE/bug.yml").read_text(encoding="utf-8"), OWN_FORM)
 
     def test_a_project_without_writing_conventions_gets_none(self) -> None:
         root = self.project("v2", edited=False)

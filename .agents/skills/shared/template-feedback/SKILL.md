@@ -25,7 +25,9 @@ capability or cross-project improvement in the template itself.
      open the upstream Issue with this skill and link the two Issues.
 2. Search the template repository's open and closed Issues for an existing report.
    Reuse the existing Issue when it describes the same underlying problem.
-3. Open an Issue in the template repository with:
+3. Open an Issue in the template repository with its feedback form
+   (`.github/ISSUE_TEMPLATE/template-feedback.yml`, "Template feedback") when the
+   template repository has one; otherwise write the body with the same items:
    - template version and the kind of downstream repository ("a private
      downstream repository" or "a public downstream repository"); name the
      repository only when it is public and its maintainer agrees;
@@ -34,6 +36,10 @@ capability or cross-project improvement in the template itself.
    - why the change is cross-project rather than local;
    - a proposed general rule or interface, if known;
    - compatibility, migration and cleanup impact.
+   The template's Issue forms are prompts for that body; the body still follows
+   the template's declared `issue_sections` (`issue-workflow`, "Writing
+   conventions"). File one Issue per problem: a bundled report cannot be
+   classified, scheduled or closed on its own.
 4. Keep downstream work moving with a local workaround only when it is clearly
    marked as temporary and linked to the upstream Issue.
    The template repository is public: never include downstream private content,
@@ -42,6 +48,14 @@ capability or cross-project improvement in the template itself.
 5. When the template change lands, update the downstream project through the
    normal Issue, branch and PR process. Do not copy the template repository's
    history or private development state into the downstream project.
+6. A PR to the template repository is a narrower channel than an Issue: use one
+   only for a change already covered by an Issue, or for a defect whose fix is
+   obvious and mechanical (a broken path, a typo in a shipped file), because it
+   arrives without the classification, scope and acceptance an Issue carries.
+   State the related Issue or the one-line defect in the PR body, follow the
+   template repository's PR template and writing language, and leave the
+   version, the release notes and the manual upgrade steps to the maintainer. A
+   behavior change or a new shared rule still needs the Issue first.
 
 The upstream Issue is the shared improvement channel. Do not send credentials,
 private logs or large artifacts; attach redacted evidence or a reproducible
