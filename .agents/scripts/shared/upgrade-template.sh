@@ -17,7 +17,8 @@
 #   - shared: replaced above its `## In this repository` section when check 1
 #     passes; without a section, replaced whole when unchanged here and
 #     otherwise three-way merged with the source tag as base; added when new;
-#     removed when removed and unchanged here;
+#     removed when removed and unchanged here. A block the release inserts but
+#     the project already holds verbatim is not inserted a second time;
 #   - the registry: merged key by key and entry by entry. The `writing:` block
 #     is the project's own and never changes; the followed version
 #     (template.version, or template.upstream.version in a derived template) is
@@ -51,6 +52,7 @@ export PYTHONDONTWRITEBYTECODE=1
 exec "$python" -I - "$(dirname "${BASH_SOURCE[0]}")" "$@" <<'PY'
 import os
 import posixpath
+import difflib
 import hashlib
 import json
 import re
@@ -384,6 +386,57 @@ def steps(text: str) -> dict[str, str]:
     return {number: body.rstrip() for number, body in found.items()}
 
 
+def paragraphs(lines: list[str], start: int, end: int) -> list[tuple[int, int]]:
+    """The ranges of lines[start:end] that hold a blank-line-separated group of
+    non-blank lines."""
+    groups, index = [], start
+    while index < end:
+        if not lines[index].strip():
+            index += 1
+            continue
+        first = index
+        while index < end and lines[index].strip():
+            index += 1
+        groups.append((first, index))
+    return groups
+
+
+def occurs(haystack: list[str], needle: list[str]) -> bool:
+    """Whether NEEDLE appears in HAYSTACK as consecutive lines."""
+    return any(haystack[start:start + len(needle)] == needle
+               for start in range(len(haystack) - len(needle) + 1))
+
+
+def already_applied(mine: str, base: str, theirs: str) -> tuple[str, int]:
+    """THEIRS without the blocks MINE already holds, and how many it dropped.
+    When the project made the release's insertion by hand at another place, the
+    two insertions do not overlap and a three-way merge keeps both: the block
+    would be duplicated and the next run would add it again (issue #188). A
+    group of inserted lines that appears verbatim here is not inserted."""
+    before, after = base.splitlines(keepends=True), theirs.splitlines(keepends=True)
+    if mine == theirs:
+        return theirs, 0
+    here = [line.rstrip() for line in mine.splitlines()]
+    dropped: set[int] = set()
+    repeated = 0
+    for tag, _, _, start, end in difflib.SequenceMatcher(None, before, after, autojunk=False).get_opcodes():
+        if tag != "insert":
+            continue
+        groups = paragraphs(after, start, end)
+        for number, (first, last) in enumerate(groups):
+            if not occurs(here, [after[line].rstrip() for line in range(first, last)]):
+                continue
+            while first > start and not after[first - 1].strip():
+                first -= 1
+            # The last group carries the blank lines that separate the insertion
+            # from the text that follows it.
+            dropped.update(range(first, end if number == len(groups) - 1 else last))
+            repeated += 1
+    if not repeated:
+        return theirs, 0
+    return "".join(line for number, line in enumerate(after) if number not in dropped), repeated
+
+
 def reconcile(source: tuple, target: tuple, section: str) -> list[str]:
     """Why the local section needs its slot rows or step keys reconciled."""
     reasons = []
@@ -502,17 +555,20 @@ class Upgrade:
                 break
             parent.rmdir()
 
-    def merge(self, mine: str, base: str, theirs: str) -> tuple[str, bool]:
+    def merge(self, mine: str, base: str, theirs: str) -> tuple[str, bool, int]:
+        """The three-way merge of MINE, BASE and THEIRS, whether it is clean,
+        and how many of THEIRS's insertions MINE already held."""
+        reduced, repeated = already_applied(mine, base, theirs)
         with tempfile.TemporaryDirectory() as directory:
             names = []
-            for name, text in (("mine", mine), ("base", base), ("theirs", theirs)):
+            for name, text in (("mine", mine), ("base", base), ("theirs", reduced)):
                 (Path(directory) / name).write_text(text, encoding="utf-8")
                 names.append(str(Path(directory) / name))
             result = git("merge-file", "-p", "-L", "here", "-L", self.source, "-L", self.target, *names,
                          cwd=self.clone, check=False)
         if result.returncode < 0 or result.returncode > 127:
             raise Failure(f"git merge-file failed: {result.stderr.decode(errors='replace').strip()}")
-        return result.stdout.decode(), result.returncode == 0
+        return result.stdout.decode(), result.returncode == 0, repeated
 
     def conflict(self, path: str, message: str) -> None:
         """Refuse, unless --resolved names PATH and it has no conflict markers."""
@@ -603,17 +659,18 @@ class Upgrade:
             return self.conflict(path, f"{path}: changed here (a link)")
         mine, source, target = parts(here), parts(base), parts(theirs)
         if mine[1] is None:
-            merged, clean = self.merge(here, base, theirs)
+            merged, clean, repeated = self.merge(here, base, theirs)
             if not clean:
                 return self.conflict(path, f"{path}: changed here and in {self.target}"
                                            f"{self.propose(path, merged, clean)}")
+            held = f"; {repeated} insertion(s) already here, not added again" if repeated else ""
             if merged == here:
                 if path in self.aliases and self.local(self.aliases[path]) is not None:
                     self.write(path, new_mode, merged.encode())
-                report.applied(f"{path}: already has the change of {self.target}")
+                report.applied(f"{path}: already has the change of {self.target}{held}")
             else:
                 self.write(path, new_mode, merged.encode())
-                report.applied(f"{path}: merged with the local text (three-way, no overlap)")
+                report.applied(f"{path}: merged with the local text (three-way, no overlap){held}")
             if sectioned(path, entry):
                 report.review((f"{path}: adapted here without a {SECTION} section; move the local text into"
                                f" one as additions keyed to their steps (template-upgrade step 5) and drop"
@@ -630,13 +687,14 @@ class Upgrade:
                 self.write(path, new_mode, here.encode())
             report.applied(f"{path}: already as in {self.target} above {SECTION}")
         else:
-            merged, clean = self.merge(mine[0], source[0], target[0])
+            merged, clean, repeated = self.merge(mine[0], source[0], target[0])
             if not (clean and merged == mine[0]):
                 return self.conflict(path, f"{path}: edited above {SECTION} (check 1)"
                                            f"{self.propose(path, merged + chr(10) + mine[1], clean)}")
+            held = f"; {repeated} insertion(s) already here, not added again" if repeated else ""
             if path in self.aliases and self.local(self.aliases[path]) is not None:
                 self.write(path, new_mode, here.encode())
-            report.applied(f"{path}: already has the change of {self.target} above {SECTION}")
+            report.applied(f"{path}: already has the change of {self.target} above {SECTION}{held}")
         reasons = reconcile(source, target, mine[1]) if mine[1] != target[1] else []
         if reasons:
             report.manual(f"{path}: reconcile its {SECTION} section ({'; '.join(reasons)}); read"
