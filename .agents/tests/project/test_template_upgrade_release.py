@@ -19,6 +19,7 @@ COMMANDS = Path(os.environ.get("TEMPLATE_COMMAND_DIR") or REPOSITORY / ".agents/
 SCRIPT = COMMANDS / "upgrade-template.sh"
 sys.path.insert(0, str(COMMANDS))
 import content_registry as catalog
+import test_template_support as template_support
 
 REGISTRY = ".agents/content-registry.yaml"
 IDENTITY = ["-c", "user.name=Test", "-c", "user.email=test@example.invalid"]
@@ -125,9 +126,12 @@ class UpgradeFromAnOlderReleaseTests(unittest.TestCase):
         if unreleased:
             major, minor, patch = number(current)
             self.candidate = f"v{major}.{minor}.{patch + 1}"
-        tags = sorted((tag for tag in git("tag", "-l", "v*", cwd=REPOSITORY).split()
-                       if re.fullmatch(r"v\d+\.\d+\.\d+", tag) and number(tag) < number(self.candidate)), key=number)
-        self.assertGreaterEqual(len(tags), 2, "the release tags are missing: git fetch --tags origin")
+        tags = sorted((tag for tag in template_support.release_tags() if number(tag) < number(self.candidate)),
+                      key=number)
+        # A repository copied from the template carries no template release: it
+        # skips these comparisons instead of failing its first push, while the
+        # template repository itself still reports a missing fetch.
+        template_support.require_releases(self, tags)
         floor = re.search(r"^minimum_upgrade_source: (\S+)", registry, re.M)
         self.floor = floor.group(1) if floor else None
         # Below the declared floor the command refuses the upgrade: those

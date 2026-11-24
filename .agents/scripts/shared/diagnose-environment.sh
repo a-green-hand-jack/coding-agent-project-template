@@ -188,6 +188,32 @@ else
   echo 'skip repository visibility/default branch (gh unavailable or unauthenticated)'
 fi
 
+# Hosted CI that cannot start at all (billing, a spending limit, no Actions
+# minutes left) leaves a red check on every push while nothing runs. Name that
+# state and the command that stops it. CI is a note, never the gate
+# (issue-workflow `<CI>`), so nothing here fails.
+if [[ -f .github/workflows/template-check.yml ]]; then
+  if ! command -v gh >/dev/null 2>&1; then
+    echo 'skip last template-check run: gh is unavailable'
+  elif last=$(gh run list --workflow template-check.yml --limit 1 --json databaseId,conclusion,status \
+       --jq '.[0] | "\(.databaseId) \(.conclusion // .status)"' 2>/dev/null) && [[ -n "$last" ]]; then
+    read -r run_id conclusion <<<"$last"
+    jobs=$(gh run view "$run_id" --json jobs --jq '.jobs | length' 2>/dev/null || true)
+    if [[ "$jobs" == 0 ]]; then
+      printf 'warn template-check run %s has no job: hosted CI could not start (billing or a spending limit)\n' "$run_id"
+      echo '     Every push keeps leaving that red check while nothing runs: stop the runs with'
+      echo '     `gh workflow disable template-check.yml` and record issue-workflow <CI> as `adopted-but-unavailable`;'
+      echo '     `gh workflow enable template-check.yml` restores it once Actions can start.'
+    elif [[ "$conclusion" == failure ]]; then
+      printf 'warn template-check run %s failed: gh run view %s --log-failed\n' "$run_id" "$run_id"
+    else
+      printf 'ok   last template-check run %s: %s\n' "$run_id" "$conclusion"
+    fi
+  else
+    echo 'skip last template-check run: gh is unauthenticated or this workflow has not run yet'
+  fi
+fi
+
 if [[ -f .project/home ]]; then
   expected=$(cat .project/home)
   [[ "$expected" == "$root" ]] && printf 'ok   worktree marker\n' || { echo 'FAIL worktree marker'; fail=1; }

@@ -56,8 +56,12 @@ example assets or project-specific memory and knowledge.
    authority"), never as an active entry without a file; `template-upgrade`
    keeps it out.
    Decide `.github/workflows/template-check.yml` with the `issue-workflow`
-   `<CI>` slot: adopted when it is `yes`, rejected when it is `no`. Either way
-   fill `<LOCAL_CHECK>` with the project's own check commands; CI only marks the PR.
+   `<CI>` slot: adopted when it is `yes`, rejected when it is `no`. A repository
+   whose Actions cannot start (billing, a spending limit, no minutes left) keeps
+   the file and records `adopted-but-unavailable`: `gh workflow disable
+   template-check.yml` stops the red runs that never began, and `gh workflow
+   enable` restores them later without touching the file. Either way fill
+   `<LOCAL_CHECK>` with the project's own check commands; CI only marks the PR.
    Map the writing conventions (`issue-workflow`, "Writing conventions"): write
    the maintainer's working language and Issue opening sections in the
    registry's `writing:` block, or leave the block out when nothing is
@@ -156,7 +160,10 @@ example assets or project-specific memory and knowledge.
    `shared_with_adaptation` files (`AGENTS.md`, the registry, product skeletons)
    for the repository.
 6. Run the target repository's setup, diagnostics, CLI entrypoints and relevant
-   seam checks. Confirm that product payloads do not include `.agents/`, secrets
+   seam checks. Until the map drops the template's `scope: template` content, its
+   own tests still run: where the template's release tags are absent, as in a
+   repository copied from the template, the comparisons that need them skip
+   instead of failing, so a first push reports real results. Confirm that product payloads do not include `.agents/`, secrets
    or worktree-local state. In a repository that had only `main`, `dev` is
    created by the maintainer with `init-branches.sh` after the adoption merges;
    until then `diagnose-environment.sh` reports the three branch-model checks

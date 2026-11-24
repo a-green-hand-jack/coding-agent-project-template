@@ -33,9 +33,14 @@ jobs:
       - name: Diagnose template
         run: bash .agents/scripts/shared/diagnose-environment.sh
       # The template's own tests (scope: template) exist only in the template
-      # repository; elsewhere this step is skipped.
+      # repository; elsewhere this step is skipped. A repository copied from the
+      # template has no template release tags yet: the comparisons that need
+      # them skip themselves instead of failing the copy's first push.
       - name: Run the template's own tests
         if: hashFiles('.agents/tests/project/test_template_*.py') != ''
         run: |
-          git fetch --quiet --depth=1 origin '+refs/tags/*:refs/tags/*'
+          # A copy has no template release tags yet; fetching none is not a
+          # failure and the comparisons that need them skip themselves.
+          git fetch --quiet --depth=1 origin '+refs/tags/*:refs/tags/*' \
+            || echo 'no tag on origin yet: the template release comparisons skip'
           python3 -m unittest discover -s .agents/tests/project -p 'test_template_*.py' -v

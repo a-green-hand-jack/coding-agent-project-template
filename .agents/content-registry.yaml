@@ -2,7 +2,7 @@ schema_version: 2
 purpose: "Record which development-plane content is reusable across repositories and which content belongs to one concrete project."
 template:
   repository: https://github.com/a-green-hand-jack/coding-agent-project-template
-  version: v0.1.41
+  version: v0.1.42
 writing:
   language: "中文"
   issue_sections: "最终目标, 实现哲学, 现状和问题, 怎么办, 验收, 不做"
@@ -1586,5 +1586,27 @@ entries:
     status: active
     source: {"issue": 133}
     updated: 2026-10-28
+    supersedes: []
+    superseded_by: []
+  - path: .agents/tests/project/test_template_support.py
+    id: content-1bc959178d8cff80
+    kind: code
+    scope: template
+    owner: template-maintainers
+    summary: "Which tags are the template's own releases and whether this checkout is the template repository, shared by the tests that compare releases."
+    status: active
+    source: {"issue": 198}
+    updated: 2026-11-24
+    supersedes: []
+    superseded_by: []
+  - path: .agents/tests/project/test_template_fresh_copy.py
+    id: content-e9c06578f7b92ae9
+    kind: code
+    scope: template
+    owner: template-maintainers
+    summary: "Template-only regression check that a repository copied from the template skips the release comparisons instead of failing its first push."
+    status: active
+    source: {"issue": 198}
+    updated: 2026-11-24
     supersedes: []
     superseded_by: []

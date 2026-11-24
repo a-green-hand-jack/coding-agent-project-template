@@ -13,9 +13,18 @@ from pathlib import Path
 REPOSITORY = Path(__file__).resolve().parents[3]
 IDENTITY = ["-c", "user.name=Test", "-c", "user.email=test@example.invalid"]
 GH = """#!/bin/sh
-[ "$1 $2" = "repo view" ] || exit 1
-echo '{"visibility":"PRIVATE","nameWithOwner":"owner/project","defaultBranchRef":{"name":"main"}}'
+case "$1 $2" in
+  "repo view")
+    echo '{"visibility":"PRIVATE","nameWithOwner":"owner/project","defaultBranchRef":{"name":"main"}}' ;;
+  "run list")
+    echo '7 failure' ;;
+  "run view")
+    echo "$RUN_JOBS" ;;
+  *) exit 1 ;;
+esac
 """
+NEVER_STARTED = "0"
+STEP_FAILED = "1"
 BRANCH_LINES = ("local dev branch", "origin/dev branch", "GitHub default branch: main")
 
 
@@ -56,13 +65,18 @@ class BranchModelWhileAdoptingTests(unittest.TestCase):
 
         bin_dir = base / "bin"
         bin_dir.mkdir()
-        (bin_dir / "gh").write_text(GH, encoding="utf-8")
-        (bin_dir / "gh").chmod(0o755)
+        self.bin_dir = bin_dir
         self.env = {key: value for key, value in os.environ.items()
                     if key not in ("CI", "GITHUB_ACTIONS", "AGENTS_PYTHON")}
         self.env["PATH"] = f"{bin_dir}{os.pathsep}{self.env['PATH']}"
+        self.set_gh_runs(STEP_FAILED)
         setup = self.run_script("setup-worktree.sh")
         self.assertEqual(setup.returncode, 0, setup.stdout + setup.stderr)
+
+    def set_gh_runs(self, jobs: str) -> None:
+        (self.bin_dir / "gh").write_text(GH, encoding="utf-8")
+        (self.bin_dir / "gh").chmod(0o755)
+        self.env["RUN_JOBS"] = jobs
 
     def run_script(self, name: str) -> subprocess.CompletedProcess[str]:
         return subprocess.run(["bash", f".agents/scripts/shared/{name}"], cwd=self.root, env=self.env,
@@ -93,6 +107,23 @@ class BranchModelWhileAdoptingTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1, result.stdout)
         for line in BRANCH_LINES:
             self.assertIn(f"FAIL {line} (run .agents/scripts/shared/init-branches.sh)", result.stdout)
+
+    def test_a_run_that_never_started_names_the_disable_command(self) -> None:
+        # Billing or a spending limit: GitHub records a failed run with no job,
+        # so the hint names the command that stops the red checks instead of
+        # reading it as a code failure.
+        self.set_gh_runs(NEVER_STARTED)
+        result = self.run_script("diagnose-environment.sh")
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertIn("warn template-check run 7 has no job: hosted CI could not start", result.stdout)
+        self.assertIn("`gh workflow disable template-check.yml`", result.stdout)
+        self.assertIn("`adopted-but-unavailable`", result.stdout)
+
+    def test_a_failed_job_points_at_the_log(self) -> None:
+        self.set_gh_runs(STEP_FAILED)
+        result = self.run_script("diagnose-environment.sh")
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertIn("warn template-check run 7 failed: gh run view 7 --log-failed", result.stdout)
 
     def test_python_dependencies_are_checked_for_the_selected_interpreter(self) -> None:
         bare = self.root.parent / "bin" / "bare-python"
