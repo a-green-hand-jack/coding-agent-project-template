@@ -17,7 +17,7 @@ body:
     attributes:
       label: Template version and downstream kind
       description: The `template.version` (and `template.upstream.version` for a derived template) your repository records, and whether it is a private or public downstream repository. Name the repository only when it is public and its maintainer agrees.
-      placeholder: "v0.1.40, a private downstream repository"
+      placeholder: "<template.version>, a private or public downstream repository"
     validations:
       required: true
   - type: textarea
