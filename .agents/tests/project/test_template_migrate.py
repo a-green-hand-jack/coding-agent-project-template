@@ -624,6 +624,27 @@ class HandoffPrompt(unittest.TestCase):
         self.assertNotIn("DEV.md", result)
         self.assertIn("the issue-workflow <LOCAL_CHECK> slot", " ".join(result.split()))
 
+    def test_the_created_worktree_is_named_and_must_not_be_recreated(self) -> None:
+        result = self.prompt("", "feat/issue-7", "integration/issue-6",
+                             "--worktree", "/tmp/worktrees/issue-7")
+        self.assertIn("Branch: feat/issue-7", result)
+        self.assertIn("Worktree: /tmp/worktrees/issue-7 (already created from integration/issue-6;"
+                      " do not create another worktree or branch)", result)
+        self.assertIn("Work only in that worktree", " ".join(result.split()))
+        self.assertIn("Start in that worktree and run", result)
+        self.assertNotIn("verify it", result)
+        self.assertIn("PR target: integration/issue-6", result)
+
+    def test_a_worktree_name_without_a_value_or_twice_is_a_usage_error(self) -> None:
+        for arguments in (("--worktree",), ("7", "--worktree", "/a", "--worktree", "/b"),
+                          ("--worktree", "")):
+            with self.subTest(arguments=arguments):
+                failed = subprocess.run(["bash", str(PROMPT), *arguments], cwd=REPOSITORY,
+                                        text=True, capture_output=True)
+                self.assertEqual(failed.returncode, 2, failed.stdout + failed.stderr)
+                self.assertEqual(failed.stdout, "")
+                self.assertIn("--worktree PATH", failed.stderr)
+
     def test_prompt_tells_the_session_where_its_files_go(self) -> None:
         flat = " ".join(self.prompt("").split())
         self.assertIn("plans, PR body drafts and messages to the coordinator", flat)

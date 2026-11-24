@@ -1,7 +1,25 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-[[ -n "${1:-}" && $# -le 4 ]] || { echo "usage: $0 ISSUE_NUMBER [BRANCH] [TARGET_BASE] [COORDINATOR_HANDOFF]" >&2; exit 2; }
+usage() { echo "usage: $0 [--worktree PATH] ISSUE_NUMBER [BRANCH] [TARGET_BASE] [COORDINATOR_HANDOFF]" >&2; exit 2; }
+# The worktree the coordinator already created (root AGENTS.md: create it with
+# Herdr first, then generate the handoff). Peeled before the positional
+# arguments so existing callers keep their positions.
+worktree=
+positional=()
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --worktree)
+      [[ -z "$worktree" ]] || usage
+      [[ $# -ge 2 && -n "${2:-}" ]] || usage
+      worktree=$2
+      shift 2
+      ;;
+    *) positional+=("$1"); shift ;;
+  esac
+done
+set -- ${positional[@]+"${positional[@]}"}
+[[ -n "${1:-}" && $# -le 4 ]] || usage
 issue=$1
 branch=${2:-}
 target_base=${3:-dev}
@@ -27,6 +45,19 @@ dispatch=$(printf '%s\n' "$body" | awk '
   inside && started { print }
 ')
 [[ -n "$branch" ]] || branch="fix/issue-$number"
+if [[ -n "$worktree" ]]; then
+  printf -v location 'Branch: %s\nWorktree: %s (already created from %s; do not create another worktree or branch)' \
+    "$branch" "$worktree" "$target_base"
+  start='Start in that worktree and run:'
+  boundary="Work only in that worktree: do not edit the canonical checkout or another
+Issue's worktree, and do not create another worktree or branch.
+"
+else
+  printf -v location 'Branch: %s (already created from %s by the coordinator; verify it)' \
+    "$branch" "$target_base"
+  start='Start in the new worktree and run:'
+  boundary=
+fi
 # The project's declared writing conventions (issue-workflow, "Writing conventions").
 registry="$(git rev-parse --show-toplevel)/.agents/content-registry.yaml"
 writing=
@@ -38,12 +69,12 @@ cat <<PROMPT
 Work on Issue #$number: $title
 
 Issue: $url
-Branch: $branch (already created from $target_base by the coordinator; verify it)
+$location
 PR target: $target_base (a parent integration target must be declared in the Issue)
 
-Start in the new worktree and run:
+$start
   bash .agents/scripts/shared/setup-worktree.sh
-
+$boundary
 Read AGENTS.md, .agents/AGENTS.md, the Issue, and the directly relevant
 .agents memory/knowledge/skills before editing. Read
 .agents/skills/shared/agent-communication/SKILL.md before sending or
